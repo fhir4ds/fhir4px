@@ -8,6 +8,40 @@ import type {
   ObservationCategoryClassification
 } from "../fhir/local-classification";
 import type { LabConditionAssociation } from "../fhir/relationships";
+import promptsData from "./prompts.json";
+
+interface PromptTask {
+  system_prompt: string;
+  system_prompt_sha256?: string;
+  output_shape: string;
+  output_shape_sha256?: string;
+}
+interface PromptCatalog {
+  version: string;
+  generated_at?: string;
+  tasks: Record<string, PromptTask>;
+}
+
+const PROMPTS = promptsData as PromptCatalog;
+const EXPECTED_PROMPTS_VERSION = "1.0.0";
+// Single source of truth for prompts. Published by the model team at
+// https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/prompts.json
+// and regenerated from fhir4px-model/scripts/build_structured_cases.py whenever
+// any prompt changes. Bump EXPECTED_PROMPTS_VERSION after validating a new
+// publish; the warning below catches silent drift.
+if (typeof console !== "undefined" && typeof console.info === "function") {
+  // eslint-disable-next-line no-console
+  console.info(`[fhir4px:webllm] prompts.json version: ${PROMPTS.version}`);
+}
+if (PROMPTS.version !== EXPECTED_PROMPTS_VERSION) {
+  if (typeof console !== "undefined" && typeof console.error === "function") {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[fhir4px:webllm] prompts.json version mismatch: expected ${EXPECTED_PROMPTS_VERSION}, got ${PROMPTS.version}. ` +
+        "Prompt drift may cause model failures. Update EXPECTED_PROMPTS_VERSION after validating."
+    );
+  }
+}
 
 export const WEBLLM_GROUPING_MODEL = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 export const WEBLLM_GROUPING_CUSTOM_MODEL = "fhir4px-q4f16_1-MLC";
@@ -1684,28 +1718,7 @@ type LabConditionPromptUserPatch = {
 function labConditionTargetSystemPrompt(): string {
   const override = sessionFlagValue(LAB_CONDITION_SYSTEM_PROMPT_OVERRIDE_KEY);
   if (override) return override;
-  return [
-    "Return only JSON.",
-    "Task: decide whether one lab, vital sign, or measurement group is clinically associated with one of the patient's existing condition choices.",
-    "This is organization only, not medical advice.",
-    "You are not diagnosing the patient and you are not adding new conditions.",
-    "Use only the measurement name, optional FHIR reference context, and the provided condition choices.",
-    "referenceContext comes only from FHIR references already present in the record set; use it only to clarify whether a direct relationship exists.",
-    "Return an empty associations array or one association object.",
-    "If you return an association object, include exactly conditionName and confidence.",
-    "conditionName must exactly match one conditionChoices.name.",
-    "Choose the most relevant condition when the measurement has a clinical relationship to that condition.",
-    "Rank relevance as: high direct monitoring or diagnosis, medium indirect or missing context, low possible or weak.",
-    "Return empty when no choice has a direct clinical relationship to the measurement.",
-    "Examples:",
-    "Empty: Vitamin D level with Migraine.",
-    "Empty: Cholesterol panel with Asthma.",
-    "Low: Body weight with Heart Failure when no fluid-status context is present.",
-    "Medium: Ferritin with Anemia when iron deficiency is not explicit.",
-    "High: INR with Long-term Anticoagulant Therapy.",
-    "High: Peak expiratory flow with Asthma.",
-    "High: Hemoglobin A1c with Diabetes Type 2."
-  ].join("\n");
+  return PROMPTS.tasks.lab_condition_association.system_prompt;
 }
 
 function labConditionTargetUserPrompt(params: {
@@ -1735,7 +1748,7 @@ function labConditionTargetUserPrompt(params: {
     referenceContext: string[];
   } = {
     outputShape:
-      'Return JSON with an "associations" array. Each item must have "conditionName" and "confidence". The confidence value must be one of: high, medium, low.',
+      PROMPTS.tasks.lab_condition_association.output_shape,
     measurement: {
       groupId: params.labGroup.groupId,
       name: params.labGroup.patientFriendlyName
@@ -2307,7 +2320,7 @@ function labAssociationEvalDefaultUserPayload(
 ): unknown {
   return {
     outputShape:
-      'Return JSON with an "associations" array. Each item must have "conditionName" and "confidence". The confidence value must be one of: high, medium, low.',
+      PROMPTS.tasks.lab_condition_association.output_shape,
     measurement: {
       groupId: labGroup.groupId,
       name: labGroup.patientFriendlyName
@@ -2619,7 +2632,7 @@ export function webLlmPlaygroundCases(): WebLlmPlaygroundCase[] {
       description: "Patient-friendly names and observation buckets for text-only lab concepts.",
       operationLabel: "batch record naming",
       messages: [
-        { role: "system", content: namingSystemPrompt("Observation", observationNamingRecords.length) },
+        { role: "system", content: namingSystemPrompt() },
         { role: "user", content: namingBatchUserPrompt(observationNamingRecords, observationNames) }
       ],
       schemaText: namingBatchResponseSchemaText(observationNames),
@@ -2664,42 +2677,18 @@ export function webLlmPlaygroundCases(): WebLlmPlaygroundCase[] {
   ];
 }
 
-function namingSystemPrompt(resourceType: string, recordCount = 1): string {
-  const batchMode = recordCount > 1;
-  return [
-    batchMode
-      ? "Return only JSON for patient-friendly record names."
-      : "Return only JSON for one patient-friendly record name.",
-    "Task: classification/label normalization only, not medical advice.",
-    "Use only input facts. Do not create diagnoses, values, dates, statuses, instructions, risk, or next steps.",
-    batchMode
-      ? "Return one item for every input record id; copy each id exactly."
-      : "Return one label for the input id; details stay linked to the original record.",
-    "Use only concept text, coding code, coding display, and medication ingredient/route/form when provided.",
-    "For Observation records, include observationBucket with one of labs, vitals, or other.",
-    "If availableNames contains the same patient-facing concept, copy that available name exactly.",
-    "Do not copy a technical available name when the code or display implies a simpler patient-facing label.",
-    "Never output the literal resourceType as the patientFriendlyName (e.g., do not return \"Encounter\" for an Encounter, \"Procedure\" for a Procedure, \"DiagnosticReport\" for a DiagnosticReport).",
-    "For Observations, DiagnosticReports, and Procedures, never output broad diagnosis-style labels such as Diabetes, Hypertension, Kidney Disease, Cancer, Asthma, or Depression unless that exact phrase is the input concept.",
-    batchMode ? "If two input records in this request are the same patient-facing concept, use the same patientFriendlyName for both." : "",
-    "If no available name fits, create a concise Title Case label.",
-    "Avoid acronyms unless common or source-provided.",
-    "Acceptable acronyms: MMR, HPV, MRI, CT, BMI, COVID-19.",
-    "If unsure, use the closest source concept and set fallback true.",
-    `Resource type: ${resourceType}.`,
-    ...resourceSpecificInstructions(resourceType)
-  ]
-    .filter(Boolean)
-    .join("\n");
+function namingSystemPrompt(): string {
+  // prompts.json (single source of truth) already includes per-resource-type
+  // rules and the diagnosis-prohibition rules inline. No batchMode variation:
+  // the user-payload outputShape tells the model whether to return one record
+  // or many, the system prompt stays constant.
+  return PROMPTS.tasks.app_patient_friendly_name.system_prompt;
 }
 
 function namingUserPrompt(record: GroupableRecord, availableNames: string[]): string {
   const choices = relevantAvailableNameChoices([record], availableNamesForRecords([record], availableNames));
   return JSON.stringify({
-    outputShape:
-      record.resourceType === "Observation"
-        ? "JSON object: {patientFriendlyName,observationBucket,confidence,fallback}"
-        : "JSON object: {patientFriendlyName,confidence,fallback}",
+    outputShape: PROMPTS.tasks.app_patient_friendly_name.output_shape,
     availableNames: choices,
     record: promptRecord(record)
   });
@@ -2884,7 +2873,7 @@ async function nameRecordWithWebLlm(
   const { engine, modelId } = await getWebLlmEngine(options);
   const namingAvailableNames = relevantAvailableNameChoices([record], availableNamesForRecords([record], availableNames));
   const messages: ChatMessage[] = [
-    { role: "system", content: namingSystemPrompt(record.resourceType, 1) },
+    { role: "system", content: namingSystemPrompt() },
     { role: "user", content: namingUserPrompt(record, namingAvailableNames) }
   ];
   const schemaText = namingResponseSchemaText(namingAvailableNames);
@@ -2941,7 +2930,7 @@ async function nameBatchWithWebLlm(
   const namingAvailableNames = relevantAvailableNameChoices(records, availableNamesForRecords(records, availableNames));
   const resourceType = [...new Set(records.map((record) => record.resourceType))].join(", ");
   const messages: ChatMessage[] = [
-    { role: "system", content: namingSystemPrompt(resourceType, records.length) },
+    { role: "system", content: namingSystemPrompt() },
     { role: "user", content: namingBatchUserPrompt(records, namingAvailableNames) }
   ];
   const schemaText = namingBatchResponseSchemaText(namingAvailableNames);
