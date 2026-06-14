@@ -159,6 +159,7 @@ import {
   getWebLlmWarmupStatus,
   groupWithWebLlmIncrementalStream,
   subscribeWebLlmWarmupStatus,
+  DEFAULT_WEBLLM_MODEL_PREFERENCE,
   WEBLLM_GROUPING_CUSTOM_MODEL,
   WEBLLM_GROUPING_FALLBACK_MODEL,
   WEBLLM_GROUPING_MODEL,
@@ -335,6 +336,12 @@ function localGroupingModelId(mode: LocalGroupingMode): string {
 function localGroupingModelPreference(mode: LocalGroupingMode): WebLlmModelPreference {
   if (mode === "custom-single") return "custom";
   return mode === "three-b-batch" ? "three-b" : "one-b";
+}
+
+function defaultLocalGroupingMode(): LocalGroupingMode {
+  if (DEFAULT_WEBLLM_MODEL_PREFERENCE === "custom") return "custom-single";
+  if (DEFAULT_WEBLLM_MODEL_PREFERENCE === "three-b") return "three-b-batch";
+  return "one-b-batch";
 }
 
 function localGroupingBatchSize(mode: LocalGroupingMode): number {
@@ -1203,7 +1210,7 @@ export function PatientExplorer() {
   const [groupingSource, setGroupingSource] = useState<ExplorerGroupingSource>("source");
   const [groupingProgress, setGroupingProgress] = useState<{ completed: number; total: number } | null>(null);
   const [activeTab, setActiveTab] = useState<ExplorerTab>("MedicationRequest");
-  const [localGroupingMode, setLocalGroupingMode] = useState<LocalGroupingMode>("one-b-batch");
+  const [localGroupingMode, setLocalGroupingMode] = useState<LocalGroupingMode>(defaultLocalGroupingMode());
   const [activeObservationBucket, setActiveObservationBucket] = useState<ObservationBucket>("labs");
   const [resourceStatusFilter, setResourceStatusFilter] = useState<ResourceStatusFilter>("active");
   const [visitClassFilter, setVisitClassFilter] = useState<VisitClassFilter>("all");
@@ -1818,6 +1825,37 @@ export function PatientExplorer() {
       const explicitRelatedContext = explicitContextByLabGroupId.get(groupId) ?? [];
       const orderedConditionChoices = conditionChoicesForLabGroup(group);
       setStatus(`Linking related medical records... ${index + 1}/${groupsToProcess.length}`);
+
+      // Auto-abstain: when the deterministic FHIR-reference layer surfaced no
+      // context for this lab group, the model has no signal to work from and
+      // historically defaults to the most prevalent comorbidity in the choice
+      // menu (production logs 2026-06-14: 4/4 empty-context calls returned
+      // "High Blood Pressure" with no clinical relationship). Trust the
+      // empty-context signal and skip the model. Cache a __none__ entry so we
+      // don't retry on every run.
+      if (explicitRelatedContext.length === 0) {
+        groupingConsoleLog("info", "relationship-suggestion-auto-abstain", {
+          labGroupId: groupId,
+          labName: group.patientFriendlyName,
+          conditionChoiceCount: orderedConditionChoices.length,
+          conditionChoiceNames: orderedConditionChoices.map((choice) => choice.name),
+          eligibleRecordCount: groupRecords.length
+        });
+        await upsertAndPersist([
+          relationshipCacheEntry({
+            sourceGroupId: groupId,
+            targetGroupId: "__none__",
+            sourceResourceType: "Observation",
+            targetResourceType: "Condition",
+            relationship: "none",
+            confidence: 0,
+            fallback: true,
+            model: options.selectedModelId
+          })
+        ]);
+        continue;
+      }
+
       try {
         const associations = await associateLabGroupWithConditionsWithWebLlm(group, groupRecords, orderedConditionChoices, {
           modelPreference: localGroupingModelPreference(localGroupingMode),
@@ -1860,6 +1898,7 @@ export function PatientExplorer() {
           acceptedConditionGroupIds: associations.map((association) => association.conditionGroupId),
           confidenceValues: associations.map((association) => association.confidence),
           conditionChoiceCount: orderedConditionChoices.length,
+          conditionChoiceNames: orderedConditionChoices.map((choice) => choice.name),
           eligibleRecordCount: groupRecords.length,
           referenceContextCount: explicitRelatedContext.length,
           referenceContext: explicitRelatedContext

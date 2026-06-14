@@ -1,11 +1,18 @@
 import { Box, Button, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
 import { ArrowRight, FileText, LockKeyhole, Plug, Search, Share2 } from "lucide-react";
 import { Link as RouterLink } from "react-router-dom";
+import { isSmartCallback } from "../lib/smart/callback";
+import { SmartCallback } from "./SmartCallback";
 
 const MINT = "#00b4d8";
 const MINT_LIGHT = "#90e0ef";
 
 export function Landing() {
+  // OAuth redirect URIs use the bare host (see ProviderSearch.tsx:298), so the
+  // IdP returns to "/" with ?code=...&state=.... Detect that here and render
+  // the callback handler instead of the marketing page.
+  if (isSmartCallback()) return <SmartCallback />;
+
   return (
     <Stack spacing={6}>
       <Stack spacing={2} alignItems="flex-start">
@@ -30,7 +37,7 @@ export function Landing() {
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <Button
             component={RouterLink}
-            to="/app"
+            to="/providers"
             variant="contained"
             size="large"
             endIcon={<ArrowRight size={18} />}
@@ -131,7 +138,7 @@ export function Landing() {
             </Box>
             <Button
               component={RouterLink}
-              to="/app"
+              to="/providers"
               variant="contained"
               size="large"
               endIcon={<ArrowRight size={18} />}

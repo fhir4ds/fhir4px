@@ -2,7 +2,6 @@ import { Route, Routes } from "react-router-dom";
 import { ConnectedProvider } from "../pages/ConnectedProvider";
 import { Docs } from "../pages/Docs";
 import { GroupingReport } from "../pages/GroupingReport";
-import { Home } from "../pages/Home";
 import { Landing } from "../pages/Landing";
 import { LocalExport } from "../pages/LocalExport";
 import { LlmPlayground } from "../pages/LlmPlayground";
@@ -18,7 +17,6 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
-      <Route path="/app" element={<Home />} />
       <Route path="/providers" element={<ProviderSearch />} />
       <Route path="/smart/callback" element={<SmartCallback />} />
       <Route path="/connected" element={<ConnectedProvider />} />

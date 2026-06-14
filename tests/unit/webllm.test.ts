@@ -34,7 +34,7 @@ describe("WebLLM grouping adapter", () => {
       }
     });
 
-    const { groupWithWebLlm, WEBLLM_GROUPING_MODEL } = await import("../../src/lib/llm/webllm");
+    const { groupWithWebLlm, WEBLLM_GROUPING_CUSTOM_MODEL } = await import("../../src/lib/llm/webllm");
 
     await groupWithWebLlm([
       {
@@ -47,7 +47,7 @@ describe("WebLLM grouping adapter", () => {
       }
     ]);
 
-    expect(mocks.createEngine).toHaveBeenCalledWith(WEBLLM_GROUPING_MODEL, expect.any(Object));
+    expect(mocks.createEngine).toHaveBeenCalledWith(WEBLLM_GROUPING_CUSTOM_MODEL, expect.any(Object));
     expect(mocks.createCompletion).toHaveBeenCalledWith(
       expect.objectContaining({
         max_tokens: 900,
@@ -59,8 +59,7 @@ describe("WebLLM grouping adapter", () => {
       })
     );
     expect(mocks.createCompletion.mock.calls[0][0]).not.toHaveProperty("model");
-    expect(WEBLLM_GROUPING_MODEL).toBe("Llama-3.2-1B-Instruct-q4f16_1-MLC");
-    expect(mocks.createEngine.mock.calls[0][1]).not.toHaveProperty("appConfig");
+    expect(WEBLLM_GROUPING_CUSTOM_MODEL).toBe("fhir4px-q4f16_1-MLC");
     expect(JSON.parse(mocks.createCompletion.mock.calls[0][0].response_format.schema)).toMatchObject({
       required: ["groups", "unassigned"],
       properties: {
@@ -71,14 +70,14 @@ describe("WebLLM grouping adapter", () => {
   });
 
   it("does not download non-default models unless explicitly enabled", async () => {
-    mocks.createEngine.mockRejectedValueOnce(new Error("generic model unavailable"));
+    mocks.createEngine.mockRejectedValueOnce(new Error("custom model unavailable"));
 
-    const { warmWebLlmGroupingModel, WEBLLM_GROUPING_MODEL } = await import("../../src/lib/llm/webllm");
+    const { warmWebLlmGroupingModel, WEBLLM_GROUPING_CUSTOM_MODEL } = await import("../../src/lib/llm/webllm");
 
     await expect(warmWebLlmGroupingModel()).resolves.toBe(false);
 
     expect(mocks.createEngine).toHaveBeenCalledTimes(1);
-    expect(mocks.createEngine).toHaveBeenCalledWith(WEBLLM_GROUPING_MODEL, expect.any(Object));
+    expect(mocks.createEngine).toHaveBeenCalledWith(WEBLLM_GROUPING_CUSTOM_MODEL, expect.any(Object));
   });
 
   it("can opt in to the custom fhir4px model", async () => {
@@ -106,16 +105,16 @@ describe("WebLLM grouping adapter", () => {
     expect(mocks.createEngine.mock.calls[0][1].appConfig.cacheBackend).toBe("indexeddb");
   });
 
-  it("ignores the old stock fallback model flag so 1B failures stay visible", async () => {
+  it("ignores the old stock fallback model flag so default-model failures stay visible", async () => {
     window.sessionStorage.setItem("fhir4px_enable_webllm_fallback_models", "1");
-    mocks.createEngine.mockRejectedValueOnce(new Error("generic model unavailable"));
+    mocks.createEngine.mockRejectedValueOnce(new Error("custom model unavailable"));
 
-    const { warmWebLlmGroupingModel, WEBLLM_GROUPING_MODEL } = await import("../../src/lib/llm/webllm");
+    const { warmWebLlmGroupingModel, WEBLLM_GROUPING_CUSTOM_MODEL } = await import("../../src/lib/llm/webllm");
 
     await expect(warmWebLlmGroupingModel()).resolves.toBe(false);
 
     expect(mocks.createEngine).toHaveBeenCalledTimes(1);
-    expect(mocks.createEngine.mock.calls[0][0]).toBe(WEBLLM_GROUPING_MODEL);
+    expect(mocks.createEngine.mock.calls[0][0]).toBe(WEBLLM_GROUPING_CUSTOM_MODEL);
   });
 
   it("can explicitly select the 3B model for local comparison", async () => {

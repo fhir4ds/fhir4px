@@ -34,6 +34,7 @@ import {
 import {
   browserCanAttemptWebLlm,
   groupWithWebLlmIncremental,
+  DEFAULT_WEBLLM_MODEL_PREFERENCE,
   WEBLLM_GROUPING_CUSTOM_MODEL,
   WEBLLM_GROUPING_FALLBACK_MODEL,
   WEBLLM_GROUPING_MODEL,
@@ -81,6 +82,12 @@ function localGroupingModelId(mode: LocalGroupingMode): string {
 function localGroupingModelPreference(mode: LocalGroupingMode): WebLlmModelPreference {
   if (mode === "custom-single") return "custom";
   return mode === "three-b-batch" ? "three-b" : "one-b";
+}
+
+function defaultLocalGroupingMode(): LocalGroupingMode {
+  if (DEFAULT_WEBLLM_MODEL_PREFERENCE === "custom") return "custom-single";
+  if (DEFAULT_WEBLLM_MODEL_PREFERENCE === "three-b") return "three-b-batch";
+  return "one-b-batch";
 }
 
 function localGroupingBatchSize(mode: LocalGroupingMode): number {
@@ -190,7 +197,7 @@ export function GroupingReport() {
   const [records, setRecords] = useState<GroupableRecord[]>([]);
   const [report, setReport] = useState<GroupingReportResult | null>(null);
   const [reportMode, setReportMode] = useState<ReportMode>("lookup-seeded-model");
-  const [localGroupingMode, setLocalGroupingMode] = useState<LocalGroupingMode>("one-b-batch");
+  const [localGroupingMode, setLocalGroupingMode] = useState<LocalGroupingMode>(defaultLocalGroupingMode());
   const [loadedSource, setLoadedSource] = useState<ReportSource>("jordan-fixture");
 
   const counts = useMemo(

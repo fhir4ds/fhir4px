@@ -56,7 +56,7 @@ describe("directory search", () => {
       endpointStatus: "candidate",
       recommendationTier: "recommended_confirm",
       empiricalPrecisionAt1: 0.7179,
-      clientId: ""
+      clientId: import.meta.env.VITE_EPIC_PROD_CLIENT_ID || ""
     });
   });
 

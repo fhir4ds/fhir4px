@@ -67,7 +67,7 @@ type WebLlmDebugWindow = Window & {
 type WebLlmLogLevel = "debug" | "info" | "warn" | "error";
 export type WebLlmModelPreference = "one-b" | "three-b" | "custom";
 export type WebLlmNamingMode = "batch" | "single";
-const DEFAULT_WEBLLM_MODEL_PREFERENCE: WebLlmModelPreference = "custom";
+export const DEFAULT_WEBLLM_MODEL_PREFERENCE: WebLlmModelPreference = "custom";
 
 export interface WebLlmGroupingOptions {
   timeoutMs?: number;
@@ -2685,6 +2685,9 @@ function namingSystemPrompt(resourceType: string, recordCount = 1): string {
     "Use only concept text, coding code, coding display, and medication ingredient/route/form when provided.",
     "For Observation records, include observationBucket with one of labs, vitals, or other.",
     "If availableNames contains the same patient-facing concept, copy that available name exactly.",
+    "Do not copy a technical available name when the code or display implies a simpler patient-facing label.",
+    "Never output the literal resourceType as the patientFriendlyName (e.g., do not return \"Encounter\" for an Encounter, \"Procedure\" for a Procedure, \"DiagnosticReport\" for a DiagnosticReport).",
+    "For Observations, DiagnosticReports, and Procedures, never output broad diagnosis-style labels such as Diabetes, Hypertension, Kidney Disease, Cancer, Asthma, or Depression unless that exact phrase is the input concept.",
     batchMode ? "If two input records in this request are the same patient-facing concept, use the same patientFriendlyName for both." : "",
     "If no available name fits, create a concise Title Case label.",
     "Avoid acronyms unless common or source-provided.",
