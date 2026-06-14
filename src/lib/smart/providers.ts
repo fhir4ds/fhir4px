@@ -57,42 +57,51 @@ export function getSandboxProviders(): SmartProvider[] {
       clientId: import.meta.env.VITE_CERNER_SANDBOX_CLIENT_ID || "",
       scopes: CERNER_SANDBOX_SCOPES
     },
-    {
-      id: "smart-dev-sandbox",
-      name: "SMART Dev Sandbox",
-      vendor: "unknown",
-      fhirBaseUrl: SMART_DEV_SANDBOX_BASE_URL,
-      clientId: "local-test-session",
-      scopes: EXPANDED_CLINICAL_SCOPES,
-      localTestPatientId: "fhir4px-sandbox-patient",
-      localTestPatients: [
-        {
-          id: "fhir4px-sandbox-patient",
-          label: "Pat Explorer",
-          description: "Compact patient-explorer fixture",
-          source: "configured"
-        },
-        {
-          id: "fhir4px-large-sandbox-patient",
-          label: "Jordan Longitudinal",
-          description: "Large synthetic patient with repeated labs, vitals, and medications",
-          source: "configured"
-        },
-        {
-          id: "fhir4px-large-cardiorenal-patient",
-          label: "Riley Cardiorenal",
-          description: "Large synthetic patient with heart failure, anticoagulation, kidney disease, and metabolic monitoring",
-          source: "configured"
-        },
-        {
-          id: "fhir4px-large-respiratory-immune-patient",
-          label: "Morgan Respiratory-Immune",
-          description: "Large synthetic patient with respiratory, HIV, thyroid, anemia, and medication safety monitoring",
-          source: "configured"
-        }
-      ],
-      launchMode: "local-test-session"
-    }
+    // SMART Dev Sandbox hits a local HAPI FHIR server and uses local test
+    // fixtures, so it's only useful when running the dev sandbox locally.
+    // Hide it from production builds.
+    ...(import.meta.env.DEV
+      ? [
+          {
+            id: "smart-dev-sandbox",
+            name: "SMART Dev Sandbox",
+            vendor: "unknown" as const,
+            fhirBaseUrl: SMART_DEV_SANDBOX_BASE_URL,
+            clientId: "local-test-session",
+            scopes: EXPANDED_CLINICAL_SCOPES,
+            localTestPatientId: "fhir4px-sandbox-patient",
+            localTestPatients: [
+              {
+                id: "fhir4px-sandbox-patient",
+                label: "Pat Explorer",
+                description: "Compact patient-explorer fixture",
+                source: "configured" as const
+              },
+              {
+                id: "fhir4px-large-sandbox-patient",
+                label: "Jordan Longitudinal",
+                description: "Large synthetic patient with repeated labs, vitals, and medications",
+                source: "configured" as const
+              },
+              {
+                id: "fhir4px-large-cardiorenal-patient",
+                label: "Riley Cardiorenal",
+                description:
+                  "Large synthetic patient with heart failure, anticoagulation, kidney disease, and metabolic monitoring",
+                source: "configured" as const
+              },
+              {
+                id: "fhir4px-large-respiratory-immune-patient",
+                label: "Morgan Respiratory-Immune",
+                description:
+                  "Large synthetic patient with respiratory, HIV, thyroid, anemia, and medication safety monitoring",
+                source: "configured" as const
+              }
+            ],
+            launchMode: "local-test-session" as const
+          }
+        ]
+      : [])
   ];
 }
 
