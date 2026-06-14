@@ -62,7 +62,7 @@ export function AppFrame({ children }: PropsWithChildren) {
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} mb={3}>
           <Typography
             component={RouterLink}
-            to="/"
+            to="/app"
             variant="h1"
             sx={{ color: "text.primary", textDecoration: "none", flexGrow: 1 }}
           >

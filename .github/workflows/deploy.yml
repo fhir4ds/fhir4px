@@ -1,0 +1,62 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          # All optional -- set as GitHub Actions secrets (Settings → Secrets and variables → Actions).
+          # VITE_EPIC_SANDBOX_REDIRECT_URI is required for OAuth to work in production;
+          # set it to the public callback URL (https://app.fhir4ds.com/smart/callback).
+          VITE_EPIC_SANDBOX_CLIENT_ID: ${{ secrets.VITE_EPIC_SANDBOX_CLIENT_ID }}
+          VITE_EPIC_PROD_CLIENT_ID: ${{ secrets.VITE_EPIC_PROD_CLIENT_ID }}
+          VITE_EPIC_SANDBOX_REDIRECT_URI: ${{ secrets.VITE_EPIC_SANDBOX_REDIRECT_URI }}
+          VITE_CERNER_SANDBOX_CLIENT_ID: ${{ secrets.VITE_CERNER_SANDBOX_CLIENT_ID }}
+          VITE_CERNER_PROD_CLIENT_ID: ${{ secrets.VITE_CERNER_PROD_CLIENT_ID }}
+          VITE_EPIC_SANDBOX_BASE_URL: ${{ secrets.VITE_EPIC_SANDBOX_BASE_URL }}
+          VITE_CERNER_SANDBOX_BASE_URL: ${{ secrets.VITE_CERNER_SANDBOX_BASE_URL }}
+        run: npm run build
+
+      # GitHub Pages doesn't rewrite unknown paths to index.html, so client-side routes
+      # like /smart/callback?code=... would 404 on a hard refresh. Serving the SPA shell
+      # from 404.html lets the React router pick the route up client-side.
+      - name: SPA fallback
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

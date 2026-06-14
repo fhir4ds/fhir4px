@@ -1,4 +1,4 @@
-import { getSandboxProviders } from "../smart/providers";
+import { getProductionClientIdForVendor, getSandboxProviders } from "../smart/providers";
 import type { Vendor } from "../smart/types";
 import type {
   DirectoryOrigin,
@@ -185,7 +185,7 @@ function toDirectoryProviders(record: DirectorySearchRecord, origin: DirectoryOr
       name: record.displayName,
       vendor,
       fhirBaseUrl: endpoint.fhirBaseUrl,
-      clientId: "",
+      clientId: getProductionClientIdForVendor(vendor),
       endpointStatus: endpoint.confidence >= 0.9 ? "verified" : "candidate",
       accessBrand: endpoint.accessBrand,
       rawAccessBrand: endpoint.rawAccessBrand,

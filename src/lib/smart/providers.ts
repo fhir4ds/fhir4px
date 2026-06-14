@@ -1,5 +1,5 @@
 import { CERNER_SANDBOX_SCOPES, EPIC_SANDBOX_SCOPES, EXPANDED_CLINICAL_SCOPES } from "./scopes";
-import type { SmartProvider } from "./types";
+import type { SmartProvider, Vendor } from "./types";
 
 const EPIC_SANDBOX_BASE_URL =
   import.meta.env.VITE_EPIC_SANDBOX_BASE_URL ||
@@ -17,6 +17,26 @@ const SMART_DEV_SANDBOX_BASE_URL =
   import.meta.env.VITE_SMART_DEV_SANDBOX_BASE_URL ||
   "http://localhost:4004/hapi-fhir-jpaserver/fhir";
 
+/**
+ * Production client IDs per vendor. Directory providers from a given vendor
+ * use this ID at SMART launch. Empty string means "not yet registered" -- the
+ * provider will fail the launchability check in ProviderSearch until an ID
+ * is provided via env var.
+ *
+ * Sandbox providers don't use this; they have their own sandbox-specific IDs
+ * because each vendor's sandbox is a separate app registration.
+ */
+export function getProductionClientIdForVendor(vendor: Vendor): string {
+  switch (vendor) {
+    case "epic":
+      return import.meta.env.VITE_EPIC_PROD_CLIENT_ID || "";
+    case "cerner":
+      return import.meta.env.VITE_CERNER_PROD_CLIENT_ID || "";
+    default:
+      return "";
+  }
+}
+
 export function getSandboxProviders(): SmartProvider[] {
   return [
     {
@@ -24,7 +44,7 @@ export function getSandboxProviders(): SmartProvider[] {
       name: "Epic Sandbox",
       vendor: "epic",
       fhirBaseUrl: EPIC_SANDBOX_BASE_URL,
-      clientId: import.meta.env.VITE_EPIC_CLIENT_ID || "",
+      clientId: import.meta.env.VITE_EPIC_SANDBOX_CLIENT_ID || "",
       redirectUriOverride: EPIC_SANDBOX_REDIRECT_URI,
       scopes: EPIC_SANDBOX_SCOPES,
       customAuthorizeEndpoint: "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/authorize"
@@ -34,7 +54,7 @@ export function getSandboxProviders(): SmartProvider[] {
       name: "Cerner Sandbox",
       vendor: "cerner",
       fhirBaseUrl: CERNER_SANDBOX_BASE_URL,
-      clientId: import.meta.env.VITE_CERNER_CLIENT_ID || "",
+      clientId: import.meta.env.VITE_CERNER_SANDBOX_CLIENT_ID || "",
       scopes: CERNER_SANDBOX_SCOPES
     },
     {
