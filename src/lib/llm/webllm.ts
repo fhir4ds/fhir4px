@@ -67,7 +67,7 @@ type WebLlmDebugWindow = Window & {
 type WebLlmLogLevel = "debug" | "info" | "warn" | "error";
 export type WebLlmModelPreference = "one-b" | "three-b" | "custom";
 export type WebLlmNamingMode = "batch" | "single";
-const DEFAULT_WEBLLM_MODEL_PREFERENCE: WebLlmModelPreference = "one-b";
+const DEFAULT_WEBLLM_MODEL_PREFERENCE: WebLlmModelPreference = "custom";
 
 export interface WebLlmGroupingOptions {
   timeoutMs?: number;

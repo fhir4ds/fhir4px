@@ -106,6 +106,22 @@ export function Docs() {
         </Section>
 
         <Section title="Handoffs: three ways to share">
+          <Box
+            sx={{
+              mb: 2,
+              p: 1.5,
+              borderRadius: 1,
+              border: 1,
+              borderColor: MINT_LIGHT,
+              bgcolor: "rgba(144, 224, 239, 0.05)"
+            }}
+          >
+            <Typography variant="body2" sx={{ color: MINT_LIGHT }}>
+              <strong>Status: in development.</strong> The handoff modes below describe the planned
+              design. Today you can connect portals and view records; the export and referral flows
+              that produce these handoff artifacts are not yet built.
+            </Typography>
+          </Box>
           <Typography>
             fhir4px never sends your records to a fhir4px-operated server. When you generate a referral
             handoff, you choose one of three modes:
@@ -184,15 +200,6 @@ Simvastatin 20mg  -- Inactive (Marked by patient, May 24 2026)`}</Box>
             />
           </Stack>
         </Section>
-
-        <Stack spacing={1}>
-          <Typography variant="h5">Related</Typography>
-          <Stack direction="row" spacing={3}>
-            <Link href="/terms">Terms of Service</Link>
-            <Link href="/privacy">Privacy Policy</Link>
-            <Link href="https://github.com/fhir4ds/fhir4px" target="_blank" rel="noreferrer">GitHub</Link>
-          </Stack>
-        </Stack>
       </Stack>
     </Container>
   );

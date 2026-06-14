@@ -42,19 +42,15 @@ export function Landing() {
             Read the docs
           </Button>
         </Stack>
-        <Stack direction="row" spacing={3} mt={2}>
-          <RouterLink to="/terms" style={{ color: MINT_LIGHT, textDecoration: "none", fontSize: "0.875rem" }}>
-            Terms
-          </RouterLink>
-          <RouterLink to="/privacy" style={{ color: MINT_LIGHT, textDecoration: "none", fontSize: "0.875rem" }}>
-            Privacy
-          </RouterLink>
-        </Stack>
       </Stack>
 
       <Box>
-        <Typography variant="overline" color={MINT_LIGHT}>How it works</Typography>
-        <Typography variant="h3" mb={3}>Find. Connect. Share.</Typography>
+        <Stack direction="row" spacing={2} alignItems="baseline" mb={3}>
+          <Box>
+            <Typography variant="overline" color={MINT_LIGHT}>How it works</Typography>
+            <Typography variant="h3">Find. Connect. Share.</Typography>
+          </Box>
+        </Stack>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <HowItWorksCard
             icon={<Search size={20} />}
@@ -73,6 +69,7 @@ export function Landing() {
             step="3"
             title="Share"
             description="Generate a referral handoff -- direct source pull, encrypted QR summary, or local encrypted Bundle -- without sending records to fhir4px."
+            badge="Planned"
           />
         </Stack>
       </Box>
@@ -128,7 +125,8 @@ export function Landing() {
             <Box>
               <Typography variant="h5">Ready to take your records back?</Typography>
               <Typography color="text.secondary" variant="body2">
-                Free. No account. No data leaves your device.
+                Free. No account. No data leaves your device. Portal connection is live; referral
+                handoffs are in development.
               </Typography>
             </Box>
             <Button
@@ -144,6 +142,40 @@ export function Landing() {
           </Stack>
         </CardContent>
       </Card>
+
+      <Box
+        sx={{
+          borderTop: 1,
+          borderColor: "rgba(144, 224, 239, 0.2)",
+          pt: 3,
+          mt: 4
+        }}
+      >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ sm: "center" }}>
+          <Typography color="text.secondary" variant="body2">
+            fhir4px &middot; FHIR for Patient Exchange
+          </Typography>
+          <Stack direction="row" spacing={3}>
+            <RouterLink to="/docs" style={{ color: MINT_LIGHT, textDecoration: "none", fontSize: "0.875rem" }}>
+              Docs
+            </RouterLink>
+            <RouterLink to="/terms" style={{ color: MINT_LIGHT, textDecoration: "none", fontSize: "0.875rem" }}>
+              Terms
+            </RouterLink>
+            <RouterLink to="/privacy" style={{ color: MINT_LIGHT, textDecoration: "none", fontSize: "0.875rem" }}>
+              Privacy
+            </RouterLink>
+            <a
+              href="https://github.com/fhir4ds/fhir4px"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: MINT_LIGHT, textDecoration: "none", fontSize: "0.875rem" }}
+            >
+              GitHub
+            </a>
+          </Stack>
+        </Stack>
+      </Box>
     </Stack>
   );
 }
@@ -153,9 +185,10 @@ interface HowItWorksCardProps {
   step: string;
   title: string;
   description: string;
+  badge?: string;
 }
 
-function HowItWorksCard({ icon, step, title, description }: HowItWorksCardProps) {
+function HowItWorksCard({ icon, step, title, description, badge }: HowItWorksCardProps) {
   return (
     <Card variant="outlined" sx={{ flex: 1, bgcolor: "rgba(0, 180, 216, 0.04)" }}>
       <CardContent>
@@ -164,7 +197,16 @@ function HowItWorksCard({ icon, step, title, description }: HowItWorksCardProps)
             <Box sx={{ color: "#90e0ef" }}>{icon}</Box>
             <Typography variant="h6">{title}</Typography>
           </Stack>
-          <Typography variant="overline" color="#90e0ef">Step {step}</Typography>
+          {badge ? (
+            <Chip
+              label={badge}
+              size="small"
+              variant="outlined"
+              sx={{ color: MINT_LIGHT, borderColor: MINT, fontSize: "0.7rem" }}
+            />
+          ) : (
+            <Typography variant="overline" color="#90e0ef">Step {step}</Typography>
+          )}
         </Stack>
         <Typography color="text.secondary" variant="body2">{description}</Typography>
       </CardContent>
