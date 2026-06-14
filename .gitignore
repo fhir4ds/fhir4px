@@ -1,0 +1,37 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+.vite-dev.log
+.vite-dev.pid
+.cert/
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Data: raw downloads, vendor endpoint dumps, and ETL scratch (regenerated from sources)
+data/
+
+# Archive: directory-ETL files moved to fhir4px-directory, kept locally pending deletion review
+archive/
+
+# ETL build outputs (DuckDB and other intermediates)
+build/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo

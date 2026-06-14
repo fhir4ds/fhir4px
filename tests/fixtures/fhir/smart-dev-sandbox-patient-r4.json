@@ -1,0 +1,1168 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "fhir4px-sandbox-patient",
+        "identifier": [
+          {
+            "system": "https://fhir4px.local/synthetic-patients",
+            "value": "patient-explorer-reference-case"
+          }
+        ],
+        "name": [
+          {
+            "use": "official",
+            "family": "Explorer",
+            "given": ["Pat"]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1982-04-12"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/fhir4px-sandbox-patient"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "fhir4px-med-metformin",
+        "code": {
+          "coding": [
+            {
+              "system": "urn:oid:2.16.840.1.113883.6.88",
+              "code": "860975",
+              "display": "metformin hydrochloride 500 MG Oral Tablet"
+            }
+          ],
+          "text": "Metformin 500 mg tablet"
+        },
+        "form": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "385055001",
+              "display": "Oral tablet"
+            }
+          ],
+          "text": "Oral tablet"
+        },
+        "ingredient": [
+          {
+            "itemCodeableConcept": {
+              "coding": [
+                {
+                  "system": "urn:oid:2.16.840.1.113883.6.88",
+                  "code": "6809",
+                  "display": "metformin"
+                }
+              ],
+              "text": "Metformin"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Medication/fhir4px-med-metformin"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "fhir4px-med-metformin-er",
+        "code": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "861007",
+              "display": "metformin hydrochloride 500 MG Extended Release Oral Tablet"
+            }
+          ],
+          "text": "Metformin 500 mg extended release tablet"
+        },
+        "form": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "385057009",
+              "display": "Extended release tablet"
+            }
+          ],
+          "text": "Extended release tablet"
+        },
+        "ingredient": [
+          {
+            "itemCodeableConcept": {
+              "coding": [
+                {
+                  "system": "urn:oid:2.16.840.1.113883.6.88",
+                  "code": "6809",
+                  "display": "metformin"
+                }
+              ],
+              "text": "Metformin"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Medication/fhir4px-med-metformin-er"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "fhir4px-med-albuterol-inhaler",
+        "code": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "745679",
+              "display": "albuterol 0.09 MG/ACTUAT Metered Dose Inhaler"
+            }
+          ],
+          "text": "Albuterol inhaler"
+        },
+        "form": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "411062004",
+              "display": "Metered dose inhaler"
+            }
+          ],
+          "text": "Metered dose inhaler"
+        },
+        "ingredient": [
+          {
+            "itemCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                  "code": "435",
+                  "display": "albuterol"
+                }
+              ],
+              "text": "Albuterol"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Medication/fhir4px-med-albuterol-inhaler"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "fhir4px-med-albuterol-solution",
+        "code": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "630208",
+              "display": "albuterol 0.83 MG/ML Inhalation Solution"
+            }
+          ],
+          "text": "Albuterol nebulizer solution"
+        },
+        "form": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "385024007",
+              "display": "Inhalation solution"
+            }
+          ],
+          "text": "Inhalation solution"
+        },
+        "ingredient": [
+          {
+            "itemCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                  "code": "435",
+                  "display": "albuterol"
+                }
+              ],
+              "text": "Albuterol"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Medication/fhir4px-med-albuterol-solution"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Medication",
+        "id": "fhir4px-med-atorvastatin",
+        "code": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "617314",
+              "display": "atorvastatin 20 MG Oral Tablet"
+            }
+          ],
+          "text": "Atorvastatin 20 mg tablet"
+        },
+        "form": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "385055001",
+              "display": "Oral tablet"
+            }
+          ],
+          "text": "Oral tablet"
+        },
+        "ingredient": [
+          {
+            "itemCodeableConcept": {
+              "coding": [
+                {
+                  "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                  "code": "83367",
+                  "display": "atorvastatin"
+                }
+              ],
+              "text": "Atorvastatin"
+            }
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Medication/fhir4px-med-atorvastatin"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "fhir4px-condition-diabetes",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "44054006",
+              "display": "Type 2 diabetes mellitus"
+            }
+          ],
+          "text": "Type 2 diabetes"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "onsetDateTime": "2022-01-15"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/fhir4px-condition-diabetes"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "fhir4px-condition-diabetes-hyperglycemia",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/icd-10-cm",
+              "code": "E11.65",
+              "display": "Type 2 diabetes mellitus with hyperglycemia"
+            }
+          ],
+          "text": "Type 2 diabetes mellitus with hyperglycemia"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "onsetDateTime": "2023-06-20"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/fhir4px-condition-diabetes-hyperglycemia"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "fhir4px-condition-hypertension",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "38341003",
+              "display": "Hypertensive disorder, systemic arterial"
+            }
+          ],
+          "text": "Hypertension"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "onsetDateTime": "2024-02-01"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/fhir4px-condition-hypertension"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Encounter",
+        "id": "fhir4px-encounter-primary-care",
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "period": {
+          "start": "2026-04-10T15:00:00-05:00",
+          "end": "2026-04-10T15:30:00-05:00"
+        },
+        "reasonReference": [
+          {
+            "reference": "Condition/fhir4px-condition-diabetes"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Encounter/fhir4px-encounter-primary-care"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "fhir4px-medreq-metformin",
+        "status": "active",
+        "intent": "order",
+        "medicationReference": {
+          "reference": "Medication/fhir4px-med-metformin"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "encounter": {
+          "reference": "Encounter/fhir4px-encounter-primary-care"
+        },
+        "authoredOn": "2026-04-10",
+        "dosageInstruction": [
+          {
+            "text": "Take one tablet by mouth twice daily with meals."
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationRequest/fhir4px-medreq-metformin"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "fhir4px-medreq-metformin-er",
+        "status": "active",
+        "intent": "order",
+        "medicationReference": {
+          "reference": "Medication/fhir4px-med-metformin-er"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "encounter": {
+          "reference": "Encounter/fhir4px-encounter-primary-care"
+        },
+        "authoredOn": "2026-04-10",
+        "dosageInstruction": [
+          {
+            "text": "Take one extended release tablet by mouth daily."
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationRequest/fhir4px-medreq-metformin-er"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "fhir4px-medreq-albuterol-inhaler",
+        "status": "active",
+        "intent": "order",
+        "medicationReference": {
+          "reference": "Medication/fhir4px-med-albuterol-inhaler"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "encounter": {
+          "reference": "Encounter/fhir4px-encounter-primary-care"
+        },
+        "authoredOn": "2026-04-10",
+        "dosageInstruction": [
+          {
+            "text": "Inhale two puffs every four hours as needed for wheezing."
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationRequest/fhir4px-medreq-albuterol-inhaler"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "fhir4px-medreq-albuterol-solution",
+        "status": "active",
+        "intent": "order",
+        "medicationReference": {
+          "reference": "Medication/fhir4px-med-albuterol-solution"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "encounter": {
+          "reference": "Encounter/fhir4px-encounter-primary-care"
+        },
+        "authoredOn": "2026-04-10",
+        "dosageInstruction": [
+          {
+            "text": "Use one vial by nebulizer every six hours as needed."
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationRequest/fhir4px-medreq-albuterol-solution"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "fhir4px-medreq-atorvastatin",
+        "status": "active",
+        "intent": "order",
+        "medicationReference": {
+          "reference": "Medication/fhir4px-med-atorvastatin"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "encounter": {
+          "reference": "Encounter/fhir4px-encounter-primary-care"
+        },
+        "authoredOn": "2026-04-10",
+        "dosageInstruction": [
+          {
+            "text": "Take one tablet by mouth every evening."
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationRequest/fhir4px-medreq-atorvastatin"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-a1c",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory",
+                "display": "Laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "urn:oid:2.16.840.1.113883.6.1",
+              "code": "4548-4",
+              "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+            }
+          ],
+          "text": "Hemoglobin A1c"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "encounter": {
+          "reference": "Encounter/fhir4px-encounter-primary-care"
+        },
+        "effectiveDateTime": "2026-04-10T09:00:00-05:00",
+        "valueQuantity": {
+          "value": 7.1,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "H",
+                "display": "High"
+              }
+            ]
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-a1c"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-weight",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "29463-7",
+              "display": "Body weight"
+            }
+          ],
+          "text": "Weight"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10T09:00:00-05:00",
+        "valueQuantity": {
+          "value": 180,
+          "unit": "lb",
+          "system": "http://unitsofmeasure.org",
+          "code": "[lb_av]"
+        },
+        "interpretation": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation",
+                "code": "N",
+                "display": "Normal"
+              }
+            ]
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-weight"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-systolic-bp",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "76534-7",
+              "display": "Systolic blood pressure by Noninvasive"
+            }
+          ],
+          "text": "Systolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10T09:00:00-05:00",
+        "valueQuantity": {
+          "value": 132,
+          "unit": "mmHg",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-systolic-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-diastolic-bp",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8462-4",
+              "display": "Diastolic blood pressure"
+            }
+          ],
+          "text": "Diastolic blood pressure"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10T09:00:00-05:00",
+        "valueQuantity": {
+          "value": 84,
+          "unit": "mmHg",
+          "system": "http://unitsofmeasure.org",
+          "code": "mm[Hg]"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-diastolic-bp"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-heart-rate",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ],
+          "text": "Heart rate"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10T09:00:00-05:00",
+        "valueQuantity": {
+          "value": 78,
+          "unit": "beats/minute",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-heart-rate"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-oxygen-saturation",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "2708-6",
+              "display": "Oxygen saturation in Arterial blood"
+            }
+          ],
+          "text": "Oxygen saturation"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10T09:00:00-05:00",
+        "valueQuantity": {
+          "value": 98,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-oxygen-saturation"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-ejection-fraction",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "imaging",
+                "display": "Imaging"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "33878-0",
+              "display": "Left ventricular ejection fraction by US"
+            }
+          ],
+          "text": "Left ventricular ejection fraction"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-03-15",
+        "valueQuantity": {
+          "value": 62,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-ejection-fraction"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-foot-exam",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "exam",
+                "display": "Exam"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "Diabetic foot exam"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10",
+        "valueString": "Normal sensation and pulses."
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-foot-exam"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-steps",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "activity",
+                "display": "Activity"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "Daily step count"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-09",
+        "valueQuantity": {
+          "value": 8234,
+          "unit": "steps",
+          "system": "http://unitsofmeasure.org",
+          "code": "{steps}"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-steps"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-home-glucose-note",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory",
+                "display": "Laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "Home glucose note"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-11",
+        "valueString": "Patient reports fasting readings mostly under 140."
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-home-glucose-note"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-smoker",
+        "status": "final",
+        "code": {
+          "text": "Current tobacco use"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10",
+        "valueBoolean": false
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-smoker"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "fhir4px-obs-no-result",
+        "status": "cancelled",
+        "code": {
+          "text": "Cancelled lipid panel"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-12",
+        "dataAbsentReason": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/data-absent-reason",
+              "code": "not-performed",
+              "display": "Not Performed"
+            }
+          ],
+          "text": "Not performed"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/fhir4px-obs-no-result"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "id": "fhir4px-report-a1c",
+        "text": {
+          "status": "generated",
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\">Diabetes monitoring lab report</div>"
+        },
+        "status": "final",
+        "code": {
+          "text": "Diabetes monitoring lab report"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "effectiveDateTime": "2026-04-10T09:00:00-05:00",
+        "result": [
+          {
+            "reference": "Observation/fhir4px-obs-a1c"
+          },
+          {
+            "reference": "Observation/fhir4px-obs-weight"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "DiagnosticReport/fhir4px-report-a1c"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "fhir4px-immunization-influenza",
+        "status": "completed",
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/cvx",
+              "code": "158",
+              "display": "influenza, injectable, quadrivalent"
+            }
+          ],
+          "text": "Flu shot"
+        },
+        "patient": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "occurrenceDateTime": "2025-10-05"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/fhir4px-immunization-influenza"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "fhir4px-immunization-dtap-1",
+        "status": "completed",
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/cvx",
+              "code": "20",
+              "display": "DTaP"
+            }
+          ],
+          "text": "DTaP, 5 pertussis antigens"
+        },
+        "patient": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "occurrenceDateTime": "2010-01-01"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/fhir4px-immunization-dtap-1"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "fhir4px-immunization-dtap-2",
+        "status": "completed",
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/cvx",
+              "code": "106",
+              "display": "Diphtheria, tetanus toxoids and acellular pertussis vaccine"
+            }
+          ],
+          "text": "Diphtheria, tetanus toxoids and acellular pertussis vaccine"
+        },
+        "patient": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "occurrenceDateTime": "2010-03-01"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/fhir4px-immunization-dtap-2"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "fhir4px-immunization-mmr-1",
+        "status": "completed",
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/cvx",
+              "code": "03",
+              "display": "Measles, mumps and rubella virus vaccine"
+            }
+          ],
+          "text": "Measles, mumps and rubella virus vaccine"
+        },
+        "patient": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "occurrenceDateTime": "2011-01-01"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/fhir4px-immunization-mmr-1"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Immunization",
+        "id": "fhir4px-immunization-mmr-2",
+        "status": "completed",
+        "vaccineCode": {
+          "coding": [
+            {
+              "system": "http://hl7.org/fhir/sid/cvx",
+              "code": "03",
+              "display": "MMR II"
+            }
+          ],
+          "text": "MMR II"
+        },
+        "patient": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "occurrenceDateTime": "2015-01-01"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Immunization/fhir4px-immunization-mmr-2"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Procedure",
+        "id": "fhir4px-procedure-retinal-screen",
+        "status": "completed",
+        "code": {
+          "text": "Diabetic retinal screening"
+        },
+        "subject": {
+          "reference": "Patient/fhir4px-sandbox-patient"
+        },
+        "performedDateTime": "2026-03-20"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Procedure/fhir4px-procedure-retinal-screen"
+      }
+    }
+  ]
+}

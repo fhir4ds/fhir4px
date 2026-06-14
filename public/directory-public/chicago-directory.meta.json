@@ -1,0 +1,139 @@
+{
+  "buildTimestamp": "2026-05-31 17:21:32.792910-05:00",
+  "artifactSourceTable": "provider_endpoint_recommendation",
+  "pilotRegion": {
+    "name": "Chicago 50-mile pilot",
+    "centerName": "Chicago Loop",
+    "centerLat": 41.8781,
+    "centerLon": -87.6298,
+    "radiusMiles": 50.0,
+    "filter": "Provider practice address geocode must be within radius."
+  },
+  "totalProviders": 48144,
+  "totalEndpointLinks": 19431,
+  "providersWithEndpoint": 18050,
+  "providerOnly": 30094,
+  "prePilotFilter": {
+    "matchedProviders": 36423,
+    "matchedEndpointLinks": 42721,
+    "matchedProvidersWithCoordinates": 32805,
+    "taxonomyEligibleMatchedProviders": 22640,
+    "excludedProvidersByRadiusOrMissingGeocode": 20999,
+    "excludedEndpointLinksByRadiusOrMissingGeocode": 23987
+  },
+  "pilotProvidersWithCoordinates": 15424,
+  "pilotMaxDistanceMiles": 49.77,
+  "sourceFileCount": 22,
+  "geocodeCacheSize": 76003,
+  "reviewQueueSize": 203314,
+  "confidenceDistribution": {
+    "0.55": 19422,
+    "1.00": 9
+  },
+  "accessBrands": {
+    "Advocate Health": 5800,
+    "Northwestern Medicine": 2804,
+    "UChicago Medicine": 2193,
+    "UI Health": 1737,
+    "Endeavor Health": 1380,
+    "Lurie Children's": 765,
+    "Duly Health and Care": 690,
+    "OCHIN": 561,
+    "Rush": 403,
+    "Ascension Illinois": 369,
+    "Prime Healthcare": 361,
+    "Trinity Health": 342,
+    "AdventHealth": 293,
+    "Illinois Bone & Joint Institute": 287,
+    "Franciscan Alliance": 197,
+    "Acumen Physician Solutions": 160,
+    "Lawndale Christian Health Center": 148,
+    "Access Community Health Network": 132,
+    "OSF HealthCare": 114,
+    "Sinai Chicago": 96,
+    "VNA Health Care": 91,
+    "Community Health of South Florida": 73,
+    "City of Hope": 60,
+    "Mercyhealth": 58,
+    "NPPES Endpoint Reference": 42,
+    "Riverside Medical Center": 41,
+    "SSM Health": 39,
+    "Health Choice Network": 37,
+    "BJC HealthCare / Washington University": 35,
+    "Franciscan Health": 28,
+    "KeyCare": 24,
+    "Shriners Children's": 22,
+    "Premise Health": 15,
+    "DaVita": 7,
+    "Shriner's Childrens": 6,
+    "AGNESIAN HEALTHCARE INC": 5,
+    "Froedtert & The Medical College of Wisconsin": 4,
+    "Midwestern University": 3,
+    "BetterHealth": 3,
+    "Methodist Hospitals": 2,
+    "MemorialCare Medical Foundation": 1,
+    "MISSOURI BAPTIST MEDICAL CENTER": 1,
+    "Missouri Baptist Medical Center": 1,
+    "Evernorth": 1
+  },
+  "nppesEndpointHygiene": {
+    "accepted": 44064,
+    "rejected": 679,
+    "rejectionReasons": {
+      "missing_fhir_path_marker": 623,
+      "query_or_fragment_not_fhir_base": 34,
+      "email_security_or_redirector": 17,
+      "login_or_auth_page": 5
+    }
+  },
+  "reviewedAssertions": {
+    "totalAssertions": 0,
+    "acceptedAssertions": 0,
+    "acceptedEndpointAssertions": 0
+  },
+  "cmsNpd": {},
+  "recommendationPolicy": {
+    "enabled": true,
+    "visiblePolicies": [
+      "top_recommendation",
+      "alternative_option"
+    ],
+    "suppressedEvidencePaths": [
+      "cms_org_affiliation",
+      "public_health_system_affiliation",
+      "strict_vector_candidate",
+      "cms_plus_public_affiliation",
+      "address_entity_endpoint"
+    ],
+    "scoreMeaning": "Empirical precision estimate by evidence path from manual QA calibration."
+  },
+  "taxonomyPolicy": {
+    "eligibleForPatientSearch": true,
+    "included": [
+      "Physicians (204*, 207*, 208*)",
+      "Physician assistants (363A*)",
+      "Nurse practitioners (363L*)",
+      "Clinical nurse specialists (364S*)",
+      "Advanced practice midwives/CNMs (367A*)",
+      "Podiatry (213E*)"
+    ],
+    "excludedExamples": [
+      "Optometry (152W*)",
+      "Dental",
+      "Pharmacy",
+      "PT/OT/speech/rehab",
+      "Non-prescriber behavioral health",
+      "Non-APP nursing",
+      "Students/residents"
+    ]
+  },
+  "knownLimitations": [
+    "The published artifact is limited to matched, taxonomy-eligible providers with geocoded practice addresses within 50 miles of the Chicago Loop.",
+    "Matched providers without coordinates are excluded from the published pilot artifact.",
+    "Optometry, dental, pharmacy, therapy/rehab, non-prescriber behavioral health, non-APP nursing, and student taxonomies are excluded from the MVP artifact.",
+    "Providers without a visible FHIR endpoint recommendation are included as provider-only rows and are not launchable.",
+    "Recommendation labels must be confirmed by the patient before portal launch.",
+    "Public Chicago rows are not launchable until the app has a registered client ID for that portal.",
+    "Recommendation scores are calibrated by evidence path and are not proof that a specific row is correct."
+  ]
+}

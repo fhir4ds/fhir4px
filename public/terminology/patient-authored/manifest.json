@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "systems": {
+    "rxnorm": {
+      "path": "rxnorm.json",
+      "count": 124919
+    },
+    "cvx": {
+      "path": "cvx.json",
+      "count": 288
+    }
+  }
+}

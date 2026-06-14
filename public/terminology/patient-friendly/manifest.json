@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "generatedAt": "2026-06-08T19:02:30+00:00",
+  "sourceCsv": "data/patient_friendly_2026-06-08.csv",
+  "selection": {
+    "excludedMatchType": "original",
+    "friendlySources": [],
+    "unchangedTechnicalNamesExcluded": true
+  },
+  "systems": {
+    "cpt": {
+      "path": "cpt.json",
+      "entries": 7697,
+      "bytes": 365426
+    },
+    "cvx": {
+      "path": "cvx.json",
+      "entries": 230,
+      "bytes": 8395
+    },
+    "hcpcs": {
+      "path": "hcpcs.json",
+      "entries": 90,
+      "bytes": 4464
+    },
+    "icd10cm": {
+      "path": "icd10cm.json",
+      "entries": 73066,
+      "bytes": 4030899
+    },
+    "loinc": {
+      "path": "loinc.json",
+      "entries": 166664,
+      "bytes": 9783348
+    },
+    "rxnorm": {
+      "path": "rxnorm.json",
+      "entries": 83098,
+      "bytes": 5274218
+    },
+    "snomed": {
+      "path": "snomed.json",
+      "entries": 327346,
+      "bytes": 17068712
+    }
+  },
+  "sourceRows": 1127094,
+  "skippedSourceRows": 192560,
+  "skippedUnchangedRows": 276343
+}
