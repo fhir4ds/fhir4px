@@ -1361,20 +1361,20 @@ describe("WebLLM grouping adapter", () => {
       }
     ]);
     const systemMessage = mocks.createCompletion.mock.calls[0][0].messages[0].content;
-    expect(systemMessage).toContain("Return at most one condition association.");
+    expect(systemMessage).toContain("Return an empty associations array or one association object.");
     expect(systemMessage).toContain(
-      "Rank relevance as: high direct monitoring or diagnosis > medium indirect or missing context > low possible or weak."
+      "Rank relevance as: high direct monitoring or diagnosis, medium indirect or missing context, low possible or weak."
     );
-    expect(systemMessage).toContain("high: INR + Long-term Anticoagulant Therapy -> Long-term Anticoagulant Therapy.");
-    expect(systemMessage).toContain("medium: Ferritin + Anemia -> Anemia when iron deficiency is not explicit.");
-    expect(systemMessage).toContain("low: Body weight + Heart Failure -> Heart Failure when no fluid-status context is present.");
-    expect(systemMessage).toContain("return []: Current tobacco use + Hypertension or Diabetes -> [].");
+    expect(systemMessage).toContain("High: INR with Long-term Anticoagulant Therapy.");
+    expect(systemMessage).toContain("Medium: Ferritin with Anemia when iron deficiency is not explicit.");
+    expect(systemMessage).toContain("Low: Body weight with Heart Failure when no fluid-status context is present.");
+    expect(systemMessage).toContain("High: Hemoglobin A1c with Diabetes Type 2.");
     expect(systemMessage).not.toContain("Do not just choose the closest available condition");
     expect(systemMessage).not.toContain("confidence 0.98");
     const userMessage = JSON.parse(mocks.createCompletion.mock.calls[0][0].messages[1].content);
     expect(userMessage).toEqual({
       outputShape:
-        'JSON object: {associations:[{conditionName,confidence:"high"|"medium"|"low"}]}. Return at most one association. Return [] when no clinical association exists.',
+        'Return JSON with an "associations" array. Each item must have "conditionName" and "confidence". The confidence value must be one of: high, medium, low.',
       measurement: {
         groupId: "observation-glucose",
         name: "Glucose"

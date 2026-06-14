@@ -1691,27 +1691,20 @@ function labConditionTargetSystemPrompt(): string {
     "You are not diagnosing the patient and you are not adding new conditions.",
     "Use only the measurement name, optional FHIR reference context, and the provided condition choices.",
     "referenceContext comes only from FHIR references already present in the record set; use it only to clarify whether a direct relationship exists.",
-    "Return either {\"associations\":[]} or {\"associations\":[{\"conditionName\":\"...\",\"confidence\":\"high\"|\"medium\"|\"low\"}]}.",
-    "Return at most one condition association.",
+    "Return an empty associations array or one association object.",
+    "If you return an association object, include exactly conditionName and confidence.",
     "conditionName must exactly match one conditionChoices.name.",
-    "Choose the most relevant condition only when the measurement has a clinical relationship to that condition.",
-    "Rank relevance as: high direct monitoring or diagnosis > medium indirect or missing context > low possible or weak.",
-    "Use high when the measurement is a standard test, vital sign, score, or follow-up marker for that condition.",
-    "Use medium when the relationship is likely but the measurement name or reference context is incomplete.",
-    "Use low when the relationship is possible but weak or context-dependent.",
-    "Return [] when every available condition is only broadly related, common, clinically adjacent, from the same visit, from the same body system, a risk factor, or a comorbidity.",
-    "Prefer [] over low when there is only broad relevance.",
+    "Choose the most relevant condition when the measurement has a clinical relationship to that condition.",
+    "Rank relevance as: high direct monitoring or diagnosis, medium indirect or missing context, low possible or weak.",
+    "Return empty when no choice has a direct clinical relationship to the measurement.",
     "Examples:",
-    "high: INR + Long-term Anticoagulant Therapy -> Long-term Anticoagulant Therapy.",
-    "high: Peak expiratory flow + Asthma -> Asthma.",
-    "medium: Ferritin + Anemia -> Anemia when iron deficiency is not explicit.",
-    "medium: C-reactive protein + Rheumatoid Arthritis -> Rheumatoid Arthritis when no flare or follow-up context is present.",
-    "low: Body weight + Heart Failure -> Heart Failure when no fluid-status context is present.",
-    "low: Liver enzyme panel + Obesity -> Obesity when no liver disease context is present.",
-    "return []: Vitamin D level + Migraine -> [].",
-    "return []: Cholesterol panel + Asthma -> [].",
-    "return []: Current tobacco use + Hypertension or Diabetes -> [].",
-    "return []: Kidney function lab + Hypertension alone -> [] unless kidney disease context is present."
+    "Empty: Vitamin D level with Migraine.",
+    "Empty: Cholesterol panel with Asthma.",
+    "Low: Body weight with Heart Failure when no fluid-status context is present.",
+    "Medium: Ferritin with Anemia when iron deficiency is not explicit.",
+    "High: INR with Long-term Anticoagulant Therapy.",
+    "High: Peak expiratory flow with Asthma.",
+    "High: Hemoglobin A1c with Diabetes Type 2."
   ].join("\n");
 }
 
@@ -1742,7 +1735,7 @@ function labConditionTargetUserPrompt(params: {
     referenceContext: string[];
   } = {
     outputShape:
-      'JSON object: {associations:[{conditionName,confidence:"high"|"medium"|"low"}]}. Return at most one association. Return [] when no clinical association exists.',
+      'Return JSON with an "associations" array. Each item must have "conditionName" and "confidence". The confidence value must be one of: high, medium, low.',
     measurement: {
       groupId: params.labGroup.groupId,
       name: params.labGroup.patientFriendlyName
@@ -2314,7 +2307,7 @@ function labAssociationEvalDefaultUserPayload(
 ): unknown {
   return {
     outputShape:
-      'JSON object: {associations:[{conditionName,confidence:"high"|"medium"|"low"}]}. Return at most one association. Return [] when no clinical association exists.',
+      'Return JSON with an "associations" array. Each item must have "conditionName" and "confidence". The confidence value must be one of: high, medium, low.',
     measurement: {
       groupId: labGroup.groupId,
       name: labGroup.patientFriendlyName
