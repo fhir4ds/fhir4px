@@ -1826,36 +1826,13 @@ export function PatientExplorer() {
       const orderedConditionChoices = conditionChoicesForLabGroup(group);
       setStatus(`Linking related medical records... ${index + 1}/${groupsToProcess.length}`);
 
-      // Auto-abstain: when the deterministic FHIR-reference layer surfaced no
-      // context for this lab group, the model has no signal to work from and
-      // historically defaults to the most prevalent comorbidity in the choice
-      // menu (production logs 2026-06-14: 4/4 empty-context calls returned
-      // "High Blood Pressure" with no clinical relationship). Trust the
-      // empty-context signal and skip the model. Cache a __none__ entry so we
-      // don't retry on every run.
-      if (explicitRelatedContext.length === 0) {
-        groupingConsoleLog("info", "relationship-suggestion-auto-abstain", {
-          labGroupId: groupId,
-          labName: group.patientFriendlyName,
-          conditionChoiceCount: orderedConditionChoices.length,
-          conditionChoiceNames: orderedConditionChoices.map((choice) => choice.name),
-          eligibleRecordCount: groupRecords.length
-        });
-        await upsertAndPersist([
-          relationshipCacheEntry({
-            sourceGroupId: groupId,
-            targetGroupId: "__none__",
-            sourceResourceType: "Observation",
-            targetResourceType: "Condition",
-            relationship: "none",
-            confidence: 0,
-            fallback: true,
-            model: options.selectedModelId
-          })
-        ]);
-        continue;
-      }
-
+      // Auto-abstain on empty referenceContext was here previously as a defense
+      // against the prior model's over-association bias. The model team retrained
+      // (data/structured_training_narrow_menu_fix/merged) and the rule now blocks
+      // legitimate associations the model would make correctly -- e.g., Diastolic
+      // Blood Pressure without explicit FHIR references is the canonical
+      // hypertension monitoring measurement but was being silently dropped. Trust
+      // the model again; production telemetry below catches regressions.
       try {
         const associations = await associateLabGroupWithConditionsWithWebLlm(group, groupRecords, orderedConditionChoices, {
           modelPreference: localGroupingModelPreference(localGroupingMode),
@@ -1891,17 +1868,32 @@ export function PatientExplorer() {
                 })
               ];
         await upsertAndPersist(entries);
+
+        // Telemetry for model-vs-deterministic agreement. The deterministic
+        // layer (FHIR references) and the model are now both running on every
+        // lab group; comparing them surfaces model regressions early without
+        // hardcoding the defense back in.
+        const deterministicGroupIds = [...referencedConditionGroupIdsForRecords(groupRecords)];
+        const modelGroupIds = associations.map((association) => association.conditionGroupId);
+        const modelMatchedDeterministic =
+          modelGroupIds.length > 0 &&
+          deterministicGroupIds.length > 0 &&
+          modelGroupIds.some((id) => deterministicGroupIds.includes(id));
         groupingConsoleLog("info", "relationship-suggestion-group-complete", {
           labGroupId: groupId,
           labName: group.patientFriendlyName,
           acceptedAssociationCount: associations.length,
-          acceptedConditionGroupIds: associations.map((association) => association.conditionGroupId),
+          acceptedConditionGroupIds: modelGroupIds,
           confidenceValues: associations.map((association) => association.confidence),
           conditionChoiceCount: orderedConditionChoices.length,
           conditionChoiceNames: orderedConditionChoices.map((choice) => choice.name),
           eligibleRecordCount: groupRecords.length,
           referenceContextCount: explicitRelatedContext.length,
-          referenceContext: explicitRelatedContext
+          referenceContext: explicitRelatedContext,
+          deterministicReferencedGroupIds: deterministicGroupIds,
+          modelMatchedDeterministic,
+          modelDisagreedWithDeterministic:
+            deterministicGroupIds.length > 0 && (modelGroupIds.length === 0 || !modelMatchedDeterministic)
         });
       } catch (caught) {
         groupingConsoleLog("warn", "relationship-suggestion-fallback", {
