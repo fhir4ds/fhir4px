@@ -46,9 +46,18 @@ if (PROMPTS.version !== EXPECTED_PROMPTS_VERSION) {
 export const WEBLLM_GROUPING_MODEL = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 export const WEBLLM_GROUPING_CUSTOM_MODEL = "fhir4px-q4f16_1-MLC";
 export const WEBLLM_GROUPING_FALLBACK_MODEL = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
+export const WEBLLM_GROUPING_Q0BF16_MODEL = "fhir4px-q0bf16-MLC";
 const FHIR4PX_MODEL_URL = "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/fhir4px-q4f16_1-MLC/";
 const FHIR4PX_MODEL_LIB_URL =
   "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/libs/fhir4px-q4f16_1-webgpu.wasm";
+// q0bf16 test variant (unquantized bf16, ~2.5 GB). Temporary — model team will
+// delete after testing. Activate via:
+//   sessionStorage.setItem("fhir4px_use_q0bf16_webllm_model", "1")
+// then reload. Needs ~3 GB VRAM.
+const FHIR4PX_Q0BF16_MODEL_URL =
+  "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/fhir4px-q0bf16-MLC/";
+const FHIR4PX_Q0BF16_MODEL_LIB_URL =
+  "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/libs/fhir4px-q0bf16-webgpu.wasm";
 const DEFAULT_WEBLLM_TIMEOUT_MS = 120_000;
 const DEFAULT_BATCH_SIZE = 6;
 const DEFAULT_INCREMENTAL_NAMING_BATCH_SIZE = 3;
@@ -99,7 +108,7 @@ type WebLlmDebugWindow = Window & {
 };
 
 type WebLlmLogLevel = "debug" | "info" | "warn" | "error";
-export type WebLlmModelPreference = "one-b" | "three-b" | "custom";
+export type WebLlmModelPreference = "one-b" | "three-b" | "custom" | "q0bf16";
 export type WebLlmNamingMode = "batch" | "single";
 export const DEFAULT_WEBLLM_MODEL_PREFERENCE: WebLlmModelPreference = "custom";
 
@@ -897,6 +906,7 @@ function webLlmCustomModelEnabled(): boolean {
 
 function webLlmModelPreference(options: WebLlmGroupingOptions): WebLlmModelPreference {
   if (options.modelPreference) return options.modelPreference;
+  if (q0bf16ModelEnabled()) return "q0bf16";
   return webLlmCustomModelEnabled() ? "custom" : "one-b";
 }
 
@@ -915,6 +925,25 @@ function customWebLlmAppConfig() {
   };
 }
 
+function q0bf16AppConfig() {
+  return {
+    model_list: [
+      {
+        model: FHIR4PX_Q0BF16_MODEL_URL,
+        model_id: WEBLLM_GROUPING_Q0BF16_MODEL,
+        model_lib: FHIR4PX_Q0BF16_MODEL_LIB_URL,
+        vram_required_MB: 3072,
+        low_resource_required: false
+      }
+    ],
+    cacheBackend: "indexeddb" as const
+  };
+}
+
+function q0bf16ModelEnabled(): boolean {
+  return sessionFlagValue("fhir4px_use_q0bf16_webllm_model") === "1";
+}
+
 function webLlmCandidatePlan(options: WebLlmGroupingOptions): {
   preference: WebLlmModelPreference;
   engineKey: string;
@@ -924,8 +953,15 @@ function webLlmCandidatePlan(options: WebLlmGroupingOptions): {
   const genericCandidate = { modelId: WEBLLM_GROUPING_MODEL };
   const threeBCandidate = { modelId: WEBLLM_GROUPING_FALLBACK_MODEL };
   const customCandidate = { modelId: WEBLLM_GROUPING_CUSTOM_MODEL, engineConfig: { appConfig: customWebLlmAppConfig() } };
+  const q0bf16Candidate = { modelId: WEBLLM_GROUPING_Q0BF16_MODEL, engineConfig: { appConfig: q0bf16AppConfig() } };
   const candidateList =
-    preference === "custom" ? [customCandidate] : preference === "three-b" ? [threeBCandidate] : [genericCandidate];
+    preference === "q0bf16"
+      ? [q0bf16Candidate]
+      : preference === "custom"
+        ? [customCandidate]
+        : preference === "three-b"
+          ? [threeBCandidate]
+          : [genericCandidate];
   const seenCandidates = new Set<string>();
   const candidates = candidateList.filter((candidate) => {
     if (seenCandidates.has(candidate.modelId)) return false;
