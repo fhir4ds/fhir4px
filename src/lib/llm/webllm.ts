@@ -941,6 +941,7 @@ function q0bf16AppConfig() {
 }
 
 function q0bf16ModelEnabled(): boolean {
+  if (envFlagEnabled(import.meta.env.VITE_WEBLLM_USE_Q0BF16_MODEL)) return true;
   return sessionFlagValue("fhir4px_use_q0bf16_webllm_model") === "1";
 }
 
