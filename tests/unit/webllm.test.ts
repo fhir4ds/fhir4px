@@ -51,22 +51,12 @@ describe("WebLLM grouping adapter", () => {
     expect(mocks.createCompletion).toHaveBeenCalledWith(
       expect.objectContaining({
         max_tokens: 900,
-        temperature: 0,
-        response_format: expect.objectContaining({
-          type: "json_object",
-          schema: expect.any(String)
-        })
+        temperature: 0
       })
     );
     expect(mocks.createCompletion.mock.calls[0][0]).not.toHaveProperty("model");
+    expect(mocks.createCompletion.mock.calls[0][0]).not.toHaveProperty("response_format");
     expect(WEBLLM_GROUPING_CUSTOM_MODEL).toBe("fhir4px-q4f16_1-MLC");
-    expect(JSON.parse(mocks.createCompletion.mock.calls[0][0].response_format.schema)).toMatchObject({
-      required: ["groups", "unassigned"],
-      properties: {
-        groups: expect.any(Object),
-        unassigned: expect.any(Object)
-      }
-    });
   });
 
   it("does not download non-default models unless explicitly enabled", async () => {
@@ -135,85 +125,6 @@ describe("WebLLM grouping adapter", () => {
     expect(mocks.createEngine).toHaveBeenCalledWith(WEBLLM_GROUPING_FALLBACK_MODEL, expect.any(Object));
   });
 
-  it("retries without schema mode when structured output is unavailable", async () => {
-    mocks.createCompletion
-      .mockRejectedValueOnce(new Error("BindingError: Cannot pass non-string to std::string"))
-      .mockResolvedValueOnce({
-        choices: [{ message: { content: '{"groups":[],"unassigned":[]}' } }]
-      });
-    mocks.createEngine.mockResolvedValueOnce({
-      chat: {
-        completions: {
-          create: mocks.createCompletion
-        }
-      }
-    });
-
-    const { groupWithWebLlm } = await import("../../src/lib/llm/webllm");
-    const onProgress = vi.fn();
-
-    await expect(
-      groupWithWebLlm(
-        [
-          {
-            id: "obs-a1c",
-            resourceType: "Observation",
-            sourceLabel: "Hemoglobin A1c",
-            source: "provider"
-          }
-        ],
-        { onProgress }
-      )
-    ).resolves.toEqual({ groups: [], unassigned: [] });
-
-    expect(mocks.createCompletion).toHaveBeenCalledTimes(2);
-    expect(mocks.createCompletion.mock.calls[0][0]).toHaveProperty("response_format");
-    expect(mocks.createCompletion.mock.calls[1][0]).not.toHaveProperty("response_format");
-    expect(onProgress).toHaveBeenCalledWith(
-      expect.stringContaining("Structured local output unavailable; retrying JSON output")
-    );
-  });
-
-  it("retries without schema mode when structured output is non-JSON text", async () => {
-    mocks.createCompletion
-      .mockResolvedValueOnce({
-        choices: [{ message: { content: "I cannot produce that output." } }]
-      })
-      .mockResolvedValueOnce({
-        choices: [{ message: { content: '{"groups":[],"unassigned":["obs-a1c"]}' } }]
-      });
-    mocks.createEngine.mockResolvedValueOnce({
-      chat: {
-        completions: {
-          create: mocks.createCompletion
-        }
-      }
-    });
-
-    const { groupWithWebLlm } = await import("../../src/lib/llm/webllm");
-    const onProgress = vi.fn();
-
-    await expect(
-      groupWithWebLlm(
-        [
-          {
-            id: "obs-a1c",
-            resourceType: "Observation",
-            sourceLabel: "Hemoglobin A1c",
-            source: "provider"
-          }
-        ],
-        { onProgress }
-      )
-    ).resolves.toEqual({ groups: [], unassigned: ["obs-a1c"] });
-
-    expect(mocks.createCompletion).toHaveBeenCalledTimes(2);
-    expect(mocks.createCompletion.mock.calls[0][0]).toHaveProperty("response_format");
-    expect(mocks.createCompletion.mock.calls[1][0]).not.toHaveProperty("response_format");
-    expect(onProgress).toHaveBeenCalledWith(
-      expect.stringContaining("Structured local output unavailable; retrying JSON output")
-    );
-  });
 
   it("adds resource-specific guidance and medication route hints to the structured request", async () => {
     mocks.createCompletion.mockResolvedValueOnce({
@@ -258,11 +169,7 @@ describe("WebLLM grouping adapter", () => {
   it("does not offer unrelated cached names to medication naming and rejects ingredient mismatches", async () => {
     mocks.createCompletion.mockImplementation(async (input) => {
       const parsed = JSON.parse(input.messages[1].content);
-      const schema = JSON.parse(input.response_format.schema);
       expect(parsed.availableNames).toEqual([]);
-      expect(schema.properties.patientFriendlyName).toMatchObject({
-        type: "string"
-      });
       expect(JSON.stringify(input)).not.toContain("Hydroxychloroquine Oral");
       return {
         choices: [
@@ -477,7 +384,6 @@ describe("WebLLM grouping adapter", () => {
   it("names compact records in small batches and offers earlier batch names in the next schema", async () => {
     mocks.createCompletion.mockImplementation(async (input) => {
       const parsed = JSON.parse(input.messages[1].content);
-      const schema = JSON.parse(input.response_format.schema);
 
       if (parsed.records[0].id === "imm-mmr-1") {
         expect(parsed.availableNames).toEqual([]);
@@ -499,7 +405,6 @@ describe("WebLLM grouping adapter", () => {
       }
 
       expect(parsed.availableNames).toEqual(["MMR", "DTaP", "Flu"]);
-      expect(schema.properties.items.items.properties.patientFriendlyName.anyOf[0].enum).toContain("MMR");
       return {
         choices: [
           {
@@ -783,87 +688,6 @@ describe("WebLLM grouping adapter", () => {
     expect(mocks.createCompletion).toHaveBeenCalledTimes(2);
   });
 
-  it("retries incremental naming when structured output is non-JSON text", async () => {
-    mocks.createCompletion
-      .mockResolvedValueOnce({
-        choices: [
-          {
-            message: {
-              content: "I cannot produce that output."
-            }
-          }
-        ]
-      })
-      .mockImplementationOnce(async (input) => {
-        const parsed = JSON.parse(input.messages[1].content);
-        return {
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  items: parsed.records.map((record: { id: string }) => ({
-                    id: record.id,
-                    patientFriendlyName: "Hemoglobin A1c",
-                    observationBucket: "labs",
-                    confidence: 0.86,
-                    fallback: false
-                  }))
-                })
-              }
-            }
-          ]
-        };
-      });
-    mocks.createEngine.mockResolvedValueOnce({
-      chat: {
-        completions: {
-          create: mocks.createCompletion
-        }
-      }
-    });
-
-    const { groupWithWebLlmIncremental } = await import("../../src/lib/llm/webllm");
-    const onProgress = vi.fn();
-
-    await expect(
-      groupWithWebLlmIncremental(
-        [
-          {
-            id: "cluster-a1c",
-            resourceType: "Observation",
-            sourceLabel: "Hemoglobin A1c",
-            categoryCode: "laboratory",
-            source: "provider"
-          },
-          {
-            id: "cluster-a1c-alt",
-            resourceType: "Observation",
-            sourceLabel: "HbA1c",
-            categoryCode: "laboratory",
-            source: "provider"
-          }
-        ],
-        { onProgress }
-      )
-    ).resolves.toMatchObject({
-      groups: [
-        expect.objectContaining({
-          patientFriendlyName: "Hemoglobin A1c",
-          resourceIds: ["cluster-a1c", "cluster-a1c-alt"],
-          observationBucket: "labs",
-          fallback: false
-        })
-      ],
-      unassigned: []
-    });
-
-    expect(mocks.createCompletion).toHaveBeenCalledTimes(2);
-    expect(mocks.createCompletion.mock.calls[0][0]).toHaveProperty("response_format");
-    expect(mocks.createCompletion.mock.calls[1][0]).not.toHaveProperty("response_format");
-    expect(onProgress).toHaveBeenCalledWith(
-      expect.stringContaining("Structured local batch naming unavailable; retrying JSON output")
-    );
-  });
 
   it("marks recovered batch-to-single naming fallback diagnostics as recovered", async () => {
     mocks.createCompletion.mockImplementation(async (input) => {
@@ -1059,7 +883,6 @@ describe("WebLLM grouping adapter", () => {
       const parsed = JSON.parse(input.messages[1].content);
       expect(parsed.availableNames.length).toBeLessThanOrEqual(30);
       expect(parsed.availableNames).toContain(olderRelevantName);
-      expect(JSON.stringify(input.response_format?.schema)).toContain(olderRelevantName);
       return {
         choices: [
           {
@@ -1389,11 +1212,6 @@ describe("WebLLM grouping adapter", () => {
     });
     expect(JSON.stringify(userMessage)).not.toContain("snomed");
     expect(JSON.stringify(userMessage)).not.toContain("records");
-    const schema = JSON.parse(mocks.createCompletion.mock.calls[0][0].response_format.schema);
-    expect(schema.properties.associations.type).toBe("array");
-    expect(schema.properties.associations.maxItems).toBe(1);
-    expect(schema.properties.associations.items.properties.conditionName.enum).toEqual(["Type 2 Diabetes"]);
-    expect(schema.properties.associations.items.properties.confidence.enum).toEqual(["high", "medium", "low"]);
   });
 
   it("returns no association when the model returns no scored associations", async () => {
@@ -1911,11 +1729,6 @@ describe("WebLLM grouping adapter", () => {
 
     const firstRequest = mocks.createCompletion.mock.calls[0][0];
     expect(firstRequest.max_tokens).toBe(180);
-    expect(JSON.parse(firstRequest.response_format.schema).properties.associations.items.properties.confidence.enum).toEqual([
-      "high",
-      "medium",
-      "low"
-    ]);
   });
 
   it("allows lab-condition eval suites to override payload templates and schemas", async () => {
@@ -1996,7 +1809,6 @@ describe("WebLLM grouping adapter", () => {
         }
       ])
     });
-    expect(request.response_format.schema).toBe(schemaText);
   });
 
   it("uses a live system prompt override for lab-condition association", async () => {
