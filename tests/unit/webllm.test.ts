@@ -55,7 +55,7 @@ describe("WebLLM grouping adapter", () => {
       })
     );
     expect(mocks.createCompletion.mock.calls[0][0]).not.toHaveProperty("model");
-    expect(mocks.createCompletion.mock.calls[0][0]).not.toHaveProperty("response_format");
+    expect(mocks.createCompletion.mock.calls[0][0]).toHaveProperty("response_format");
     expect(WEBLLM_GROUPING_CUSTOM_MODEL).toBe("fhir4px-q4f16_1-MLC");
   });
 

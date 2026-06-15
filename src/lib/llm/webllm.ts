@@ -870,6 +870,7 @@ function errorMessage(error: unknown): string {
 }
 
 function webLlmDebugEnabled(): boolean {
+  if (import.meta.env.DEV) return true;
   return sessionFlagValue("fhir4px_debug_webllm") === "1";
 }
 
@@ -1283,17 +1284,18 @@ function estimatePromptTokens(records: GroupableRecord[]): number {
 }
 
 function completionRequest(messages: ChatMessage[], structured: boolean, schemaText = GROUPING_RESPONSE_SCHEMA_TEXT, maxTokens = 900) {
-  // response_format deliberately omitted: WebLLM's grammar-constrained decoder
-  // was funneling the model into degenerate outputs (reflexive [] for lab
-  // associations, repetitive names). The model is trained to emit valid JSON
-  // without grammar enforcement. JSON.parse() + the existing structured-retry
-  // fallback handle the rare malformed response.
-  // schemaText stays in the signature for callers that still pass it; it's
-  // unused until/unless we reintroduce a (looser) schema.
   return {
     messages,
     max_tokens: maxTokens,
-    temperature: 0
+    temperature: 0,
+    ...(structured
+      ? {
+          response_format: {
+            type: "json_object" as const,
+            schema: schemaText
+          }
+        }
+      : {})
   };
 }
 
