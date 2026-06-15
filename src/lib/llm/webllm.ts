@@ -1630,8 +1630,6 @@ function labConditionTargetSchemaText(conditionChoices: ConditionAssociationChoi
       associations: {
         type: "array",
         maxItems: 1,
-        description:
-          "Return an empty array when no provided condition has a clinically relevant measurement relationship.",
         items: {
           type: "object",
           additionalProperties: false,
