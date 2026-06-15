@@ -46,18 +46,19 @@ if (PROMPTS.version !== EXPECTED_PROMPTS_VERSION) {
 export const WEBLLM_GROUPING_MODEL = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
 export const WEBLLM_GROUPING_CUSTOM_MODEL = "fhir4px-q4f16_1-MLC";
 export const WEBLLM_GROUPING_FALLBACK_MODEL = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
-export const WEBLLM_GROUPING_Q0BF16_MODEL = "fhir4px-q0bf16-MLC";
+export const WEBLLM_GROUPING_Q4F32_1_MODEL = "fhir4px-q4f32_1-MLC";
 const FHIR4PX_MODEL_URL = "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/fhir4px-q4f16_1-MLC/";
 const FHIR4PX_MODEL_LIB_URL =
   "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/libs/fhir4px-q4f16_1-webgpu.wasm";
-// q0bf16 test variant (unquantized bf16, ~2.5 GB). Temporary — model team will
-// delete after testing. Activate via:
-//   sessionStorage.setItem("fhir4px_use_q0bf16_webllm_model", "1")
-// then reload. Needs ~3 GB VRAM.
-const FHIR4PX_Q0BF16_MODEL_URL =
-  "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/fhir4px-q0bf16-MLC/";
-const FHIR4PX_Q0BF16_MODEL_LIB_URL =
-  "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/libs/fhir4px-q0bf16-webgpu.wasm";
+// q4f32_1 test variant: same 4-bit weights as q4f16_1 but with fp32 activations.
+// Tests whether fp16 activations are degrading model behavior. Temporary.
+// Activate via VITE_WEBLLM_USE_Q4F32_1_MODEL=1 in .env.local or:
+//   sessionStorage.setItem("fhir4px_use_q4f32_1_webllm_model", "1")
+// Needs ~1.5 GB VRAM.
+const FHIR4PX_Q4F32_1_MODEL_URL =
+  "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/fhir4px-q4f32_1-MLC/";
+const FHIR4PX_Q4F32_1_MODEL_LIB_URL =
+  "https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/libs/fhir4px-q4f32_1-webgpu.wasm";
 const DEFAULT_WEBLLM_TIMEOUT_MS = 120_000;
 const DEFAULT_BATCH_SIZE = 6;
 const DEFAULT_INCREMENTAL_NAMING_BATCH_SIZE = 3;
@@ -108,7 +109,7 @@ type WebLlmDebugWindow = Window & {
 };
 
 type WebLlmLogLevel = "debug" | "info" | "warn" | "error";
-export type WebLlmModelPreference = "one-b" | "three-b" | "custom" | "q0bf16";
+export type WebLlmModelPreference = "one-b" | "three-b" | "custom" | "q4f32_1";
 export type WebLlmNamingMode = "batch" | "single";
 export const DEFAULT_WEBLLM_MODEL_PREFERENCE: WebLlmModelPreference = "custom";
 
@@ -906,7 +907,7 @@ function webLlmCustomModelEnabled(): boolean {
 
 function webLlmModelPreference(options: WebLlmGroupingOptions): WebLlmModelPreference {
   if (options.modelPreference) return options.modelPreference;
-  if (q0bf16ModelEnabled()) return "q0bf16";
+  if (q4f32_1ModelEnabled()) return "q4f32_1";
   return webLlmCustomModelEnabled() ? "custom" : "one-b";
 }
 
@@ -925,14 +926,14 @@ function customWebLlmAppConfig() {
   };
 }
 
-function q0bf16AppConfig() {
+function q4f32_1AppConfig() {
   return {
     model_list: [
       {
-        model: FHIR4PX_Q0BF16_MODEL_URL,
-        model_id: WEBLLM_GROUPING_Q0BF16_MODEL,
-        model_lib: FHIR4PX_Q0BF16_MODEL_LIB_URL,
-        vram_required_MB: 3072,
+        model: FHIR4PX_Q4F32_1_MODEL_URL,
+        model_id: WEBLLM_GROUPING_Q4F32_1_MODEL,
+        model_lib: FHIR4PX_Q4F32_1_MODEL_LIB_URL,
+        vram_required_MB: 1536,
         low_resource_required: false
       }
     ],
@@ -940,9 +941,9 @@ function q0bf16AppConfig() {
   };
 }
 
-function q0bf16ModelEnabled(): boolean {
-  if (envFlagEnabled(import.meta.env.VITE_WEBLLM_USE_Q0BF16_MODEL)) return true;
-  return sessionFlagValue("fhir4px_use_q0bf16_webllm_model") === "1";
+function q4f32_1ModelEnabled(): boolean {
+  if (envFlagEnabled(import.meta.env.VITE_WEBLLM_USE_Q4F32_1_MODEL)) return true;
+  return sessionFlagValue("fhir4px_use_q4f32_1_webllm_model") === "1";
 }
 
 function webLlmCandidatePlan(options: WebLlmGroupingOptions): {
@@ -954,10 +955,10 @@ function webLlmCandidatePlan(options: WebLlmGroupingOptions): {
   const genericCandidate = { modelId: WEBLLM_GROUPING_MODEL };
   const threeBCandidate = { modelId: WEBLLM_GROUPING_FALLBACK_MODEL };
   const customCandidate = { modelId: WEBLLM_GROUPING_CUSTOM_MODEL, engineConfig: { appConfig: customWebLlmAppConfig() } };
-  const q0bf16Candidate = { modelId: WEBLLM_GROUPING_Q0BF16_MODEL, engineConfig: { appConfig: q0bf16AppConfig() } };
+  const q4f32_1Candidate = { modelId: WEBLLM_GROUPING_Q4F32_1_MODEL, engineConfig: { appConfig: q4f32_1AppConfig() } };
   const candidateList =
-    preference === "q0bf16"
-      ? [q0bf16Candidate]
+    preference === "q4f32_1"
+      ? [q4f32_1Candidate]
       : preference === "custom"
         ? [customCandidate]
         : preference === "three-b"
