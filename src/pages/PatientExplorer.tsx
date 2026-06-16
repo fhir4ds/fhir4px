@@ -1900,7 +1900,7 @@ export function PatientExplorer() {
             targetGroupId,
             sourceResourceType: "MedicationRequest",
             targetResourceType: "Condition",
-            relationship: "monitoring_marker",
+            relationship: "treatment",
             confidence: 1,
             fallback: false,
             model: "deterministic:condition-med"
@@ -3182,6 +3182,7 @@ export function PatientExplorer() {
     if (entry.model === "fhir_reference") return "Linked in medical record";
     const value = entry.relationship;
     if (value === "monitoring_marker") return "Monitoring marker";
+    if (value === "treatment") return "Treatment";
     if (value === "potentially_related") return "Potentially related";
     return "No local suggestion";
   }

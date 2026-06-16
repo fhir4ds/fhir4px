@@ -11,7 +11,7 @@ export type ExplicitRelationshipKind =
   | "has_member"
   | "based_on"
   | "part_of";
-export type SuggestedGroupRelationshipKind = "monitoring_marker" | "potentially_related" | "none";
+export type SuggestedGroupRelationshipKind = "monitoring_marker" | "treatment" | "potentially_related" | "none";
 
 export interface RecordRelationship {
   id: string;
