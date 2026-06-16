@@ -96,6 +96,7 @@ import {
   type ClassificationCacheRecord,
   type ClassificationTransform
 } from "../lib/fhir/classification-cache";
+import { classifyBatch } from "../lib/embeddings";
 import {
   emptyRelationshipCache,
   RELATIONSHIP_CACHE_ID,
@@ -1571,54 +1572,38 @@ export function PatientExplorer() {
       isCurrentRun: () => boolean;
     }
   ) {
-    const plans: Array<{
+    interface ClassificationPlan {
       transform: ClassificationTransform;
       records: GroupableRecord[];
-      deterministic: (record: GroupableRecord) => ClassificationCacheEntry["result"];
-      classifyWithModel: (record: GroupableRecord) => Promise<ClassificationCacheEntry["result"]>;
-    }> = [
+      embeddingTask: string;
+      deterministic?: (record: GroupableRecord) => ClassificationCacheEntry["result"];
+    }
+
+    const plans: ClassificationPlan[] = [
       {
         transform: "Observation.classifyCategory",
         records: compactRecordsForModel(recordsByType(nextRecords, "Observation")),
-        deterministic: deterministicObservationCategoryClassification,
-        classifyWithModel: (record) =>
-          classifyObservationCategoryWithWebLlm(record, {
-            modelPreference: localGroupingModelPreference(localGroupingMode),
-            onProgress: (message) => {
-              if (options.isCurrentRun()) setStatus(message);
-            }
-          })
+        embeddingTask: "observation_category"
+        // No deterministic — embeddings are the authority for observation category.
+        // FHIR category extensions are frequently wrong (vitals miscategorized as labs).
       },
       {
         transform: "AllergyIntolerance.classifyAllergy",
         records: compactRecordsForModel(recordsByType(nextRecords, "AllergyIntolerance")),
-        deterministic: deterministicAllergyClassification,
-        classifyWithModel: (record) =>
-          classifyAllergyWithWebLlm(record, {
-            modelPreference: localGroupingModelPreference(localGroupingMode),
-            onProgress: (message) => {
-              if (options.isCurrentRun()) setStatus(message);
-            }
-          })
+        embeddingTask: "allergy_type",
+        deterministic: deterministicAllergyClassification
       },
       {
         transform: "Encounter.classifyVisit",
         records: compactRecordsForModel(recordsByType(nextRecords, "Encounter")),
-        deterministic: deterministicEncounterVisitClassification,
-        classifyWithModel: (record) =>
-          classifyEncounterVisitWithWebLlm(record, {
-            modelPreference: localGroupingModelPreference(localGroupingMode),
-            onProgress: (message) => {
-              if (options.isCurrentRun()) setStatus(message);
-            }
-          })
+        embeddingTask: "visit_type",
+        deterministic: deterministicEncounterVisitClassification
       }
     ];
     const total = plans.reduce((sum, plan) => sum + plan.records.length, 0);
     if (total === 0) return;
 
     let cache = await loadClassificationCache(key);
-    let completed = 0;
     const upsertAndPersist = async (entries: ClassificationCacheEntry[]) => {
       if (entries.length === 0) return;
       cache = upsertClassificationCacheEntries(cache, entries);
@@ -1627,50 +1612,115 @@ export function PatientExplorer() {
       await saveClassificationCache(key, cache);
     };
 
+    function mapEmbeddingResult(
+      transform: ClassificationTransform,
+      className: string,
+      confidence: number
+    ): ClassificationCacheEntry["result"] {
+      if (transform === "Observation.classifyCategory") {
+        const bucket = className === "lab" ? "labs" : className === "vital" ? "vitals" : "other";
+        return {
+          observationCategory: bucket as PatientObservationBucket,
+          confidence,
+          fallback: false,
+          source: "embedding"
+        } as ObservationCategoryClassification;
+      }
+      if (transform === "AllergyIntolerance.classifyAllergy") {
+        const domain = className === "medication" ? "drug" : className;
+        return {
+          assertionType: "specific_allergy",
+          allergyDomain: domain as AllergyDomain,
+          confidence,
+          fallback: false,
+          source: "embedding"
+        } as AllergyClassification;
+      }
+      // Encounter.classifyVisit
+      return {
+        visitClass: className as EncounterVisitClass,
+        confidence,
+        fallback: false,
+        source: "embedding"
+      } as EncounterVisitClassification;
+    }
+
     groupingConsoleLog("info", "classification-start", {
       totalConcepts: total,
-      canRunLocalModel: options.canRunLocalModel,
       selectedModelId: options.selectedModelId,
+      classifier: "embedding",
       plans: plans.map((plan) => ({ transform: plan.transform, count: plan.records.length }))
     });
 
     for (const plan of plans) {
+      if (!options.isCurrentRun()) return;
+      const needsEmbedding: GroupableRecord[] = [];
+
       for (const record of plan.records) {
-        if (!options.isCurrentRun()) return;
         const existing = preferredClassificationEntry(cache, plan.transform, record.id);
-        const deterministic = plan.deterministic(record);
-        const deterministicModel = deterministic.source === "fhir_category" ? "fhir_category" : deterministic.source;
+        const hasEmbedding = existing?.model === "embedding";
+        const hasAuthoritativeDet =
+          plan.deterministic &&
+          !hasEmbedding &&
+          plan.deterministic(record).source === "fhir_category";
 
-        if (!existing || deterministic.source === "fhir_category") {
-          await upsertAndPersist([classificationCacheEntry(record, plan.transform, deterministicModel, deterministic)]);
-        }
-
-        const current = preferredClassificationEntry(cache, plan.transform, record.id);
-        const alreadyHasModel = current?.model === "local_model";
-        const needsModel =
-          options.canRunLocalModel &&
-          !alreadyHasModel &&
-          deterministic.source !== "fhir_category" &&
-          deterministic.fallback;
-
-        if (needsModel) {
-          setStatus(`Classifying medical records... ${completed + 1}/${total}`);
-          try {
-            const modelResult = await plan.classifyWithModel(record);
-            if (!options.isCurrentRun()) return;
+        if (hasEmbedding || hasAuthoritativeDet) {
+          // Already classified by embeddings or authoritative deterministic
+          if (hasAuthoritativeDet && !existing) {
+            const det = plan.deterministic!(record);
             await upsertAndPersist([
-              classificationCacheEntry(record, plan.transform, "local_model", modelResult)
+              classificationCacheEntry(record, plan.transform, det.source, det)
             ]);
-          } catch (caught) {
-            groupingConsoleLog("warn", "classification-model-fallback", {
-              transform: plan.transform,
-              compactRecordId: record.id,
-              error: caught instanceof Error ? caught.message : String(caught)
-            });
+          }
+          continue;
+        }
+        needsEmbedding.push(record);
+      }
+
+      if (needsEmbedding.length === 0) continue;
+
+      setStatus(`Classifying ${plan.transform}... (${needsEmbedding.length} concepts)`);
+      const texts = needsEmbedding.map((record) => record.sourceLabel || record.resourceType);
+      groupingConsoleLog("info", "classification-embedding-batch", {
+        transform: plan.transform,
+        embeddingTask: plan.embeddingTask,
+        count: needsEmbedding.length,
+        sampleTexts: texts.slice(0, 5)
+      });
+
+      try {
+        const results = await classifyBatch(plan.embeddingTask, texts);
+        if (!options.isCurrentRun()) return;
+
+        const entries: ClassificationCacheEntry[] = needsEmbedding.map((record, index) => {
+          const result = mapEmbeddingResult(plan.transform, results[index].className, results[index].confidence);
+          return classificationCacheEntry(record, plan.transform, "embedding", result);
+        });
+        await upsertAndPersist(entries);
+
+        groupingConsoleLog("info", "classification-embedding-complete", {
+          transform: plan.transform,
+          count: needsEmbedding.length,
+          results: needsEmbedding.map((record, index) => ({
+            text: texts[index],
+            predicted: results[index].className,
+            confidence: Math.round(results[index].confidence * 100) / 100
+          }))
+        });
+      } catch (caught) {
+        groupingConsoleLog("warn", "classification-embedding-fallback", {
+          transform: plan.transform,
+          error: caught instanceof Error ? caught.message : String(caught)
+        });
+        // Fall back to deterministic for each record
+        if (plan.deterministic) {
+          for (const record of needsEmbedding) {
+            const det = plan.deterministic(record);
+            await upsertAndPersist([
+              classificationCacheEntry(record, plan.transform, det.source, det)
+            ]);
           }
         }
-
-        completed += 1;
       }
     }
 

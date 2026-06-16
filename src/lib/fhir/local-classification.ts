@@ -12,7 +12,7 @@ export type EncounterVisitClass =
   | "home_health"
   | "other"
   | "unknown";
-export type LocalClassificationSource = "fhir_category" | "deterministic" | "local_model" | "fallback";
+export type LocalClassificationSource = "fhir_category" | "deterministic" | "local_model" | "embedding" | "fallback";
 
 export interface AllergyClassification {
   assertionType: AllergyAssertionType;
