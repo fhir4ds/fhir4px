@@ -135,6 +135,7 @@ import {
 } from "../lib/fhir/relationships";
 import { completedObservationRecordsForRelationship } from "../lib/fhir/relationship-eligibility";
 import { buildReferralSummary } from "../lib/fhir/normalize";
+import { findDeterministicConditionsForLab } from "../lib/fhir/condition-lab-lookup";
 import {
   createPatientAuthoredRecord,
   createPatientPatch,
@@ -1826,13 +1827,40 @@ export function PatientExplorer() {
       const orderedConditionChoices = conditionChoicesForLabGroup(group);
       setStatus(`Linking related medical records... ${index + 1}/${groupsToProcess.length}`);
 
-      // Auto-abstain on empty referenceContext was here previously as a defense
-      // against the prior model's over-association bias. The model team retrained
-      // (data/structured_training_narrow_menu_fix/merged) and the rule now blocks
-      // legitimate associations the model would make correctly -- e.g., Diastolic
-      // Blood Pressure without explicit FHIR references is the canonical
-      // hypertension monitoring measurement but was being silently dropped. Trust
-      // the model again; production telemetry below catches regressions.
+      // Deterministic condition-lab lookup: check the curated table before calling
+      // the model. 34 conditions × 289 lab pairs from Synthea module rules + manual
+      // curation. Skips the LLM call for any lab that's in the table AND matches a
+      // condition the patient actually has.
+      const deterministicConditions = await findDeterministicConditionsForLab(group.patientFriendlyName);
+      if (deterministicConditions.length > 0) {
+        const matchedGroupIds: string[] = [];
+        for (const conditionName of deterministicConditions) {
+          const match = conditionChoices.find((choice) => choice.name === conditionName);
+          if (match) matchedGroupIds.push(match.conditionGroupId);
+        }
+        if (matchedGroupIds.length > 0) {
+          const deterministicEntries = matchedGroupIds.map((targetGroupId) =>
+            relationshipCacheEntry({
+              sourceGroupId: groupId,
+              targetGroupId,
+              sourceResourceType: "Observation",
+              targetResourceType: "Condition",
+              relationship: "monitoring_marker",
+              confidence: 1,
+              fallback: false,
+              model: "deterministic:condition-lab"
+            })
+          );
+          await upsertAndPersist(deterministicEntries);
+          groupingConsoleLog("info", "relationship-suggestion-deterministic", {
+            labGroupId: groupId,
+            labName: group.patientFriendlyName,
+            matchedConditionNames: deterministicConditions,
+            matchedGroupIds
+          });
+          continue;
+        }
+      }
       try {
         const associations = await associateLabGroupWithConditionsWithWebLlm(group, groupRecords, orderedConditionChoices, {
           modelPreference: localGroupingModelPreference(localGroupingMode),
