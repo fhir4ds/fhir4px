@@ -36,16 +36,19 @@ describe("WebLLM grouping adapter", () => {
 
     const { groupWithWebLlm, WEBLLM_GROUPING_CUSTOM_MODEL } = await import("../../src/lib/llm/webllm");
 
-    await groupWithWebLlm([
-      {
-        id: "obs-a1c",
-        resourceType: "Observation",
-        sourceLabel: "Hemoglobin A1c",
-        valueKind: "quantity",
-        unit: "%",
-        source: "provider"
-      }
-    ]);
+    await groupWithWebLlm(
+      [
+        {
+          id: "obs-a1c",
+          resourceType: "Observation",
+          sourceLabel: "Hemoglobin A1c",
+          valueKind: "quantity",
+          unit: "%",
+          source: "provider"
+        }
+      ],
+      { modelPreference: "custom" }
+    );
 
     expect(mocks.createEngine).toHaveBeenCalledWith(WEBLLM_GROUPING_CUSTOM_MODEL, expect.any(Object));
     expect(mocks.createCompletion).toHaveBeenCalledWith(
@@ -64,7 +67,7 @@ describe("WebLLM grouping adapter", () => {
 
     const { warmWebLlmGroupingModel, WEBLLM_GROUPING_CUSTOM_MODEL } = await import("../../src/lib/llm/webllm");
 
-    await expect(warmWebLlmGroupingModel()).resolves.toBe(false);
+    await expect(warmWebLlmGroupingModel({ modelPreference: "custom" })).resolves.toBe(false);
 
     expect(mocks.createEngine).toHaveBeenCalledTimes(1);
     expect(mocks.createEngine).toHaveBeenCalledWith(WEBLLM_GROUPING_CUSTOM_MODEL, expect.any(Object));
@@ -101,7 +104,7 @@ describe("WebLLM grouping adapter", () => {
 
     const { warmWebLlmGroupingModel, WEBLLM_GROUPING_CUSTOM_MODEL } = await import("../../src/lib/llm/webllm");
 
-    await expect(warmWebLlmGroupingModel()).resolves.toBe(false);
+    await expect(warmWebLlmGroupingModel({ modelPreference: "custom" })).resolves.toBe(false);
 
     expect(mocks.createEngine).toHaveBeenCalledTimes(1);
     expect(mocks.createEngine.mock.calls[0][0]).toBe(WEBLLM_GROUPING_CUSTOM_MODEL);
