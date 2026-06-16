@@ -1190,7 +1190,7 @@ export function PatientExplorer() {
   const [groupingSource, setGroupingSource] = useState<ExplorerGroupingSource>("source");
   const [groupingProgress, setGroupingProgress] = useState<{ completed: number; total: number } | null>(null);
   const [activeTab, setActiveTab] = useState<ExplorerTab>("MedicationRequest");
-  const [localGroupingMode, setLocalGroupingMode] = useState<LocalGroupingMode>(defaultLocalGroupingMode());
+  const [localGroupingMode, setLocalGroupingMode] = useState<LocalGroupingMode>("three-b-batch" as LocalGroupingMode);
   const [activeObservationBucket, setActiveObservationBucket] = useState<ObservationBucket>("labs");
   const [resourceStatusFilter, setResourceStatusFilter] = useState<ResourceStatusFilter>("active");
   const [visitClassFilter, setVisitClassFilter] = useState<VisitClassFilter>("all");
