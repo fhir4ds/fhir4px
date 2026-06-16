@@ -1692,43 +1692,28 @@ type LabConditionConfidenceLabel = (typeof LAB_CONDITION_CONFIDENCE_LABELS)[numb
 export const LAB_CONDITION_SYSTEM_PROMPT_OVERRIDE_KEY = "fhir4px_webllm_lab_condition_system_prompt";
 export const LAB_CONDITION_USER_PAYLOAD_OVERRIDE_KEY = "fhir4px_webllm_lab_condition_user_payload";
 
-function labConditionTargetSchemaText(conditionChoices: ConditionAssociationChoice[] = []): string {
-  const seenConditionNames = new Set<string>();
-  const conditionChoiceNames = conditionChoices
-    .map((choice) => (typeof choice.name === "string" ? choice.name.trim() : ""))
-    .filter((choice) => choice.length > 0)
-    .filter((choice) => {
-      const normalized = canonicalName(choice);
-      if (seenConditionNames.has(normalized)) return false;
-      seenConditionNames.add(normalized);
-      return true;
-    })
-    .slice(0, MAX_AVAILABLE_NAMES);
+function labConditionTargetSchemaText(_conditionChoices: ConditionAssociationChoice[] = []): string {
+  // Relaxed schema per model team Test 1 (2026-06-16). The strict schema with
+  // additionalProperties:false, maxItems, enum, and description fields caused
+  // WebLLM's EBNF grammar to bias toward the shortest valid path
+  // {"associations":[]} on the 3B q4f16 model. PyTorch with the same payload
+  // and strict weights produces correct associations, confirming the bug is in
+  // the grammar-constraint layer, not the model weights or prompt format.
   return JSON.stringify({
     type: "object",
-    additionalProperties: false,
     required: ["associations"],
     properties: {
       associations: {
         type: "array",
-        maxItems: 1,
         items: {
           type: "object",
-          additionalProperties: false,
           required: ["conditionName", "confidence"],
           properties: {
-            conditionName: {
-              type: "string",
-              enum: conditionChoiceNames,
-              description: "Exact name of the selected condition from conditionChoices."
-            },
-            confidence: {
-              enum: Array.from(LAB_CONDITION_CONFIDENCE_LABELS),
-              description: "Categorical association strength: high, medium, or low."
-            }
+            conditionName: { type: "string" },
+            confidence: { type: "string" }
           }
         }
-      },
+      }
     }
   });
 }

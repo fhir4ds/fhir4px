@@ -1639,11 +1639,11 @@ describe("WebLLM grouping adapter", () => {
     ]);
     const schema = JSON.parse(labCase?.schemaText ?? "{}");
     expect(schema.properties.associations.type).toBe("array");
-    expect(schema.properties.associations.items.properties.conditionName.enum).toEqual([
-      "Type 2 Diabetes",
-      "High Blood Pressure"
-    ]);
-    expect(schema.properties.associations.items.properties.confidence.enum).toEqual(["high", "medium", "low"]);
+    // Schema is relaxed per model team Test 1 — no enum, no additionalProperties,
+    // no maxItems. See labConditionTargetSchemaText() in webllm.ts.
+    expect(schema.properties.associations.items.properties.conditionName.type).toBe("string");
+    expect(schema.properties.associations.items.properties.confidence.type).toBe("string");
+    expect(schema.additionalProperties).toBeUndefined();
   });
 
   it("runs lab-condition eval suites against the shared matcher and confidence gate", async () => {
