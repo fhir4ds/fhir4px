@@ -47,7 +47,8 @@ export function getSandboxProviders(): SmartProvider[] {
       clientId: import.meta.env.VITE_EPIC_SANDBOX_CLIENT_ID || "",
       redirectUriOverride: EPIC_SANDBOX_REDIRECT_URI,
       scopes: EPIC_SANDBOX_SCOPES,
-      customAuthorizeEndpoint: "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/authorize"
+      customAuthorizeEndpoint: "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/authorize",
+      customTokenEndpoint: "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token"
     },
     {
       id: "cerner-sandbox",

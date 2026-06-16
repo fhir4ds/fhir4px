@@ -9,6 +9,7 @@ export interface SmartProvider {
   redirectUriOverride?: string;
   scopes?: string;
   customAuthorizeEndpoint?: string;
+  customTokenEndpoint?: string;
   localTestPatientId?: string;
   localTestPatients?: SmartSandboxPatient[];
   launchMode?: "smart" | "local-test-session";

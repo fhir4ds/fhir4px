@@ -31,7 +31,9 @@ export async function buildAuthorizeUrl({
   }
 
   const fhirBaseUrl = provider.fhirBaseUrl.replace(/\/$/, "");
-  const endpoints = await discoverEndpoints(fhirBaseUrl, fetcher);
+  const endpoints = provider.customAuthorizeEndpoint && provider.customTokenEndpoint
+    ? { authorizationEndpoint: provider.customAuthorizeEndpoint, tokenEndpoint: provider.customTokenEndpoint }
+    : await discoverEndpoints(fhirBaseUrl, fetcher);
   const codeVerifier = randomBase64Url(64);
   const codeChallenge = await sha256Base64Url(codeVerifier);
   const state = randomBase64Url(32);
