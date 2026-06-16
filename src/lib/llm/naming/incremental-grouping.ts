@@ -33,9 +33,27 @@ export async function* groupWithNamingIncrementalStream(
   const completedRecords: GroupableRecord[] = [];
   let completedCount = 0;
 
+  console.info("[fhir4px:naming]", {
+    event: "naming-stream-start",
+    totalRecords: records.length,
+    batchCount: batches.length,
+    batchSize,
+    initialAvailableNames: availableNames.length,
+    timestamp: new Date().toISOString()
+  });
+
   for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
     const batch = batches[batchIndex];
     options.onProgress?.(`Naming records... ${completedCount + 1}/${records.length}`);
+
+    console.info("[fhir4px:naming]", {
+      event: "naming-batch-start",
+      batchIndex: batchIndex + 1,
+      batchCount: batches.length,
+      recordCount: batch.length,
+      completedBeforeBatch: completedCount,
+      timestamp: new Date().toISOString()
+    });
 
     const results = await nameRecords(batch, availableNames, options);
 
@@ -67,6 +85,17 @@ export async function* groupWithNamingIncrementalStream(
     }
 
     completedCount += batch.length;
+
+    console.info("[fhir4px:naming]", {
+      event: "naming-batch-complete",
+      batchIndex: batchIndex + 1,
+      batchCount: batches.length,
+      completedCount,
+      totalCount: records.length,
+      groupCount: groupsByName.size,
+      names: results.map((r) => r.patientFriendlyName),
+      timestamp: new Date().toISOString()
+    });
     const pendingRecords = records.filter((r) => !completedRecords.includes(r));
 
     const groups = [...groupsByName.values()].map((g) => ({

@@ -3058,23 +3058,6 @@ export function PatientExplorer() {
               )}
             </Stack>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-              {canAttemptLocalGrouping && (
-                <TextField
-                  select
-                  size="small"
-                  label="Local model"
-                  value={localGroupingMode}
-                  onChange={(event) => handleLocalGroupingModeChange(event.target.value as LocalGroupingMode)}
-                  disabled={busy}
-                  sx={{ minWidth: 158 }}
-                >
-                  {LOCAL_GROUPING_MODE_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              )}
               <Button
                 variant="outlined"
                 size="small"
