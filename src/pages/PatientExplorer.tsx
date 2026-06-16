@@ -154,24 +154,21 @@ import {
 } from "../lib/fhir/patient-authored-options";
 import type { ReferralSummary } from "../lib/fhir/types";
 import {
-  associateLabGroupWithConditionsWithWebLlm,
-  browserCanAttemptWebLlm,
-  classifyAllergyWithWebLlm,
-  classifyEncounterVisitWithWebLlm,
-  classifyObservationCategoryWithWebLlm,
-  getWebLlmWarmupStatus,
-  groupWithWebLlmIncrementalStream,
-  subscribeWebLlmWarmupStatus,
-  DEFAULT_WEBLLM_MODEL_PREFERENCE,
-  WEBLLM_GROUPING_CUSTOM_MODEL,
-  WEBLLM_GROUPING_FALLBACK_MODEL,
-  WEBLLM_GROUPING_MODEL,
-  type WebLlmDiagnostic,
-  type WebLlmIncrementalGroupingUpdate,
-  type WebLlmNamingMode,
-  type WebLlmModelPreference,
-  type WebLlmWarmupStatus
-} from "../lib/llm/webllm";
+  groupWithNamingIncrementalStream,
+  browserCanAttemptNaming,
+  getNamingWarmupStatus,
+  subscribeNamingWarmupStatus,
+  preloadNamingModel,
+  incrementalNamingBatchSize,
+  type NamingDiagnostic,
+  type NamingIncrementalUpdate,
+  type NamingWarmupStatus
+} from "../lib/llm/naming";
+import {
+  associateLabGroupWithConditions,
+  type ConditionAssociationChoice,
+  type LabGroupContext
+} from "../lib/llm/association";
 import { SMART_AUTH_POPUP_EVENT, isSmartAuthPopupMessage } from "../lib/smart/popup";
 import {
   type FhirDataset,
@@ -331,28 +328,10 @@ const VISIT_CLASS_FILTER_OPTIONS: Array<{ value: VisitClassFilter; label: string
   { value: "unknown", label: "Unknown" }
 ];
 
-function localGroupingModelId(mode: LocalGroupingMode): string {
-  if (mode === "custom-single") return WEBLLM_GROUPING_CUSTOM_MODEL;
-  return mode === "three-b-batch" ? WEBLLM_GROUPING_FALLBACK_MODEL : WEBLLM_GROUPING_MODEL;
-}
+const TRANSFORMERS_LLM_MODEL_ID = "transformers-llm";
 
-function localGroupingModelPreference(mode: LocalGroupingMode): WebLlmModelPreference {
-  if (mode === "custom-single") return "custom";
-  return mode === "three-b-batch" ? "three-b" : "one-b";
-}
-
-function defaultLocalGroupingMode(): LocalGroupingMode {
-  if (DEFAULT_WEBLLM_MODEL_PREFERENCE === "custom") return "custom-single";
-  if (DEFAULT_WEBLLM_MODEL_PREFERENCE === "three-b") return "three-b-batch";
-  return "one-b-batch";
-}
-
-function localGroupingBatchSize(mode: LocalGroupingMode): number {
-  return mode === "one-b-single" || mode === "custom-single" ? 1 : 3;
-}
-
-function localGroupingNamingMode(mode: LocalGroupingMode): WebLlmNamingMode {
-  return mode === "one-b-single" || mode === "custom-single" ? "single" : "batch";
+function localGroupingModelId(): string {
+  return TRANSFORMERS_LLM_MODEL_ID;
 }
 
 function emptyReferralSummary(): ReferralSummary {
@@ -848,9 +827,7 @@ function slugGroupName(value: string): string {
 
 function isLocalModelCacheEntry(entry: GroupingCacheEntry): boolean {
   return (
-    entry.model === WEBLLM_GROUPING_MODEL ||
-    entry.model === WEBLLM_GROUPING_FALLBACK_MODEL ||
-    entry.model === WEBLLM_GROUPING_CUSTOM_MODEL
+    entry.model === TRANSFORMERS_LLM_MODEL_ID
   );
 }
 
@@ -925,7 +902,7 @@ function cachedCompactGrouping(
           ? "lookup"
           : usedModels.has(PATIENT_FRIENDLY_LOOKUP_MODEL)
             ? "mixed"
-            : "webllm"
+            : "transformers"
   };
 }
 
@@ -970,7 +947,7 @@ function expandedCachedGrouping(
 }
 
 function progressiveTypeGrouping(
-  update: WebLlmIncrementalGroupingUpdate,
+  update: NamingIncrementalUpdate,
   originalRecords: GroupableRecord[],
   cachedCompactRecords: GroupableRecord[] = [],
   cachedCompactResult: PatientGroupingResult = { groups: [], unassigned: [], source: "source" }
@@ -1009,7 +986,7 @@ function finalCachedTypeGrouping(
 function cacheEntriesFromCompactResult(
   compactRecords: GroupableRecord[],
   result: PatientGroupingResult,
-  modelId = WEBLLM_GROUPING_MODEL,
+  modelId = TRANSFORMERS_LLM_MODEL_ID,
   now = Date.now()
 ): GroupingCacheEntry[] {
   const compactIdSet = compactIds(compactRecords);
@@ -1139,7 +1116,7 @@ function groupingConsoleLog(level: "info" | "warn" | "error", event: string, det
   else console.info(`${prefix} ${serialized}`);
 }
 
-function formatWebLlmDiagnostic(diagnostic: WebLlmDiagnostic): string {
+function formatNamingDiagnostic(diagnostic: NamingDiagnostic): string {
   const count = diagnostic.affectedCount ?? diagnostic.affectedRecordIds?.length;
   const affected = count !== undefined ? `${count} concept${count === 1 ? "" : "s"}` : "unknown concept count";
   const scope = diagnostic.fallbackScope ? `${diagnostic.fallbackScope} fallback` : "diagnostic";
@@ -1222,7 +1199,7 @@ export function PatientExplorer() {
   const [dateSort, setDateSort] = useState<DateSortMode>("newest");
   const [density, setDensity] = useState<ExplorerDensity>("comfortable");
   const [dataMenuAnchorEl, setDataMenuAnchorEl] = useState<HTMLElement | null>(null);
-  const [webLlmWarmupStatus, setWebLlmWarmupStatus] = useState<WebLlmWarmupStatus>(() => getWebLlmWarmupStatus());
+  const [webLlmWarmupStatus, setNamingWarmupStatus] = useState<NamingWarmupStatus>(() => getNamingWarmupStatus());
   const [selectedRecordKey, setSelectedRecordKey] = useState<string | null>(null);
   const [selectedMatchingRecordKeys, setSelectedMatchingRecordKeys] = useState<string[]>([]);
   const [selectedMatchReason, setSelectedMatchReason] = useState<string | null>(null);
@@ -1307,7 +1284,7 @@ export function PatientExplorer() {
   const sourceGroups = useMemo(() => sourceRecordGrouping(records).groups, [records]);
 
   const displayGroups = groupingSource === "source" ? sourceGroups : groups;
-  const selectedLocalModelId = localGroupingModelId(localGroupingMode);
+  const selectedLocalModelId = TRANSFORMERS_LLM_MODEL_ID;
 
   const observationById = useMemo(() => {
     const map = new Map<string, ReferralSummary["observations"][number]>();
@@ -2057,12 +2034,18 @@ export function PatientExplorer() {
         }
       }
       try {
-        const associations = await associateLabGroupWithConditionsWithWebLlm(group, groupRecords, orderedConditionChoices, {
-          modelPreference: localGroupingModelPreference(localGroupingMode),
+        const labGroupContext: LabGroupContext = {
+          groupId: group.groupId ?? relationshipGroupKey(group),
+          patientFriendlyName: group.patientFriendlyName,
+          resourceIds: group.resourceIds,
+          resourceTypes: group.resourceTypes
+        };
+        const associations = await associateLabGroupWithConditions(labGroupContext, orderedConditionChoices, {
+          explicitRelatedContext,
           onProgress: (message) => {
             if (options.isCurrentRun()) setStatus(message);
           }
-        }, { explicitRelatedContext });
+        });
         if (!options.isCurrentRun()) return;
         const entries =
           associations.length > 0
@@ -2147,8 +2130,8 @@ export function PatientExplorer() {
       totalRecords: nextRecords.length,
       activeTab,
       localGroupingMode,
-      localGroupingModelId: localGroupingModelId(localGroupingMode),
-      localGroupingBatchSize: localGroupingBatchSize(localGroupingMode),
+      localGroupingModelId: TRANSFORMERS_LLM_MODEL_ID,
+      localGroupingBatchSize: incrementalNamingBatchSize({}),
       resourceCounts: (Object.keys(RESOURCE_LABELS) as ExplorerTab[]).reduce<Record<string, number>>((counts, type) => {
         counts[type] = recordsByType(nextRecords, type).length;
         return counts;
@@ -2158,8 +2141,8 @@ export function PatientExplorer() {
       const key = await getOrCreateSessionVaultKey();
       let cache = await loadGroupingCache(key);
       let cacheById = groupingCacheByCompactId(cache);
-      const selectedModelId = localGroupingModelId(localGroupingMode);
-      const canRunLocalModel = browserCanAttemptWebLlm();
+      const selectedModelId = TRANSFORMERS_LLM_MODEL_ID;
+      const canRunLocalModel = browserCanAttemptNaming();
       groupingConsoleLog("info", "cache-loaded", {
         runId,
         cacheEntryCount: cache.entries.length,
@@ -2285,7 +2268,7 @@ export function PatientExplorer() {
       }
 
       if (!canRunLocalModel) {
-        groupingConsoleLog("warn", "webllm-unavailable", {
+        groupingConsoleLog("warn", "naming-unavailable", {
           runId,
           reason: "WebGPU unavailable or webdriver browser",
           totalUncachedConcepts: totalUncachedClusters
@@ -2312,13 +2295,13 @@ export function PatientExplorer() {
 
       const failures: string[] = [];
       const diagnostics: string[] = [];
-      const reportDiagnostic = (diagnostic: WebLlmDiagnostic) => {
-        const formatted = formatWebLlmDiagnostic(diagnostic);
+      const reportDiagnostic = (diagnostic: NamingDiagnostic) => {
+        const formatted = formatNamingDiagnostic(diagnostic);
         console.warn("[fhir4px:local-grouping]", {
           ...diagnostic,
           formatted,
           uiVisible: !diagnostic.recovered,
-          note: "Resource ids are local FHIR ids or compact cluster ids; enable fhir4px_debug_webllm for response excerpts."
+          note: "Resource ids are local FHIR ids or compact cluster ids."
         });
         if (diagnostic.recovered) return;
         diagnostics.push(formatted);
@@ -2342,11 +2325,8 @@ export function PatientExplorer() {
         setStatus("Organizing medical records...");
 
         try {
-          for await (const update of groupWithWebLlmIncrementalStream(uncachedCompactRecords, {
+          for await (const update of groupWithNamingIncrementalStream(uncachedCompactRecords, {
             initialAvailableNames: cachedNamesForType(compactRecords, cacheById, { includeLookup: true }),
-            modelPreference: localGroupingModelPreference(localGroupingMode),
-            namingMode: localGroupingNamingMode(localGroupingMode),
-            namingBatchSize: localGroupingBatchSize(localGroupingMode),
             onDiagnostic: reportDiagnostic,
             onProgress: (message) => {
               if (isCurrentRun()) setStatus(message);
@@ -2562,7 +2542,7 @@ export function PatientExplorer() {
     void loadLocalData(true);
   }, []);
 
-  useEffect(() => subscribeWebLlmWarmupStatus(setWebLlmWarmupStatus), []);
+  useEffect(() => subscribeNamingWarmupStatus(setNamingWarmupStatus), []);
 
   useEffect(() => {
     const onSmartAuthComplete = (event: Event) => {
@@ -2577,7 +2557,7 @@ export function PatientExplorer() {
   }, []);
 
   useEffect(() => {
-    if (!browserCanAttemptWebLlm() || records.length === 0 || busy || modelBusy) return;
+    if (!browserCanAttemptNaming() || records.length === 0 || busy || modelBusy) return;
     const key = `${activeSourceId}|${localGroupingMode}|${autoGroupingSignature}`;
     if (lastAutoGroupingKey.current === key) return;
     lastAutoGroupingKey.current = key;
@@ -2992,7 +2972,7 @@ export function PatientExplorer() {
   }
 
   function renderDataStatusBar() {
-    const canAttemptLocalGrouping = records.length > 0 && browserCanAttemptWebLlm();
+    const canAttemptLocalGrouping = records.length > 0 && browserCanAttemptNaming();
     const menuOpen = Boolean(dataMenuAnchorEl);
     const detailText = dataStatusDetailText();
     const appDataLoading = appDataIsLoading();

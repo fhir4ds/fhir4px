@@ -8,7 +8,7 @@ import {
   type SmartAuthPopupMessage
 } from "../../lib/smart/popup";
 import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
-import { preloadWebLlmGroupingModel } from "../../lib/llm/webllm";
+import { preloadNamingModel } from "../../lib/llm/naming";
 
 const navItems = [
   { to: "/providers", label: "Providers", icon: <Search size={18} /> },
@@ -24,7 +24,7 @@ export function AppFrame({ children }: PropsWithChildren) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void preloadWebLlmGroupingModel(), 250);
+    const timer = window.setTimeout(() => void preloadNamingModel(), 250);
     return () => window.clearTimeout(timer);
   }, []);
 

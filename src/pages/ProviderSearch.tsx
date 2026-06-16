@@ -29,7 +29,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { resolveDirectoryOrigin, searchProviders } from "../lib/directory/client";
 import type { DirectoryOrigin, DirectoryProvider, DirectorySort } from "../lib/directory/types";
-import { warmWebLlmGroupingModel } from "../lib/llm/webllm";
+import { preloadNamingModel } from "../lib/llm/naming";
 import { buildAuthorizeUrl } from "../lib/smart/oauth";
 import { fetchSandboxPatients, configuredSandboxPatients, mergeSandboxPatients } from "../lib/smart/sandbox";
 import { upsertLocalTestSource } from "../lib/smart/sources";
@@ -291,7 +291,7 @@ export function ProviderSearch() {
           nextRoute: "/records"
         });
         navigate("/records");
-        window.setTimeout(() => void warmWebLlmGroupingModel(), 0);
+        window.setTimeout(() => void preloadNamingModel(), 0);
         return;
       }
 
@@ -332,7 +332,7 @@ export function ProviderSearch() {
       });
       if (popup) {
         popup.location.assign(url);
-        void warmWebLlmGroupingModel();
+        void preloadNamingModel();
         setConnectStatus("Patient portal opened in a popup.");
         setConnectingProviderId(null);
       } else {
