@@ -296,6 +296,20 @@ export function ProviderSearch() {
       }
 
       const redirectUri = provider.redirectUriOverride || window.location.origin;
+      console.info("[fhir4px:provider]", {
+        event: "smart-connect-start",
+        timestamp: new Date().toISOString(),
+        providerId: provider.id,
+        providerName: provider.name,
+        vendor: provider.vendor,
+        fhirBaseUrl: provider.fhirBaseUrl,
+        clientId: provider.clientId ? `${provider.clientId.slice(0, 8)}...` : "(empty)",
+        redirectUri,
+        scopes: provider.scopes || "(default)",
+        customAuthorizeEndpoint: provider.customAuthorizeEndpoint || "(discovery)",
+        customTokenEndpoint: provider.customTokenEndpoint || "(discovery)",
+        origin: window.location.origin
+      });
       void getOrCreateSessionVaultKey();
       popup = window.open("", "fhir4px-smart-auth", "popup,width=520,height=760");
       if (popup) {
@@ -311,6 +325,12 @@ export function ProviderSearch() {
       }
 
       const url = await buildAuthorizeUrl({ provider, redirectUri, popupLaunch: Boolean(popup) });
+      console.info("[fhir4px:provider]", {
+        event: "smart-authorize-url-built",
+        timestamp: new Date().toISOString(),
+        providerId: provider.id,
+        authorizeUrl: url
+      });
       if (popup) {
         popup.location.assign(url);
         void warmWebLlmGroupingModel();
