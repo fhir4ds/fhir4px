@@ -1,52 +1,52 @@
 {
   "task": "visit_type",
   "model": "NeuML/pubmedbert-base-embeddings",
-  "version": "0.1.0-pilot",
-  "note": "STALE — prototypes computed with gte-modernbert. Needs re-computation with pubmedbert-base-embeddings. Model team will deliver updated prototypes using patient-friendly names.",
+  "version": "1.0.0",
+  "note": "Prototypes from realistic evaluation data \u2014 real patient-friendly names from patient_friendly_names.csv",
   "classes": {
     "inpatient": {
       "prototype_texts": [
         "Hospital admission",
+        "Acute care admission",
+        "Admitted to hospital",
         "Inpatient stay",
-        "Hospitalization",
-        "Inpatient hospital care",
-        "Overnight hospital stay"
+        "Inpatient hospital care"
       ]
     },
     "outpatient": {
       "prototype_texts": [
-        "Office visit",
         "Ambulatory visit",
-        "Outpatient clinic",
-        "Primary care visit",
-        "Follow-up clinic visit"
+        "Follow-up clinic visit",
+        "Routine checkup",
+        "Office visit established patient",
+        "Specialist consultation"
       ]
     },
     "emergency": {
       "prototype_texts": [
-        "Emergency department visit",
-        "ED visit",
         "Emergency room",
-        "Urgent emergency care",
+        "ED visit",
+        "Emergency department visit",
+        "Emergency assessment",
         "Trauma activation"
       ]
     },
     "telehealth": {
       "prototype_texts": [
+        "E-visit",
         "Telehealth visit",
         "Virtual visit",
-        "Telephone visit",
-        "Video consultation",
-        "Remote telemedicine visit"
+        "Virtual check-in",
+        "Remote patient visit"
       ]
     },
     "procedure": {
       "prototype_texts": [
-        "Surgical procedure",
-        "Outpatient surgery",
-        "Day surgery",
         "Procedure room visit",
-        "Cardiac catheterization"
+        "Cardiac catheterization",
+        "Surgical operation",
+        "Outpatient surgery",
+        "Colonoscopy"
       ]
     }
   }

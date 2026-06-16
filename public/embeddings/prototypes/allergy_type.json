@@ -1,55 +1,49 @@
 {
   "task": "allergy_type",
   "model": "NeuML/pubmedbert-base-embeddings",
-  "version": "0.1.0-pilot",
-  "note": "STALE — prototypes computed with gte-modernbert. Needs re-computation with pubmedbert-base-embeddings. Model team will deliver updated prototypes using patient-friendly names.",
+  "version": "1.0.0",
+  "note": "Prototypes from realistic evaluation data \u2014 real patient-friendly names from patient_friendly_names.csv",
   "classes": {
     "medication": {
       "prototype_texts": [
-        "Penicillin",
-        "Aspirin",
-        "Ibuprofen",
-        "Sulfonamide",
-        "Cephalosporin",
-        "Insulin",
-        "Heparin",
-        "Codeine",
-        "Morphine",
-        "Amoxicillin"
+        "Allergy to ibuprofen",
+        "Allergy to aspirin",
+        "Drug Allergies",
+        "Allergy to morphine",
+        "Allergy to sulfonamide",
+        "Fish Allergy",
+        "Allergy to NSAID"
       ]
     },
     "food": {
       "prototype_texts": [
-        "Peanuts",
-        "Shellfish",
-        "Cow's milk",
-        "Egg",
-        "Wheat",
-        "Soy",
-        "Tree nuts",
-        "Shrimp",
-        "Gluten"
+        "Allergy to gluten",
+        "Allergy to hen egg",
+        "Osteoarthritis",
+        "Shellfish Allergy",
+        "Allergy to food",
+        "Allergy to peanut",
+        "Peanut Allergy"
       ]
     },
     "environmental": {
       "prototype_texts": [
-        "Pollen",
-        "Dust mites",
-        "Latex",
-        "Pet dander",
-        "Mold",
-        "Bee sting",
-        "Ragweed",
-        "Animal hair"
+        "Ear Problem",
+        "Hay Fever",
+        "Allergy to plant",
+        "Allergy to ragweed",
+        "Allergy to grass",
+        "Sesame Seed",
+        "Allergy to dust"
       ]
     },
     "other": {
       "prototype_texts": [
-        "Exercise-induced",
-        "Cold temperature",
-        "Sunlight",
-        "Adhesive tape",
-        "Iodinated contrast"
+        "Allergy to nickel",
+        "Chest Tightness",
+        "Allergy to contrast media",
+        "Solar urticaria",
+        "Allergy to metal"
       ]
     }
   }

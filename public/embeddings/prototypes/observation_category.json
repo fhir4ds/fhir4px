@@ -1,53 +1,47 @@
 {
   "task": "observation_category",
   "model": "NeuML/pubmedbert-base-embeddings",
-  "version": "0.1.0-pilot",
-  "note": "STALE — prototypes computed with gte-modernbert. Needs re-computation with pubmedbert-base-embeddings. Model team will deliver updated prototypes using patient-friendly names.",
+  "version": "1.0.0",
+  "note": "Prototypes from realistic evaluation data \u2014 real patient-friendly names from patient_friendly_names.csv",
   "classes": {
     "lab": {
       "prototype_texts": [
-        "Hemoglobin A1c",
-        "Glucose",
-        "Creatinine",
+        "Calcium",
+        "Cholesterol in HDL",
+        "Erythrocyte/Blood",
+        "Aspartate Aminotransferase",
+        "Coagulation",
+        "Cholesterol in LDL",
         "Cholesterol",
-        "Sodium",
-        "Potassium",
-        "White Blood Count",
-        "Thyroid Stimulating Hormone",
-        "Vitamin D",
-        "Ferritin",
-        "Urinalysis",
-        "Liver Function Panel"
+        "Nornicotine",
+        "Glomerular Filtration Rate",
+        "Cholesterol in LDL",
+        "Hemoglobin",
+        "Alanine Aminotransferase",
+        "Creatinine",
+        "Magnesium",
+        "Thyrotropin",
+        "Protein",
+        "Glucose",
+        "Triglyceride"
       ]
     },
     "vital": {
       "prototype_texts": [
-        "Blood Pressure",
-        "Systolic Blood Pressure",
-        "Diastolic Blood Pressure",
         "Heart Rate",
-        "Respiratory Rate",
-        "Oxygen Saturation",
-        "Body Temperature",
         "Body Weight",
-        "Body Height",
-        "Body Mass Index",
-        "Pain Score",
-        "Inhaled Oxygen Concentration"
+        "Intravascular Systolic",
+        "Body Temperature Measurement Site",
+        "Body Mass Index (BMI)",
+        "Oxygen Saturation"
       ]
     },
     "other": {
       "prototype_texts": [
-        "Tobacco Use Screening",
-        "Alcohol Use Screening",
-        "Depression Screening (PHQ-9)",
-        "Falls Risk Assessment",
-        "Activities of Daily Living",
-        "Hospital Admission Date",
-        "Provider Notes",
-        "Discharge Instructions",
-        "Education Provided",
-        "Advance Directive"
+        "Public Health Laboratory Ask at Order Entry Panel",
+        "Total Score",
+        "Patient Health Questionnaire 9 Item Total Score",
+        "Total Physical Activity"
       ]
     }
   }
