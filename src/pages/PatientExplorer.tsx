@@ -2006,38 +2006,6 @@ export function PatientExplorer() {
           continue;
         }
       }
-      // curation. Skips the LLM call for any lab that's in the table AND matches a
-      // condition the patient actually has.
-      const deterministicConditions = await findDeterministicConditionsForLab(group.patientFriendlyName);
-      if (deterministicConditions.length > 0) {
-        const matchedGroupIds: string[] = [];
-        for (const conditionName of deterministicConditions) {
-          const match = conditionChoices.find((choice) => choice.name === conditionName);
-          if (match) matchedGroupIds.push(match.conditionGroupId);
-        }
-        if (matchedGroupIds.length > 0) {
-          const deterministicEntries = matchedGroupIds.map((targetGroupId) =>
-            relationshipCacheEntry({
-              sourceGroupId: groupId,
-              targetGroupId,
-              sourceResourceType: "Observation",
-              targetResourceType: "Condition",
-              relationship: "monitoring_marker",
-              confidence: 1,
-              fallback: false,
-              model: "deterministic:condition-lab"
-            })
-          );
-          await upsertAndPersist(deterministicEntries);
-          groupingConsoleLog("info", "relationship-suggestion-deterministic", {
-            labGroupId: groupId,
-            labName: group.patientFriendlyName,
-            matchedConditionNames: deterministicConditions,
-            matchedGroupIds
-          });
-          continue;
-        }
-      }
       try {
         const associations = await associateLabGroupWithConditionsWithWebLlm(group, groupRecords, orderedConditionChoices, {
           modelPreference: localGroupingModelPreference(localGroupingMode),
