@@ -317,7 +317,6 @@ export function ProviderSearch() {
           popup.document.title = "Connecting portal";
           popup.document.body.innerHTML =
             "<main style=\"font-family:system-ui;padding:24px\">Connecting to the patient portal...</main>";
-          popup.opener = null;
         } catch {
           // Some browsers restrict access to the transient blank popup. The
           // popup can still navigate to the SMART authorization URL.
