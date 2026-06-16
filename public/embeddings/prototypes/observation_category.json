@@ -1,0 +1,54 @@
+{
+  "task": "observation_category",
+  "model": "Alibaba-NLP/gte-modernbert-base",
+  "version": "0.1.0-pilot",
+  "note": "Placeholder prototypes from pilot test_cases.json. Model team will deliver updated prototypes using patient-friendly names.",
+  "classes": {
+    "lab": {
+      "prototype_texts": [
+        "Hemoglobin A1c",
+        "Glucose",
+        "Creatinine",
+        "Cholesterol",
+        "Sodium",
+        "Potassium",
+        "White Blood Count",
+        "Thyroid Stimulating Hormone",
+        "Vitamin D",
+        "Ferritin",
+        "Urinalysis",
+        "Liver Function Panel"
+      ]
+    },
+    "vital": {
+      "prototype_texts": [
+        "Blood Pressure",
+        "Systolic Blood Pressure",
+        "Diastolic Blood Pressure",
+        "Heart Rate",
+        "Respiratory Rate",
+        "Oxygen Saturation",
+        "Body Temperature",
+        "Body Weight",
+        "Body Height",
+        "Body Mass Index",
+        "Pain Score",
+        "Inhaled Oxygen Concentration"
+      ]
+    },
+    "other": {
+      "prototype_texts": [
+        "Tobacco Use Screening",
+        "Alcohol Use Screening",
+        "Depression Screening (PHQ-9)",
+        "Falls Risk Assessment",
+        "Activities of Daily Living",
+        "Hospital Admission Date",
+        "Provider Notes",
+        "Discharge Instructions",
+        "Education Provided",
+        "Advance Directive"
+      ]
+    }
+  }
+}

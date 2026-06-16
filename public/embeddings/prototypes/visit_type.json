@@ -1,0 +1,53 @@
+{
+  "task": "visit_type",
+  "model": "Alibaba-NLP/gte-modernbert-base",
+  "version": "0.1.0-pilot",
+  "note": "Placeholder prototypes from pilot test_cases.json. Model team will deliver updated prototypes using patient-friendly names.",
+  "classes": {
+    "inpatient": {
+      "prototype_texts": [
+        "Hospital admission",
+        "Inpatient stay",
+        "Hospitalization",
+        "Inpatient hospital care",
+        "Overnight hospital stay"
+      ]
+    },
+    "outpatient": {
+      "prototype_texts": [
+        "Office visit",
+        "Ambulatory visit",
+        "Outpatient clinic",
+        "Primary care visit",
+        "Follow-up clinic visit"
+      ]
+    },
+    "emergency": {
+      "prototype_texts": [
+        "Emergency department visit",
+        "ED visit",
+        "Emergency room",
+        "Urgent emergency care",
+        "Trauma activation"
+      ]
+    },
+    "telehealth": {
+      "prototype_texts": [
+        "Telehealth visit",
+        "Virtual visit",
+        "Telephone visit",
+        "Video consultation",
+        "Remote telemedicine visit"
+      ]
+    },
+    "procedure": {
+      "prototype_texts": [
+        "Surgical procedure",
+        "Outpatient surgery",
+        "Day surgery",
+        "Procedure room visit",
+        "Cardiac catheterization"
+      ]
+    }
+  }
+}

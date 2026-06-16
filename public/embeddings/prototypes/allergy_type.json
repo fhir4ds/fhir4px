@@ -1,0 +1,56 @@
+{
+  "task": "allergy_type",
+  "model": "Alibaba-NLP/gte-modernbert-base",
+  "version": "0.1.0-pilot",
+  "note": "Placeholder prototypes from pilot test_cases.json. Model team will deliver updated prototypes using patient-friendly names.",
+  "classes": {
+    "medication": {
+      "prototype_texts": [
+        "Penicillin",
+        "Aspirin",
+        "Ibuprofen",
+        "Sulfonamide",
+        "Cephalosporin",
+        "Insulin",
+        "Heparin",
+        "Codeine",
+        "Morphine",
+        "Amoxicillin"
+      ]
+    },
+    "food": {
+      "prototype_texts": [
+        "Peanuts",
+        "Shellfish",
+        "Cow's milk",
+        "Egg",
+        "Wheat",
+        "Soy",
+        "Tree nuts",
+        "Shrimp",
+        "Gluten"
+      ]
+    },
+    "environmental": {
+      "prototype_texts": [
+        "Pollen",
+        "Dust mites",
+        "Latex",
+        "Pet dander",
+        "Mold",
+        "Bee sting",
+        "Ragweed",
+        "Animal hair"
+      ]
+    },
+    "other": {
+      "prototype_texts": [
+        "Exercise-induced",
+        "Cold temperature",
+        "Sunlight",
+        "Adhesive tape",
+        "Iodinated contrast"
+      ]
+    }
+  }
+}
