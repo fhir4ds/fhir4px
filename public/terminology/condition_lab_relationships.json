@@ -1,0 +1,366 @@
+{
+  "version": "1.0.0",
+  "generated_at": "2026-06-15T00:00:00Z",
+  "source": "synthea_module_rules + manual_curation",
+  "total_conditions": 34,
+  "total_pairs": 289,
+  "relationships": {
+    "Acute Myocardial Infarction": [
+      "Activated Clotting Time (ACT)",
+      "Ejection Fraction",
+      "Exercise Stress Test Study",
+      "Gas Panel",
+      "Heart Failure Tracking Panel",
+      "Hemoglobin A1c/Hemoglobin.Total",
+      "Magnesium",
+      "Medication Management Note",
+      "Natriuretic Peptide.B Prohormone N-Terminal",
+      "Phosphate",
+      "Thyrotropin",
+      "Triglyceride",
+      "Urinalysis Complete Panel"
+    ],
+    "Anemia": [
+      "CBC Panel",
+      "Erythrocyte",
+      "Erythrocyte/Blood",
+      "Erythrocytes",
+      "Ferritin",
+      "Hematocrit",
+      "Hemoglobin",
+      "Hemoglobin and Hematocrit Panel",
+      "Iron",
+      "Iron Binding Capacity",
+      "Leukocytes",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Platelets"
+    ],
+    "Asthma": [
+      "FEV1",
+      "Forced expiratory volume in 1 second",
+      "Oxygen Saturation",
+      "Peak expiratory flow"
+    ],
+    "Breast Cancer": [
+      "Distant Metastases.Clinical",
+      "ERBB2 Gene Duplication",
+      "Estrogen Receptor Ag",
+      "Estrogen+Progesterone Receptor Ag",
+      "HER2 Ag",
+      "Lymph Nodes with Macrometastases",
+      "Lymph Nodes with Micrometastases",
+      "Progesterone Receptor Ag",
+      "Regional Lymph Nodes.Clinical",
+      "Site of Distant Metastasis",
+      "Stage Group.Clinical",
+      "Tumor Marker"
+    ],
+    "COPD": [
+      "FEV1/FVC",
+      "Oxygen Saturation",
+      "Pulse oximetry"
+    ],
+    "COVID-19": [
+      "Adenovirus A+B+C+D+E DNA",
+      "Auto Differential Panel",
+      "Basophils",
+      "Breaths",
+      "Creatine Kinase",
+      "Eosinophils/Leukocytes",
+      "Fibrin D-Dimer",
+      "Human Metapneumovirus RNA",
+      "Influenza Virus A RNA",
+      "Influenza Virus A and B Ag Panel",
+      "Influenza Virus B Ag",
+      "Influenza Virus B RNA",
+      "Lactate Dehydrogenase",
+      "Lymphocytes/Leukocytes",
+      "Neutrophils",
+      "Neutrophils/Leukocytes",
+      "Oxygen/Gas.Total Setting",
+      "Parainfluenza Virus 2 RNA",
+      "Parainfluenza Virus 3 RNA",
+      "Procalcitonin",
+      "Respiratory Pathogens DNA and RNA Panel",
+      "Respiratory Syncytial Virus RNA",
+      "Rhinovirus RNA",
+      "SARS-CoV-2 (COVID-19) RNA Panel"
+    ],
+    "Cancer": [
+      "Alanine Aminotransferase",
+      "Albumin",
+      "Alkaline Phosphatase",
+      "Clarity",
+      "Globulin",
+      "Ketones",
+      "Leukocyte Esterase",
+      "Nitrite",
+      "Odor",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Urinalysis Macro (Dipstick) Panel"
+    ],
+    "Chronic Back Pain": [
+      "Drugs of Abuse 5 Panel"
+    ],
+    "Chronic Hepatitis B": [
+      "Alcohol Use Disorder Identification Test - Consumption",
+      "CD3+CD4+ (T4 Helper) Cells",
+      "HIV 1 RNA",
+      "PHQ-9 Quick Depression Assessment Panel",
+      "Toxoplasma Gondii Ab"
+    ],
+    "Chronic Hepatitis C": [
+      "Alcohol Use Disorder Identification Test - Consumption",
+      "CD3+CD4+ (T4 Helper) Cells",
+      "HIV 1 RNA",
+      "PHQ-9 Quick Depression Assessment Panel",
+      "Toxoplasma Gondii Ab"
+    ],
+    "Chronic Pain": [
+      "Drugs of Abuse 5 Panel"
+    ],
+    "Clavicle Fracture": [
+      "Views for Bone Density"
+    ],
+    "Colon Cancer": [
+      "Alanine Aminotransferase",
+      "Albumin",
+      "Alkaline Phosphatase",
+      "Aspartate Aminotransferase",
+      "Bilirubin",
+      "Comprehensive Metabolic 2000 Panel",
+      "Globulin",
+      "Hemoglobin and Hematocrit Panel",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Protein"
+    ],
+    "Colon Polyps": [
+      "Alanine Aminotransferase",
+      "Albumin",
+      "Alkaline Phosphatase",
+      "Aspartate Aminotransferase",
+      "Comprehensive Metabolic 2000 Panel",
+      "Globulin",
+      "Hemoglobin and Hematocrit Panel",
+      "Hemoglobin^1st Specimen",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Polyp Size Greatest Dimension"
+    ],
+    "Diabetes Type 2": [
+      "Blood glucose lab",
+      "CBC Panel",
+      "Erythrocyte",
+      "Erythrocyte/Blood",
+      "Erythrocytes",
+      "Glucose",
+      "Glucose Level",
+      "HbA1c lab value",
+      "Hemoglobin",
+      "Hemoglobin A1c",
+      "Hemoglobin A1c/Hemoglobin.Total",
+      "Hemoglobin and Hematocrit Panel",
+      "Leukocytes",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Platelets"
+    ],
+    "Diabetic Kidney Disease": [
+      "Basic Metabolic 2000 Panel",
+      "Calcium",
+      "Carbon Dioxide",
+      "Chloride",
+      "Creatinine",
+      "Glomerular Filtration Rate",
+      "Glucose",
+      "Potassium",
+      "Sodium",
+      "Urea Nitrogen"
+    ],
+    "Eczema": [
+      "Percentage Area Affected by Eczema"
+    ],
+    "Emphysema": [
+      "CBC Panel",
+      "Erythrocyte",
+      "Erythrocyte/Blood",
+      "Erythrocytes",
+      "FEV1/FVC",
+      "FEV1/FVC ratio",
+      "Forced expiratory volume in 1 second to forced vital capacity ratio",
+      "Hemoglobin",
+      "Hemoglobin and Hematocrit Panel",
+      "Leukocytes",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Platelets",
+      "Volume Expired During 1.0 S of Forced Expiration/Forced Vital Capacity"
+    ],
+    "Fractures": [
+      "Views for Bone Density"
+    ],
+    "Heart Failure": [
+      "BNP",
+      "Basic Metabolic Panel",
+      "Body Weight",
+      "Daily weight",
+      "Ferritin",
+      "Functional Capacity",
+      "Iron",
+      "Iron Binding Capacity",
+      "Iron Panel",
+      "Iron Saturation",
+      "Iron and Iron Binding Capacity Panel",
+      "Natriuretic Peptide.B Prohormone N-Terminal",
+      "New York Heart Association Functional Classification",
+      "Objective Assessment of Cardiovascular Disease",
+      "Symptom"
+    ],
+    "High Blood Pressure": [
+      "Blood Pressure",
+      "Blood Pressure Panel with All Children Optional",
+      "Diastolic Blood Pressure",
+      "Intravascular Diastolic",
+      "Intravascular Systolic",
+      "Systolic Blood Pressure"
+    ],
+    "High Cholesterol": [
+      "Alanine Aminotransferase",
+      "Albumin",
+      "Alkaline Phosphatase",
+      "Aspartate Aminotransferase",
+      "CBC Panel",
+      "Cholesterol",
+      "Cholesterol in HDL",
+      "Cholesterol in LDL",
+      "Comprehensive Metabolic 2000 Panel",
+      "Erythrocyte",
+      "Erythrocyte/Blood",
+      "Erythrocytes",
+      "Globulin",
+      "Hemoglobin",
+      "Hemoglobin and Hematocrit Panel",
+      "Leukocytes",
+      "Lipid Panel with Direct LDL",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Platelets",
+      "Protein",
+      "Triglyceride"
+    ],
+    "Kidney Disease": [
+      "BUN",
+      "Basic Metabolic 2000 Panel",
+      "Bilirubin",
+      "Calcium",
+      "Carbon Dioxide",
+      "Chloride",
+      "Clarity",
+      "Creatinine",
+      "Glomerular Filtration Rate",
+      "Glucose",
+      "Ketones",
+      "Leukocyte Esterase",
+      "Nitrite",
+      "Odor",
+      "Potassium",
+      "Protein",
+      "Sodium",
+      "Urea Nitrogen",
+      "Urinalysis Macro (Dipstick) Panel",
+      "eGFR",
+      "pH"
+    ],
+    "Long-term Anticoagulant Therapy": [
+      "INR",
+      "International Normalized Ratio",
+      "Prothrombin time INR"
+    ],
+    "Lung Cancer": [
+      "Alanine Aminotransferase",
+      "Albumin",
+      "Alkaline Phosphatase",
+      "Clarity",
+      "Globulin",
+      "Hemoglobin and Hematocrit Panel",
+      "Ketones",
+      "Leukocyte Esterase",
+      "Nitrite",
+      "Odor",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Urinalysis Macro (Dipstick) Panel"
+    ],
+    "Mandibular Fracture": [
+      "Views for Bone Density"
+    ],
+    "Metabolic Syndrome": [
+      "CBC Panel",
+      "Erythrocyte",
+      "Erythrocyte/Blood",
+      "Erythrocytes",
+      "Hemoglobin",
+      "Hemoglobin and Hematocrit Panel",
+      "Leukocytes",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Platelets"
+    ],
+    "Pregnancy": [
+      "CBC Panel",
+      "Erythrocyte",
+      "Erythrocyte/Blood",
+      "Erythrocytes",
+      "Hemoglobin",
+      "Hemoglobin and Hematocrit Panel",
+      "Leukocytes",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Platelets",
+      "Pregnancy Status"
+    ],
+    "Prostate Cancer": [
+      "Alanine Aminotransferase",
+      "Albumin",
+      "Alkaline Phosphatase",
+      "Clarity",
+      "Globulin",
+      "Guidance for Biopsy",
+      "Ketones",
+      "Leukocyte Esterase",
+      "Nitrite",
+      "Odor",
+      "Platelet",
+      "Platelet Distribution Width",
+      "Urinalysis Macro (Dipstick) Panel"
+    ],
+    "Rheumatoid Arthritis": [
+      "C-reactive protein",
+      "ESR",
+      "Erythrocyte sedimentation rate",
+      "Rheumatoid Factor"
+    ],
+    "Sepsis": [
+      "Bacteria",
+      "Gram Positive Blood Culture Panel"
+    ],
+    "Strep Throat": [
+      "Body Temperature"
+    ],
+    "Thyroid Disease": [
+      "Free T4",
+      "Free Triiodothyronine",
+      "TSH",
+      "Thyrotropin",
+      "Thyroxine Free"
+    ],
+    "Vitamin D Deficiency": [
+      "25-Hydroxyvitamin D2",
+      "25-Hydroxyvitamin D3+25-Hydroxyvitamin D2",
+      "Vitamin D level"
+    ]
+  }
+}

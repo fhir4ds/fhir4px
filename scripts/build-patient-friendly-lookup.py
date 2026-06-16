@@ -14,7 +14,7 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_INPUT = PROJECT_ROOT / "data" / "patient_friendly_2026-06-08.csv"
+DEFAULT_INPUT = PROJECT_ROOT / "data" / "patient_friendly_names.csv"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "public" / "terminology" / "patient-friendly"
 
 SYSTEM_MAP = {
