@@ -1,8 +1,8 @@
 {
   "task": "observation_category",
-  "model": "Alibaba-NLP/gte-modernbert-base",
+  "model": "NeuML/pubmedbert-base-embeddings",
   "version": "0.1.0-pilot",
-  "note": "Placeholder prototypes from pilot test_cases.json. Model team will deliver updated prototypes using patient-friendly names.",
+  "note": "STALE — prototypes computed with gte-modernbert. Needs re-computation with pubmedbert-base-embeddings. Model team will deliver updated prototypes using patient-friendly names.",
   "classes": {
     "lab": {
       "prototype_texts": [

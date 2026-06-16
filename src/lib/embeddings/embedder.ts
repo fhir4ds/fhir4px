@@ -1,16 +1,17 @@
 /**
  * Embedding model wrapper for transformers.js.
  *
- * Loads Alibaba-NLP/gte-modernbert-base (143MB, q8 WASM) on first use and
- * caches the pipeline. All Tier 3 classification tasks share this single
- * model instance.
+ * Loads joelmontavon/fhir4px-embeddings-onnx (105MB, q8 WASM) — a fhir4px-hosted
+ * ONNX conversion of NeuML/pubmedbert-base-embeddings (PubMedBERT fine-tuned for
+ * sentence similarity). Selected over gte-modernbert-base for better accuracy on
+ * medical text: wins on 3 of 4 categorization tasks plus lab↔condition matching.
  *
  * The model loads lazily — only when the first embed() call is made. This
  * avoids adding to initial page load time. Once loaded, subsequent calls
- * are ~20-50ms per text (WASM, q8).
+ * are ~5-15ms per text (WASM, q8).
  */
 
-const EMBEDDING_MODEL_ID = "Alibaba-NLP/gte-modernbert-base";
+const EMBEDDING_MODEL_ID = "joelmontavon/fhir4px-embeddings-onnx";
 
 let pipelinePromise: Promise<unknown> | null = null;
 
