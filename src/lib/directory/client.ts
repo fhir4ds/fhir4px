@@ -1,4 +1,5 @@
 import { getProductionClientIdForVendor, getSandboxProviders } from "../smart/providers";
+import { EPIC_PRODUCTION_SCOPES, EXPANDED_CLINICAL_SCOPES } from "../smart/scopes";
 import type { Vendor } from "../smart/types";
 import type {
   DirectoryOrigin,
@@ -186,6 +187,7 @@ function toDirectoryProviders(record: DirectorySearchRecord, origin: DirectoryOr
       vendor,
       fhirBaseUrl: endpoint.fhirBaseUrl,
       clientId: getProductionClientIdForVendor(vendor),
+      scopes: vendor === "epic" ? EPIC_PRODUCTION_SCOPES : EXPANDED_CLINICAL_SCOPES,
       endpointStatus: endpoint.confidence >= 0.9 ? "verified" : "candidate",
       accessBrand: endpoint.accessBrand,
       rawAccessBrand: endpoint.rawAccessBrand,

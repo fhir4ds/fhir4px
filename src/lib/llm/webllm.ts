@@ -1431,6 +1431,13 @@ function parseCompletionJson(
   }
 }
 
+// One-shot diagnostic capture requested by the model team to debug the
+// lab-condition abstention regression in the 3B model. Logs the verbatim
+// system prompt, user payload, and JSON schema for the FIRST lab-condition
+// association call in this session, gated to dev mode. Remove once the model
+// team has captured their sample.
+let labConditionDiagCaptured = false;
+
 async function createJsonCompletionWithRetry(
   engine: WebLlmEngine,
   modelId: string,
@@ -1467,6 +1474,23 @@ async function createJsonCompletionWithRetry(
       messages
     })
   );
+
+  // One-shot DIAG capture for the model team (lab-condition abstention debug).
+  if (
+    import.meta.env.DEV &&
+    !labConditionDiagCaptured &&
+    request.operationLabel === "lab condition association"
+  ) {
+    labConditionDiagCaptured = true;
+    const responseFormat = JSON.parse(request.schemaText);
+    // eslint-disable-next-line no-console
+    console.log("DIAG_SYSTEM", messages[0]?.content);
+    // eslint-disable-next-line no-console
+    console.log("DIAG_USER", messages[1]?.content);
+    // eslint-disable-next-line no-console
+    console.log("DIAG_SCHEMA", JSON.stringify(responseFormat));
+    webLlmLog("info", "lab-condition-diag-captured", { modelId });
+  }
 
   try {
     const completion = await runBoundedWebLlmOperation(

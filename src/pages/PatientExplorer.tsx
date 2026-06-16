@@ -136,6 +136,7 @@ import {
 import { completedObservationRecordsForRelationship } from "../lib/fhir/relationship-eligibility";
 import { buildReferralSummary } from "../lib/fhir/normalize";
 import { findDeterministicConditionsForLab } from "../lib/fhir/condition-lab-lookup";
+import { findDeterministicConditionsForMedication } from "../lib/fhir/condition-medication-lookup";
 import {
   createPatientAuthoredRecord,
   createPatientPatch,
@@ -1377,7 +1378,7 @@ export function PatientExplorer() {
         (entry) =>
           entry.transform === "ObservationGroup.associateConditionGroup" &&
           entry.transformVersion === RELATIONSHIP_TRANSFORM_VERSIONS["ObservationGroup.associateConditionGroup"] &&
-          entry.model === selectedLocalModelId &&
+          (entry.model === selectedLocalModelId || entry.model.startsWith("deterministic:")) &&
           entry.relationship !== "none" &&
           groupByRelationshipKey.has(entry.sourceGroupId) &&
           groupByRelationshipKey.has(entry.targetGroupId)
@@ -1762,7 +1763,6 @@ export function PatientExplorer() {
         (record) => deterministicObservationCategoryClassification(record).observationCategory === "labs"
       );
     });
-    if (labGroups.length === 0) return;
 
     let cache = await loadRelationshipCache(key);
     const upsertAndPersist = async (entries: RelationshipCacheEntry[]) => {
@@ -1802,13 +1802,6 @@ export function PatientExplorer() {
         return rightContextCount - leftContextCount || left.patientFriendlyName.localeCompare(right.patientFriendlyName);
       })
       .slice(0, maxSuggestionsPerRun);
-    if (groupsToProcess.length === 0) {
-      groupingConsoleLog("info", "relationship-suggestion-complete", {
-        processedCount: 0,
-        cacheEntryCount: cache.entries.length
-      });
-      return;
-    }
 
     groupingConsoleLog("info", "relationship-suggestion-start", {
       labGroupCount: labGroups.length,
@@ -1927,6 +1920,139 @@ export function PatientExplorer() {
         groupingConsoleLog("warn", "relationship-suggestion-fallback", {
           labGroupId: groupId,
           error: caught instanceof Error ? caught.message : String(caught)
+        });
+      }
+    }
+
+    if (!options.isCurrentRun()) return;
+
+    // Non-lab observations (vitals, others) deterministic-only pass. The main
+    // lab loop above excludes these to keep LLM scope tight, but the curated
+    // table has entries for them (e.g. "Intravascular Diastolic" /
+    // "Intravascular Systolic" / "Diastolic Blood Pressure" → High Blood
+    // Pressure). This pass runs the deterministic lookup without an LLM
+    // fallback, so a vital that isn't in the table simply gets no entry.
+    const nonLabObservationGroups = nextGroups.filter((group) => {
+      if (!group.resourceTypes.includes("Observation")) return false;
+      if (labGroups.includes(group)) return false;
+      return relationshipRecordsForLabGroup(group).length > 0;
+    });
+    if (nonLabObservationGroups.length > 0 && conditionChoices.length > 0) {
+      groupingConsoleLog("info", "vitals-relationship-suggestion-start", {
+        nonLabObservationGroupCount: nonLabObservationGroups.length
+      });
+      for (let index = 0; index < nonLabObservationGroups.length; index += 1) {
+        if (!options.isCurrentRun()) return;
+        const group = nonLabObservationGroups[index];
+        const groupId = relationshipGroupKey(group);
+        const deterministicConditions = await findDeterministicConditionsForLab(group.patientFriendlyName);
+        if (deterministicConditions.length === 0) continue;
+
+        const matchedGroupIds: string[] = [];
+        for (const conditionName of deterministicConditions) {
+          const match = conditionChoices.find((choice) => choice.name === conditionName);
+          if (match) matchedGroupIds.push(match.conditionGroupId);
+        }
+        if (matchedGroupIds.length === 0) continue;
+
+        const deterministicEntries = matchedGroupIds.map((targetGroupId) =>
+          relationshipCacheEntry({
+            sourceGroupId: groupId,
+            targetGroupId,
+            sourceResourceType: "Observation",
+            targetResourceType: "Condition",
+            relationship: "monitoring_marker",
+            confidence: 1,
+            fallback: false,
+            model: "deterministic:condition-lab"
+          })
+        );
+        await upsertAndPersist(deterministicEntries);
+        groupingConsoleLog("info", "vitals-relationship-suggestion-deterministic", {
+          observationGroupId: groupId,
+          observationName: group.patientFriendlyName,
+          matchedConditionNames: deterministicConditions,
+          matchedGroupIds
+        });
+      }
+    }
+
+    if (!options.isCurrentRun()) return;
+
+    // Medication -> Condition deterministic pass. Curated table covers 26 of
+    // the 34 conditions, 706 med-ingredient pairs. Splits multi-ingredient
+    // patient-friendly names on " / " and looks up each ingredient.
+    // There is no LLM fallback for med→condition today; deterministic-only.
+    // `relationshipRecordsForLabGroup` rejects non-Observation records, so we
+    // use `recordsForNextGroup` here which only filters hidden records.
+    const medicationGroups = nextGroups.filter(
+      (group) =>
+        group.resourceTypes.includes("MedicationRequest") &&
+        recordsForNextGroup(group).length > 0
+    );
+    if (medicationGroups.length > 0 && conditionChoices.length > 0) {
+      groupingConsoleLog("info", "medication-relationship-suggestion-start", {
+        medicationGroupCount: medicationGroups.length,
+        conditionGroupCount: conditionGroups.length
+      });
+      for (let index = 0; index < medicationGroups.length; index += 1) {
+        if (!options.isCurrentRun()) return;
+        const group = medicationGroups[index];
+        const groupId = relationshipGroupKey(group);
+        setStatus(`Linking medications to conditions... ${index + 1}/${medicationGroups.length}`);
+
+        // Collect RxNorm codes from all records in this medication group so
+        // the lookup module can decompose to active ingredients via the
+        // rxnorm_ingredient_decomposition dataset. codingKeys entries are
+        // shaped like "rxnorm:860975".
+        const rxnormCodes = Array.from(
+          new Set(
+            recordsForNextGroup(group).flatMap((record) =>
+              (record.codingKeys ?? [])
+                .filter((key) => key.startsWith("rxnorm:"))
+                .map((key) => key.slice("rxnorm:".length))
+            )
+          )
+        );
+
+        const deterministicConditions = await findDeterministicConditionsForMedication(
+          group.patientFriendlyName,
+          rxnormCodes.length > 0 ? { rxnormCodes } : undefined
+        );
+        groupingConsoleLog("info", "medication-relationship-suggestion-lookup", {
+          medicationGroupId: groupId,
+          medicationName: group.patientFriendlyName,
+          rxnormCodes,
+          deterministicConditionCandidates: deterministicConditions,
+          patientConditionNames: conditionChoices.map((c) => c.name)
+        });
+        if (deterministicConditions.length === 0) continue;
+
+        const matchedGroupIds: string[] = [];
+        for (const conditionName of deterministicConditions) {
+          const match = conditionChoices.find((choice) => choice.name === conditionName);
+          if (match) matchedGroupIds.push(match.conditionGroupId);
+        }
+        if (matchedGroupIds.length === 0) continue;
+
+        const deterministicEntries = matchedGroupIds.map((targetGroupId) =>
+          relationshipCacheEntry({
+            sourceGroupId: groupId,
+            targetGroupId,
+            sourceResourceType: "MedicationRequest",
+            targetResourceType: "Condition",
+            relationship: "monitoring_marker",
+            confidence: 1,
+            fallback: false,
+            model: "deterministic:condition-med"
+          })
+        );
+        await upsertAndPersist(deterministicEntries);
+        groupingConsoleLog("info", "medication-relationship-suggestion-deterministic", {
+          medicationGroupId: groupId,
+          medicationName: group.patientFriendlyName,
+          matchedConditionNames: deterministicConditions,
+          matchedGroupIds
         });
       }
     }

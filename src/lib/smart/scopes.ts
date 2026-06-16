@@ -52,6 +52,28 @@ export const EXPANDED_CLINICAL_SCOPES = [
   "patient/Immunization.read"
 ].join(" ");
 
+/**
+ * Scopes for Epic production (non-sandbox) connections.
+ *
+ * Epic production systems reject `launch/patient` unless the app registration
+ * explicitly approves it. The sandbox scopes work because Epic's sandbox
+ * pre-configures patient context. For production, we omit `launch/patient` and
+ * let Epic infer the patient from the `openid`/`fhirUser` token.
+ */
+export const EPIC_PRODUCTION_SCOPES = [
+  "openid",
+  "fhirUser",
+  "patient/Patient.read",
+  "patient/MedicationRequest.read",
+  "patient/AllergyIntolerance.read",
+  "patient/Condition.read",
+  "patient/Observation.read",
+  "patient/Encounter.read",
+  "patient/Procedure.read",
+  "patient/DiagnosticReport.read",
+  "patient/Immunization.read"
+].join(" ");
+
 export const MVP_RESOURCE_TYPES = [
   "Patient",
   "MedicationRequest",
