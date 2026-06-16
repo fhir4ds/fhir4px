@@ -1302,11 +1302,11 @@ function estimatePromptTokens(records: GroupableRecord[]): number {
   return Math.ceil(serializedLength / APPROX_CHARS_PER_TOKEN);
 }
 
-function completionRequest(messages: ChatMessage[], structured: boolean, schemaText = GROUPING_RESPONSE_SCHEMA_TEXT, maxTokens = 900) {
+function completionRequest(messages: ChatMessage[], structured: boolean, schemaText = GROUPING_RESPONSE_SCHEMA_TEXT, maxTokens = 900, temperature = 0) {
   return {
     messages,
     max_tokens: maxTokens,
-    temperature: 0,
+    temperature,
     ...(structured
       ? {
           response_format: {
@@ -1451,6 +1451,7 @@ async function createJsonCompletionWithRetry(
     timeoutMessage: string;
     emptyMessage: string;
     retryProgressMessage: string;
+    temperature?: number;
   }
 ): Promise<unknown> {
   const messageCharLengths = messages.map((message) => message.content.length);
@@ -1494,7 +1495,7 @@ async function createJsonCompletionWithRetry(
 
   try {
     const completion = await runBoundedWebLlmOperation(
-      () => engine.chat.completions.create(completionRequest(messages, true, request.schemaText, request.maxTokens)),
+      () => engine.chat.completions.create(completionRequest(messages, true, request.schemaText, request.maxTokens, request.temperature)),
       {
         timeoutMs: request.timeoutMs,
         timeoutMessage: request.timeoutMessage
@@ -1537,7 +1538,7 @@ async function createJsonCompletionWithRetry(
       timeoutMs: request.timeoutMs
     });
     const retry = await runBoundedWebLlmOperation(
-      () => engine.chat.completions.create(completionRequest(messages, false, request.schemaText, request.maxTokens)),
+      () => engine.chat.completions.create(completionRequest(messages, false, request.schemaText, request.maxTokens, request.temperature)),
       {
         timeoutMs: request.timeoutMs,
         timeoutMessage: request.timeoutMessage
@@ -1586,6 +1587,7 @@ export async function runStructuredWebLlmPlayground(
     schemaText: string;
     maxTokens: number;
     timeoutMs?: number;
+    temperature?: number;
   },
   options: WebLlmGroupingOptions = {}
 ): Promise<WebLlmPlaygroundRunResult> {
@@ -1604,7 +1606,7 @@ export async function runStructuredWebLlmPlayground(
   });
 
   const completion = await runBoundedWebLlmOperation(
-    () => engine.chat.completions.create(completionRequest(request.messages, true, request.schemaText, request.maxTokens)),
+    () => engine.chat.completions.create(completionRequest(request.messages, true, request.schemaText, request.maxTokens, request.temperature)),
     {
       timeoutMs,
       timeoutMessage: `Local model did not finish ${request.operationLabel} within ${Math.round(timeoutMs / 1000)} seconds`
@@ -1687,6 +1689,13 @@ const OBSERVATION_CATEGORY_CLASSIFICATION_SCHEMA_TEXT = JSON.stringify({
 });
 
 const NO_DIRECT_CONDITION_ASSOCIATION_ID = "__none__";
+// Temperature for lab-condition association calls. The 3B q4f16_1 model
+// abstains on every lab-condition call at temperature=0 due to quantization
+// tipping the probability margin toward the empty-array path. Raising to 0.3
+// gives the model enough stochasticity to pick the correct condition token.
+// Naming/classification stay at 0 (wider probability margins, no issue).
+const LAB_CONDITION_TEMPERATURE = 0.3;
+
 const LAB_CONDITION_CONFIDENCE_LABELS = ["high", "medium", "low"] as const;
 type LabConditionConfidenceLabel = (typeof LAB_CONDITION_CONFIDENCE_LABELS)[number];
 export const LAB_CONDITION_SYSTEM_PROMPT_OVERRIDE_KEY = "fhir4px_webllm_lab_condition_system_prompt";
@@ -2224,6 +2233,7 @@ export async function associateLabGroupWithConditionsWithWebLlm(
       operationLabel: "lab condition association",
       schemaText: labConditionTargetSchemaText(promptConditionChoices),
       maxTokens: 180,
+      temperature: LAB_CONDITION_TEMPERATURE,
       timeoutMs: Math.min(options.timeoutMs ?? DEFAULT_WEBLLM_TIMEOUT_MS, 45_000),
       timeoutMessage: "Local model did not finish lab-condition association within 45 seconds",
       emptyMessage: "WebLLM returned an empty lab-condition association response",
@@ -2510,6 +2520,7 @@ export async function runLabAssociationEvalSuite(
           messages,
           schemaText: testCase.schemaText ?? request.schemaText ?? labConditionTargetSchemaText(conditionChoices),
           maxTokens: request.maxTokens ?? 180,
+          temperature: LAB_CONDITION_TEMPERATURE,
           timeoutMs: request.timeoutMs
         },
         modelOptions
