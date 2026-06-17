@@ -2954,19 +2954,22 @@ export function PatientExplorer() {
   function dataStatusPrimaryText() {
     if (busy) return "Downloading medical records...";
     if (modelBusy) {
+      const warmup = getNamingWarmupStatus();
+      if (warmup.phase === "loading" && !groupingProgress) return "Loading AI model (first use only)...";
       if (status.startsWith("Classifying") || status.startsWith("Linking") || status.startsWith("Switching")) return status;
+      if (status.startsWith("Loading AI model")) return status;
       return groupingProgress && groupingProgress.total > 0
         ? `Organizing medical records... ${groupingProgress.completed}/${groupingProgress.total}`
         : "Organizing medical records...";
     }
-    if (appDataIsLoading()) return webLlmWarmupStatus.message ?? "Preparing app...";
+    if (appDataIsLoading()) return webLlmWarmupStatus.message ?? "Loading AI model...";
     return dataStatusSummary();
   }
 
   function dataStatusDetailText() {
     if (busy || modelBusy) return dataStatusSummary();
     if (appDataIsLoading()) return sources.length > 0 ? dataStatusSummary() : null;
-    if (groupingDiagnostics.length > 0) return "Some records could not be organized automatically.";
+    if (groupingDiagnostics.length > 0) return "Some records used AI model fallback names.";
     if (sources.length === 0 && status !== "Ready") return status;
     return null;
   }
