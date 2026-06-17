@@ -53,34 +53,11 @@ async function getGenerator(): Promise<Generator> {
     env.allowLocalModels = false;
     env.allowRemoteModels = true;
 
-    // Monkey-patch fetch to log model download progress. transformers.js
-    // downloads model shards as separate fetch calls; logging each gives the
-    // user visibility into what's happening during the initial ~1-2GB download.
-    const originalFetch = globalThis.fetch;
-    let downloadCount = 0;
-    globalThis.fetch = async function (input: RequestInfo | URL, init?: RequestInit) {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      const isModelFile = /\.(onnx|json|txt|model|safetensors|bin)(\?|$)/i.test(url)
-        && (url.includes("onnx") || url.includes("tokenizer") || url.includes("config") || url.includes("vocab"));
-
-      if (isModelFile) {
-        downloadCount++;
-        const filename = url.split("/").pop()?.split("?")[0] ?? "file";
-        console.info("[fhir4px:transformers-llm]", {
-          event: "model-download",
-          file: filename,
-          fileNumber: downloadCount,
-          url: url.split("?")[0],
-          timestamp: new Date().toISOString()
-        });
-      }
-      return originalFetch.call(this, input, init);
-    };
-
     const modelId = activeModelId();
     console.info("[fhir4px:transformers-llm]", {
       event: "llm-load-start",
       modelId,
+      message: "Downloading AI model (this may take 30-60 seconds on first load)",
       timestamp: new Date().toISOString()
     });
 
@@ -88,7 +65,27 @@ async function getGenerator(): Promise<Generator> {
     try {
       const generator = await pipeline("text-generation", modelId, {
         dtype: "q8",
-        device: "wasm"
+        device: "wasm",
+        progress_callback: (data: unknown) => {
+          const event = data as { status?: string; file?: string; loaded?: number; total?: number; progress?: number };
+          if (event?.status === "progress" && event.file) {
+            const pct = event.total ? Math.round((event.loaded ?? 0) / event.total * 100) : null;
+            console.info("[fhir4px:transformers-llm]", {
+              event: "model-download-progress",
+              file: event.file.split("/").pop(),
+              loaded: event.loaded,
+              total: event.total,
+              percent: pct,
+              timestamp: new Date().toISOString()
+            });
+          } else if (event?.status === "done" && event.file) {
+            console.info("[fhir4px:transformers-llm]", {
+              event: "model-download-done",
+              file: event.file.split("/").pop(),
+              timestamp: new Date().toISOString()
+            });
+          }
+        }
       });
       const elapsedMs = Math.round(performance.now() - startedAt);
 
@@ -96,16 +93,11 @@ async function getGenerator(): Promise<Generator> {
         event: "llm-load-success",
         modelId,
         elapsedMs,
-        filesDownloaded: downloadCount,
         timestamp: new Date().toISOString()
       });
 
-      // Restore original fetch
-      globalThis.fetch = originalFetch;
-
       return generator as Generator;
     } catch (error) {
-      globalThis.fetch = originalFetch;
       console.error("[fhir4px:transformers-llm]", {
         event: "llm-load-failed",
         modelId,

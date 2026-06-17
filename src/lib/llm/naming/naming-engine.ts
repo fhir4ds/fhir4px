@@ -3,7 +3,7 @@ import type { NamingResult, NamingOptions, NamingDiagnostic } from "./types";
 import { getNamingSystemPrompt, namingUserPrompt, namingBatchUserPrompt, relevantAvailableNameChoices, availableNamesForRecords } from "./shared-helpers";
 import { extractJson, parseNamingResponse, parseNamingBatchResponse } from "./parse";
 import { validatedNamingResult, fallbackNamingForRecord } from "./validate";
-import { generate } from "../transformers-llm";
+import { generate, isLlmLoaded } from "../transformers-llm";
 
 function isContextWindowError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -22,6 +22,15 @@ export async function nameOne(
   availableNames: string[],
   options: NamingOptions = {}
 ): Promise<NamingResult> {
+  if (!isLlmLoaded()) {
+    console.info("[fhir4px:naming]", {
+      event: "naming-awaiting-model",
+      message: "Waiting for Gemma 4 model to finish loading...",
+      recordId: record.id,
+      timestamp: new Date().toISOString()
+    });
+    options.onProgress?.("Loading AI model (first use only, please wait)...");
+  }
   const namingAvailableNames = relevantAvailableNameChoices([record], availableNamesForRecords([record], availableNames));
   const { content } = await generate({
     systemPrompt: getNamingSystemPrompt(),
