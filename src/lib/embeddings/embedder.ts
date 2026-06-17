@@ -1,14 +1,14 @@
 /**
  * Embedding model wrapper for transformers.js.
  *
- * Loads joelmontavon/fhir4px-embeddings-onnx (105MB, q8 WASM) — a fhir4px-hosted
+ * Loads joelmontavon/fhir4px-embeddings-onnx (fp32 WASM) — a fhir4px-hosted
  * ONNX conversion of NeuML/pubmedbert-base-embeddings (PubMedBERT fine-tuned for
  * sentence similarity). Selected over gte-modernbert-base for better accuracy on
  * medical text: wins on 3 of 4 categorization tasks plus lab↔condition matching.
  *
- * The model loads lazily — only when the first embed() call is made. This
- * avoids adding to initial page load time. Once loaded, subsequent calls
- * are ~5-15ms per text (WASM, q8).
+ * Uses fp32 dtype because WASM doesn't support block-quantized operators
+ * (GatherBlockQuantized) used by q8/q4 variants. fp32 is larger but works
+ * reliably across all browsers with WebAssembly support.
  */
 
 const EMBEDDING_MODEL_ID = "joelmontavon/fhir4px-embeddings-onnx";
@@ -25,7 +25,7 @@ async function getPipeline(): Promise<Extractor> {
     env.allowLocalModels = false;
     env.allowRemoteModels = true;
     const extractor = await pipeline("feature-extraction", EMBEDDING_MODEL_ID, {
-      dtype: "q8",
+      dtype: "fp32",
       device: "wasm"
     });
     return extractor as Extractor;

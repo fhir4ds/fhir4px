@@ -87,7 +87,7 @@ async function getGenerator(): Promise<Generator> {
     const startedAt = performance.now();
     try {
       const generator = await pipeline("text-generation", modelId, {
-        dtype: "q4",
+        dtype: "fp32",
         device: "wasm"
       });
       const elapsedMs = Math.round(performance.now() - startedAt);
