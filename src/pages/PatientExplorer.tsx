@@ -2981,9 +2981,7 @@ export function PatientExplorer() {
         ? null
         : modelBusy
           ? groupingProgressValue
-          : appDataLoading && typeof webLlmWarmupStatus.progress === "number"
-            ? Math.round(webLlmWarmupStatus.progress * 100)
-            : null;
+          : null;
     const unavailableReferences =
       (dataset?.referenceResolution?.skipped.length ?? 0) + (dataset?.referenceResolution?.unresolved.length ?? 0);
     const hasSourceError = filteredSources.some((source) => source.status === "error" || source.status === "needs-reconnect");

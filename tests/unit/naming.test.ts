@@ -15,6 +15,7 @@ import { incrementalNamingBatchSize, canonicalName, slug } from "../../src/lib/l
 import type { GroupableRecord } from "../../src/lib/fhir/patient-groups";
 
 function record(overrides: Partial<GroupableRecord> & Pick<GroupableRecord, "id" | "resourceType" | "sourceLabel">): GroupableRecord {
+  return { source: "provider", observationBucket: undefined, ...overrides } as GroupableRecord;
   return { source: "provider", ...overrides };
 }
 
