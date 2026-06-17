@@ -60,7 +60,7 @@ export function promptRecord(record: GroupableRecord): Record<string, unknown> {
       conceptTexts || conceptCodings
         ? removeUndefinedValues({ text: conceptTexts, coding: conceptCodings })
         : removeUndefinedValues({ text: [truncateText(record.sourceLabel, MAX_CONCEPT_TEXT_LENGTH)] }),
-    ingredients: takeDefined(record.ingredients, 4),
+    ingredients: takeDefined(record.ingredients ?? [], 4),
     dosageForm: truncateText(record.dosageForm, MAX_DOSAGE_FORM_LENGTH),
     route: truncateText(record.route, MAX_ROUTE_LENGTH),
     categoryCode: record.categoryCode,
@@ -134,7 +134,8 @@ export function relevantAvailableNameChoices(records: GroupableRecord[], availab
 
 // ── Observation bucket helpers ────────────────────────────────────────────
 export function observationBucketFromRecord(record: GroupableRecord): PatientObservationBucket {
-  if (record.observationBucket) return record.observationBucket;
+  const bucket = (record as GroupableRecord & { observationBucket?: PatientObservationBucket }).observationBucket;
+  if (bucket) return bucket;
   const category = canonicalName(record.category ?? "");
   const categoryCode = canonicalName(record.categoryCode ?? "");
   if (category.includes("vital") || categoryCode.includes("vital")) return "vitals";

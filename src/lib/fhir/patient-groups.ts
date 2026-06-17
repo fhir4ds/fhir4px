@@ -67,7 +67,7 @@ export interface PatientFriendlyGroup {
 export interface PatientGroupingResult {
   groups: PatientFriendlyGroup[];
   unassigned: string[];
-  source: "source" | "deterministic" | "lookup" | "webllm" | "mixed";
+  source: "source" | "deterministic" | "lookup" | "webllm" | "transformers" | "mixed";
 }
 
 function kebab(value: string): string {
