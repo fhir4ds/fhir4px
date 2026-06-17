@@ -6,7 +6,7 @@
  * WebLLM integration (~3000 lines in webllm.ts) once the fine-tuned Gemma 4
  * model is validated.
  *
- * Current model: onnx-community/gemma-4-E2B-it-ONNX (off-the-shelf, q4)
+ * Current model: onnx-community/gemma-4-E2B-it-ONNX (off-the-shelf, q8 ~2.5GB)
  * Target model: joelmontavon/fhir4px-gemma4-e2b-onnx (fine-tuned, pending)
  *
  * The model ID is configurable via the LLM_MODEL_ID constant below — swap it
@@ -87,7 +87,7 @@ async function getGenerator(): Promise<Generator> {
     const startedAt = performance.now();
     try {
       const generator = await pipeline("text-generation", modelId, {
-        dtype: "fp32",
+        dtype: "q8",
         device: "wasm"
       });
       const elapsedMs = Math.round(performance.now() - startedAt);

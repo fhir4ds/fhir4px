@@ -6,9 +6,8 @@
  * sentence similarity). Selected over gte-modernbert-base for better accuracy on
  * medical text: wins on 3 of 4 categorization tasks plus lab↔condition matching.
  *
- * Uses fp32 dtype because WASM doesn't support block-quantized operators
- * (GatherBlockQuantized) used by q8/q4 variants. fp32 is larger but works
- * reliably across all browsers with WebAssembly support.
+ * Uses q8 dtype (standard int8 dynamic quantization). WASM-compatible —
+ * no block-quantized operators. ~105MB download.
  */
 
 const EMBEDDING_MODEL_ID = "joelmontavon/fhir4px-embeddings-onnx";
@@ -25,7 +24,7 @@ async function getPipeline(): Promise<Extractor> {
     env.allowLocalModels = false;
     env.allowRemoteModels = true;
     const extractor = await pipeline("feature-extraction", EMBEDDING_MODEL_ID, {
-      dtype: "fp32",
+      dtype: "q8",
       device: "wasm"
     });
     return extractor as Extractor;
