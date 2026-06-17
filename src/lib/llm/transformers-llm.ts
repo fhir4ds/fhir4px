@@ -6,7 +6,7 @@
  * WebLLM integration (~3000 lines in webllm.ts) once the fine-tuned Gemma 4
  * model is validated.
  *
- * Current model: onnx-community/gemma-4-E2B-it-ONNX (off-the-shelf, q8 ~2.5GB)
+ * Current model: onnx-community/gemma-4-E2B-it-qat-mobile-ONNX (QAT mobile, WASM-optimized)
  * Target model: joelmontavon/fhir4px-gemma4-e2b-onnx (fine-tuned, pending)
  *
  * The model ID is configurable via the LLM_MODEL_ID constant below — swap it
@@ -22,7 +22,7 @@
  * Can also be overridden at runtime via sessionStorage:
  *   sessionStorage.setItem("fhir4px_llm_model_id", "joelmontavon/...")
  */
-const DEFAULT_LLM_MODEL_ID = "onnx-community/gemma-4-E2B-it-ONNX";
+const DEFAULT_LLM_MODEL_ID = "onnx-community/gemma-4-E2B-it-qat-mobile-ONNX";
 
 function activeModelId(): string {
   if (typeof sessionStorage !== "undefined") {
