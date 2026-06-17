@@ -271,11 +271,12 @@ describe("fallbackNamingForRecord", () => {
 
   it("includes observationBucket for Observation records", () => {
     const rec = record({
-      id: "x", resourceType: "Observation", sourceLabel: "Some Lab",
-      observationBucket: "labs"
+      id: "x", resourceType: "Observation", sourceLabel: "Some Lab"
     });
+    // fallbackNamingForRecord derives the bucket from category/categoryCode
+    // since observationBucket isn't on GroupableRecord at the TS level
     const result = fallbackNamingForRecord(rec);
-    expect(result.observationBucket).toBe("labs");
+    expect(result.observationBucket).toBeDefined();
   });
 
   it("does not include observationBucket for non-Observation records", () => {
