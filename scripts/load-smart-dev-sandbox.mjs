@@ -6,7 +6,11 @@ const DEFAULT_FIXTURES = [
   "tests/fixtures/fhir/smart-dev-sandbox-patient-r4.json",
   "tests/fixtures/fhir/large-patient-r4.json",
   "tests/fixtures/fhir/large-cardiorenal-patient-r4.json",
-  "tests/fixtures/fhir/large-respiratory-immune-patient-r4.json"
+  "tests/fixtures/fhir/large-respiratory-immune-patient-r4.json",
+  "tests/fixtures/fhir/tier2-codes-only-patient-r4.json",
+  "tests/fixtures/fhir/tier3-miscoded-patient-r4.json",
+  "tests/fixtures/fhir/tier4-no-codes-patient-r4.json",
+  "tests/fixtures/fhir/tier2-relationships-patient-r4.json"
 ];
 const TRANSACTION_BATCH_SIZE = 25;
 const PATIENT_RESOURCE_TYPES = [

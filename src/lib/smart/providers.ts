@@ -97,6 +97,30 @@ export function getSandboxProviders(): SmartProvider[] {
                 description:
                   "Large synthetic patient with respiratory, HIV, thyroid, anemia, and medication safety monitoring",
                 source: "configured" as const
+              },
+              {
+                id: "fhir4px-tier2-codes-patient",
+                label: "Sam Codes-Only (Tier 2)",
+                description: "Tests deterministic lookup: standard LOINC/RxNorm/SNOMED codes, condition-lab pairs in deterministic table",
+                source: "configured" as const
+              },
+              {
+                id: "fhir4px-tier3-miscoded-patient",
+                label: "Alex Miscoded (Tier 3)",
+                description: "Tests embedding classification: vital signs miscategorized as labs, labs miscategorized as vitals",
+                source: "configured" as const
+              },
+              {
+                id: "fhir4px-tier4-nocodes-patient",
+                label: "Robin No-Codes (Tier 4)",
+                description: "Tests LLM naming: records with display text only, no standard codes — LLM must generate patient-friendly names",
+                source: "configured" as const
+              },
+              {
+                id: "fhir4px-tier2-relations-patient",
+                label: "Jordan Linked (Relationships)",
+                description: "Tests deterministic relationships: HbA1c/Glucose→Diabetes, BP→HTN, Metformin→Diabetes, Lisinopril→HTN, Albuterol→Asthma",
+                source: "configured" as const
               }
             ],
             launchMode: "local-test-session" as const

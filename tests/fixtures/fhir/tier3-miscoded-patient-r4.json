@@ -1,0 +1,107 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "fhir4px-tier3-miscoded-patient",
+        "name": [{ "family": "Miscoded", "given": ["Alex"] }],
+        "gender": "female",
+        "birthDate": "1988-07-22"
+      },
+      "request": { "method": "PUT", "url": "Patient/fhir4px-tier3-miscoded-patient" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier3-obs-bp-systolic",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "8480-6", "display": "Systolic blood pressure" }] },
+        "subject": { "reference": "Patient/fhir4px-tier3-miscoded-patient" },
+        "effectiveDateTime": "2026-02-10",
+        "valueQuantity": { "value": 125, "unit": "mmHg" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier3-obs-bp-systolic" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier3-obs-bp-diastolic",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "8462-4", "display": "Diastolic blood pressure" }] },
+        "subject": { "reference": "Patient/fhir4px-tier3-miscoded-patient" },
+        "effectiveDateTime": "2026-02-10",
+        "valueQuantity": { "value": 82, "unit": "mmHg" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier3-obs-bp-diastolic" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier3-obs-heartrate",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "8867-4", "display": "Heart rate" }] },
+        "subject": { "reference": "Patient/fhir4px-tier3-miscoded-patient" },
+        "effectiveDateTime": "2026-02-10",
+        "valueQuantity": { "value": 72, "unit": "beats/minute" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier3-obs-heartrate" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier3-obs-weight",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "29463-7", "display": "Body weight" }] },
+        "subject": { "reference": "Patient/fhir4px-tier3-miscoded-patient" },
+        "effectiveDateTime": "2026-02-10",
+        "valueQuantity": { "value": 65, "unit": "kg" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier3-obs-weight" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier3-obs-spo2",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "59408-5", "display": "Oxygen saturation in Arterial blood by Pulse oximetry" }] },
+        "subject": { "reference": "Patient/fhir4px-tier3-miscoded-patient" },
+        "effectiveDateTime": "2026-02-10",
+        "valueQuantity": { "value": 98, "unit": "%" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier3-obs-spo2" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier3-obs-cholesterol",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "2093-3", "display": "Cholesterol [Mass/volume] in Serum or Plasma" }] },
+        "subject": { "reference": "Patient/fhir4px-tier3-miscoded-patient" },
+        "effectiveDateTime": "2026-02-10",
+        "valueQuantity": { "value": 180, "unit": "mg/dL" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier3-obs-cholesterol" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier3-obs-glucose",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "2339-0", "display": "Glucose [Mass/volume] in Blood" }] },
+        "subject": { "reference": "Patient/fhir4px-tier3-miscoded-patient" },
+        "effectiveDateTime": "2026-02-10",
+        "valueQuantity": { "value": 95, "unit": "mg/dL" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier3-obs-glucose" }
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "id": "fhir4px-tier2-codes-patient",
+        "name": [{ "family": "Codes-Only", "given": ["Sam"] }],
+        "gender": "male",
+        "birthDate": "1975-03-15"
+      },
+      "request": { "method": "PUT", "url": "Patient/fhir4px-tier2-codes-patient" }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "tier2-cond-diabetes",
+        "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }] },
+        "code": { "coding": [{ "system": "http://snomed.info/sct", "code": "44054006", "display": "Type 2 diabetes mellitus" }], "text": "Type 2 diabetes mellitus" },
+        "subject": { "reference": "Patient/fhir4px-tier2-codes-patient" }
+      },
+      "request": { "method": "PUT", "url": "Condition/tier2-cond-diabetes" }
+    },
+    {
+      "resource": {
+        "resourceType": "Condition",
+        "id": "tier2-cond-htn",
+        "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }] },
+        "code": { "coding": [{ "system": "http://snomed.info/sct", "code": "59621000", "display": "Essential hypertension" }], "text": "Hypertension" },
+        "subject": { "reference": "Patient/fhir4px-tier2-codes-patient" }
+      },
+      "request": { "method": "PUT", "url": "Condition/tier2-cond-htn" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier2-obs-hba1c",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "4548-4", "display": "Hemoglobin A1c/Hemoglobin.total in Blood" }] },
+        "subject": { "reference": "Patient/fhir4px-tier2-codes-patient" },
+        "effectiveDateTime": "2026-01-15",
+        "valueQuantity": { "value": 7.2, "unit": "%", "system": "http://unitsofmeasure.org", "code": "%" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier2-obs-hba1c" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier2-obs-glucose",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "laboratory" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "2339-0", "display": "Glucose [Mass/volume] in Blood" }] },
+        "subject": { "reference": "Patient/fhir4px-tier2-codes-patient" },
+        "effectiveDateTime": "2026-01-15",
+        "valueQuantity": { "value": 142, "unit": "mg/dL", "system": "http://unitsofmeasure.org", "code": "mg/dL" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier2-obs-glucose" }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "tier2-obs-sbp",
+        "status": "final",
+        "category": [{ "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/observation-category", "code": "vital-signs" }] }],
+        "code": { "coding": [{ "system": "http://loinc.org", "code": "8480-6", "display": "Systolic blood pressure" }] },
+        "subject": { "reference": "Patient/fhir4px-tier2-codes-patient" },
+        "effectiveDateTime": "2026-01-15",
+        "valueQuantity": { "value": 138, "unit": "mmHg", "system": "http://unitsofmeasure.org", "code": "mmHg" }
+      },
+      "request": { "method": "PUT", "url": "Observation/tier2-obs-sbp" }
+    },
+    {
+      "resource": {
+        "resourceType": "MedicationRequest",
+        "id": "tier2-med-metformin",
+        "status": "active",
+        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "860975", "display": "metformin 500 MG Oral Tablet" }] },
+        "subject": { "reference": "Patient/fhir4px-tier2-codes-patient" },
+        "authoredOn": "2026-01-10"
+      },
+      "request": { "method": "PUT", "url": "MedicationRequest/tier2-med-metformin" }
+    }
+  ]
+}
