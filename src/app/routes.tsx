@@ -21,6 +21,7 @@ export function AppRoutes() {
       <Route path="/smart/callback" element={<SmartCallback />} />
       <Route path="/connected" element={<ConnectedProvider />} />
       <Route path="/records" element={<PatientExplorer />} />
+      <Route path="/summary" element={<PatientExplorer />} />
       <Route path="/referral" element={<ReferralBuilder />} />
       <Route path="/export" element={<LocalExport />} />
       <Route path="/settings" element={<Settings />} />

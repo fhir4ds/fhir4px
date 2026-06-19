@@ -57,9 +57,18 @@ export interface DisplayObservation {
   effectiveDate?: string;
   interpretation?: string;
   abnormal?: boolean;
+  referenceRange?: ExtractedReferenceRange;
   source: "provider" | "patient";
   portalSourceId?: string;
   portalSourceName?: string;
+}
+
+export interface ExtractedReferenceRange {
+  low?: number;
+  high?: number;
+  unit?: string;
+  ucumCode?: string;
+  text?: string;
 }
 
 export interface DisplayImmunization {

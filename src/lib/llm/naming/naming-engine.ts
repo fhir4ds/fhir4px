@@ -17,6 +17,17 @@ function isContextWindowError(error: unknown): boolean {
   );
 }
 
+function logParseFailure(scope: string, content: string, error: unknown): void {
+  console.warn("[fhir4px:naming]", {
+    event: "naming-parse-failed",
+    scope,
+    rawContentPreview: content.slice(0, 800),
+    rawContentLength: content.length,
+    error: error instanceof Error ? error.message : String(error),
+    timestamp: new Date().toISOString()
+  });
+}
+
 export async function nameOne(
   record: GroupableRecord,
   availableNames: string[],
@@ -25,7 +36,7 @@ export async function nameOne(
   if (!isLlmLoaded()) {
     console.info("[fhir4px:naming]", {
       event: "naming-awaiting-model",
-      message: "Waiting for Gemma 4 model to finish loading...",
+      message: "Waiting for the AI model to finish loading...",
       recordId: record.id,
       timestamp: new Date().toISOString()
     });
@@ -38,7 +49,13 @@ export async function nameOne(
     maxTokens: 180,
     temperature: 0
   });
-  const parsed = extractJson(content);
+  let parsed: unknown;
+  try {
+    parsed = extractJson(content);
+  } catch (error) {
+    logParseFailure("single", content, error);
+    throw error;
+  }
   return validatedNamingResult(record, { id: record.id, ...parseNamingResponse(parsed) });
 }
 
@@ -58,7 +75,13 @@ export async function nameBatch(
     maxTokens,
     temperature: 0
   });
-  const parsed = extractJson(content);
+  let parsed: unknown;
+  try {
+    parsed = extractJson(content);
+  } catch (error) {
+    logParseFailure("batch", content, error);
+    throw error;
+  }
   return parseNamingBatchResponse(parsed, records).map((result) =>
     validatedNamingResult(
       records.find((r) => r.id === result.id)!,
@@ -96,7 +119,12 @@ export async function nameRecords(
       return [...left, ...right];
     }
 
-    // Generic batch failure → per-record fallback
+    // Generic batch failure (JSON parse, model error, etc.) → batch fallback for
+    // ALL records in the batch. We intentionally do NOT retry per-record here:
+    // on the transformers.js WASM backend, each per-record call is a full
+    // inference pass (10-30s on a 1.3GB model), and a model that failed JSON
+    // formatting in batch mode almost always fails the same way per-record.
+    // The cascade turns one bad batch into a minute-plus frozen UI.
     options.onDiagnostic?.({
       phase: "batch record naming",
       message: error instanceof Error ? error.message : String(error),
@@ -106,26 +134,6 @@ export async function nameRecords(
       recovered: true
     });
 
-    const results: NamingResult[] = [];
-    let nextAvailableNames = [...availableNames];
-    for (const record of records) {
-      try {
-        const naming = await nameOne(record, nextAvailableNames, options);
-        results.push(naming);
-        nextAvailableNames = [...nextAvailableNames, naming.patientFriendlyName];
-      } catch (singleError) {
-        options.onDiagnostic?.({
-          phase: "single record naming",
-          message: singleError instanceof Error ? singleError.message : String(singleError),
-          affectedRecordIds: [record.id],
-          affectedCount: 1,
-          fallbackScope: "single-concept"
-        });
-        const fallback = fallbackNamingForRecord(record);
-        results.push(fallback);
-        nextAvailableNames = [...nextAvailableNames, fallback.patientFriendlyName];
-      }
-    }
-    return results;
+    return records.map((record) => fallbackNamingForRecord(record));
   }
 }

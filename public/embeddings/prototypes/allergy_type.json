@@ -1,49 +1,62 @@
 {
   "task": "allergy_type",
   "model": "NeuML/pubmedbert-base-embeddings",
-  "version": "1.0.0",
-  "note": "Prototypes from realistic evaluation data \u2014 real patient-friendly names from patient_friendly_names.csv",
+  "version": 2,
   "classes": {
     "medication": {
       "prototype_texts": [
-        "Allergy to ibuprofen",
-        "Allergy to aspirin",
-        "Drug Allergies",
-        "Allergy to morphine",
-        "Allergy to sulfonamide",
-        "Fish Allergy",
-        "Allergy to NSAID"
+        "Allergy to ibuprofen", "Allergy to aspirin", "Drug Allergies",
+        "Allergy to morphine", "Allergy to sulfonamide", "Allergy to NSAID",
+        "Allergy to penicillin", "Penicillin Allergy", "Allergy to amoxicillin",
+        "Allergy to cephalosporin", "Allergy to ciprofloxacin",
+        "Allergy to trimethoprim", "Allergy to codeine",
+        "Allergy to oxycodone", "Allergy to hydrocodone",
+        "Allergy to lisinopril", "Allergy to metformin",
+        "Allergy to atorvastatin", "Allergy to furosemide",
+        "Allergy to vancomycin", "Allergy to gentamicin",
+        "Allergy to haloperidol", "Allergy to heparin",
+        "Allergy to insulin", "Allergy to prednisone",
+        "Adverse reaction to medication", "Drug hypersensitivity"
       ]
     },
     "food": {
       "prototype_texts": [
-        "Allergy to gluten",
-        "Allergy to hen egg",
-        "Osteoarthritis",
-        "Shellfish Allergy",
-        "Allergy to food",
-        "Allergy to peanut",
-        "Peanut Allergy"
+        "Allergy to gluten", "Allergy to hen egg", "Shellfish Allergy",
+        "Allergy to food", "Allergy to peanut", "Peanut Allergy",
+        "Allergy to milk", "Allergy to cow milk", "Milk Allergy",
+        "Allergy to soy", "Allergy to wheat", "Allergy to tree nuts",
+        "Allergy to almond", "Allergy to walnut", "Allergy to cashew",
+        "Allergy to shrimp", "Allergy to crab", "Allergy to lobster",
+        "Allergy to fish", "Fish Allergy", "Allergy to sesame",
+        "Allergy to corn", "Allergy to rice", "Allergy to strawberry",
+        "Food allergy", "Food hypersensitivity", "Lactose intolerance"
       ]
     },
     "environmental": {
       "prototype_texts": [
-        "Ear Problem",
-        "Hay Fever",
-        "Allergy to plant",
-        "Allergy to ragweed",
-        "Allergy to grass",
-        "Sesame Seed",
-        "Allergy to dust"
+        "Hay Fever", "Allergy to plant", "Allergy to ragweed",
+        "Allergy to grass", "Allergy to dust", "Allergy to dust mite",
+        "Dust Mite Allergy", "Allergy to pollen", "Allergy to tree pollen",
+        "Allergy to mold", "Mold Allergy", "Allergy to cat dander",
+        "Allergy to dog dander", "Allergy to pet", "Pet Allergy",
+        "Allergy to latex", "Latex Allergy", "Allergy to perfume",
+        "Allergy to fragrance", "Seasonal Allergies",
+        "Allergic rhinitis", "Allergy to bee sting", "Allergy to insect sting",
+        "Allergy to cockroach", "Allergy to feather"
       ]
     },
     "other": {
       "prototype_texts": [
-        "Allergy to nickel",
-        "Chest Tightness",
-        "Allergy to contrast media",
-        "Solar urticaria",
-        "Allergy to metal"
+        "Allergy to nickel", "Allergy to metal", "Allergy to contrast media",
+        "Allergy to iodinated contrast", "Solar urticaria",
+        "Allergy to adhesive", "Allergy to tape",
+        "Allergy to chlorhexidine", "Allergy to bacitracin",
+        "Allergy to formaldehyde", "Allergy to acrylic",
+        "Allergy to rubber", "Contact dermatitis",
+        "Allergic contact dermatitis", "Allergy to bee venom",
+        "Allergy to fire ant", "Allergy to wasp sting",
+        "Allergy to honey", "Exercise-induced anaphylaxis",
+        "Cold urticaria", "Heat urticaria"
       ]
     }
   }

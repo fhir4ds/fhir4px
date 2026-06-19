@@ -1,4 +1,6 @@
 import type { PatientAuthoredRecord, PatientPatch } from "./patches";
+import type { CanonicalCode } from "./canonical-codes";
+import type { GroupReferenceRange } from "./reference-ranges";
 import type {
   DisplayCodingSummary,
   DisplayCondition,
@@ -62,6 +64,14 @@ export interface PatientFriendlyGroup {
   confidence: number;
   reason: string;
   fallback: boolean;
+  /**
+   * Canonical code resolved from patient-friendly name via the canonical-codes
+   * tables (ICD-10 for conditions, LOINC for labs/vitals, RxNorm for meds).
+   * Populated post-grouping in PatientExplorer. Used by GBD DW lookup,
+   * reference-range resolver, and future code-keyed features.
+   */
+  canonicalCode?: CanonicalCode;
+  referenceRange?: GroupReferenceRange;
 }
 
 export interface PatientGroupingResult {

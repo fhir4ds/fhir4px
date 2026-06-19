@@ -38,6 +38,51 @@ interface LoadedTask {
 const loadedTasks = new Map<string, LoadedTask>();
 const loadPromises = new Map<string, Promise<LoadedTask>>();
 
+/** Test-only: inject a prototype JSON object directly, bypassing fetch. */
+export function setPrototypeDataForTest(taskName: string, data: PrototypeFile | null): void {
+  if (data) {
+    const classNames = Object.keys(data.classes).sort();
+    const centroids = new Map<string, number[]>();
+    const textsToEmbed: string[] = [];
+    const textToClass: string[] = [];
+    for (const className of classNames) {
+      const entry = data.classes[className];
+      if (entry.centroid && entry.centroid.length > 0) {
+        centroids.set(className, entry.centroid);
+      } else if (entry.prototype_texts && entry.prototype_texts.length > 0) {
+        for (const text of entry.prototype_texts) {
+          textsToEmbed.push(text);
+          textToClass.push(className);
+        }
+      }
+    }
+    // Store as a pre-loaded promise that embeds texts at first call
+    loadPromises.set(taskName, (async (): Promise<LoadedTask> => {
+      if (textsToEmbed.length > 0) {
+        const vectors = await embed(textsToEmbed);
+        const vectorsByClass = new Map<string, number[][]>();
+        for (let i = 0; i < vectors.length; i++) {
+          const cn = textToClass[i];
+          if (!vectorsByClass.has(cn)) vectorsByClass.set(cn, []);
+          vectorsByClass.get(cn)!.push(vectors[i]);
+        }
+        for (const cn of classNames) {
+          if (!centroids.has(cn)) {
+            const cv = vectorsByClass.get(cn);
+            if (cv && cv.length > 0) centroids.set(cn, averageVectors(cv));
+          }
+        }
+      }
+      const loaded: LoadedTask = { classNames, centroids };
+      loadedTasks.set(taskName, loaded);
+      return loaded;
+    })());
+  } else {
+    loadedTasks.delete(taskName);
+    loadPromises.delete(taskName);
+  }
+}
+
 function dotProduct(a: number[], b: number[]): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) sum += a[i] * b[i];

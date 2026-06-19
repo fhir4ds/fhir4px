@@ -32,7 +32,7 @@ export async function preloadNamingModel(): Promise<boolean> {
     return false;
   }
 
-  setStatus("loading", "Loading Gemma 4 E2B model...");
+  setStatus("loading", "Loading app data...");
   try {
     const { preloadLlm, getLlmModelId } = await import("../transformers-llm");
     await preloadLlm();

@@ -27,7 +27,21 @@ export async function associateLabGroupWithConditions(
     temperature: LAB_CONDITION_TEMPERATURE
   });
 
-  const parsed = extractJson(content);
+  let parsed: unknown;
+  try {
+    parsed = extractJson(content);
+  } catch (error) {
+    console.warn("[fhir4px:association]", {
+      event: "association-parse-failed",
+      labGroupId: labGroup.groupId,
+      labName: labGroup.patientFriendlyName,
+      rawContentPreview: content.slice(0, 800),
+      rawContentLength: content.length,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString()
+    });
+    throw error;
+  }
   const associations = parseAssociations(parsed);
   return mapAssociations(associations, conditionChoices);
 }

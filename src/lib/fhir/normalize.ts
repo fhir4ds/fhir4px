@@ -10,6 +10,7 @@ import type {
   DisplayMedication,
   DisplayObservation,
   DisplayProcedure,
+  ExtractedReferenceRange,
   ReferralSummary
 } from "./types";
 import type { DisplayCodeSummary } from "./types";
@@ -370,8 +371,22 @@ export function normalizeObservation(resource: FhirResource): DisplayObservation
       ? firstCodingText(resource.interpretation[0])
       : firstCodingText(resource.interpretation),
     abnormal: observationHasAbnormalInterpretation(resource),
+    referenceRange: extractReferenceRange(resource),
     source: "provider"
   };
+}
+
+function extractReferenceRange(resource: FhirResource): ExtractedReferenceRange | undefined {
+  const ranges = Array.isArray(resource.referenceRange) ? resource.referenceRange : [];
+  const first = ranges.find((r) => r && (r.low || r.high || r.text));
+  if (!first) return undefined;
+  const low = typeof first.low?.value === "number" ? first.low.value : undefined;
+  const high = typeof first.high?.value === "number" ? first.high.value : undefined;
+  const unit = (first.low?.unit ?? first.high?.unit ?? undefined) as string | undefined;
+  const ucumCode = (first.low?.code ?? first.high?.code ?? undefined) as string | undefined;
+  const text = typeof first.text === "string" && first.text.trim() ? first.text.trim() : undefined;
+  if (low === undefined && high === undefined && !text) return undefined;
+  return { low, high, unit, ucumCode, text };
 }
 
 export function normalizeImmunization(resource: FhirResource): DisplayImmunization {

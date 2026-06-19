@@ -327,6 +327,12 @@ export function ReferralBuilder() {
   }
 
   function renderObservation(observation: DisplayObservation) {
+    const range = observation.referenceRange;
+    const rangeText =
+      range?.text ??
+      (range?.low !== undefined || range?.high !== undefined
+        ? `${range?.low ?? "—"}–${range?.high ?? "—"}${range?.unit ? ` ${range.unit}` : ""}`
+        : undefined);
     return (
       <Box key={observation.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 2 }}>
         <Stack spacing={1}>
@@ -334,6 +340,11 @@ export function ReferralBuilder() {
             <Stack spacing={0.5} minWidth={0}>
               <Typography fontWeight={700}>{observation.label}</Typography>
               <Typography color="text.secondary">Provider value: {observation.value}</Typography>
+              {rangeText && (
+                <Typography variant="caption" color="text.secondary">
+                  Reference range: {rangeText}
+                </Typography>
+              )}
             </Stack>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {observation.category && <Chip size="small" label={observation.category} />}

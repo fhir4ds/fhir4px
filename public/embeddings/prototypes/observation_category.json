@@ -1,47 +1,50 @@
 {
   "task": "observation_category",
   "model": "NeuML/pubmedbert-base-embeddings",
-  "version": "1.0.0",
-  "note": "Prototypes from realistic evaluation data \u2014 real patient-friendly names from patient_friendly_names.csv",
+  "version": 2,
   "classes": {
     "lab": {
       "prototype_texts": [
-        "Calcium",
-        "Cholesterol in HDL",
-        "Erythrocyte/Blood",
-        "Aspartate Aminotransferase",
-        "Coagulation",
-        "Cholesterol in LDL",
-        "Cholesterol",
-        "Nornicotine",
-        "Glomerular Filtration Rate",
-        "Cholesterol in LDL",
-        "Hemoglobin",
-        "Alanine Aminotransferase",
-        "Creatinine",
-        "Magnesium",
-        "Thyrotropin",
-        "Protein",
-        "Glucose",
-        "Triglyceride"
+        "Hemoglobin A1c", "Glucose", "Fasting Glucose", "Creatinine", "BUN", "Urea Nitrogen",
+        "Sodium", "Potassium", "Chloride", "Bicarbonate", "Carbon Dioxide", "Calcium",
+        "Total Cholesterol", "LDL Cholesterol", "HDL Cholesterol", "Triglycerides",
+        "ALT", "AST", "Alkaline Phosphatase", "Total Bilirubin", "Albumin", "Total Protein",
+        "Thyroid Stimulating Hormone", "TSH", "Free T4", "Vitamin D", "Vitamin B12",
+        "Iron", "Ferritin", "Hemoglobin", "Hematocrit", "White Blood Cell Count",
+        "Red Blood Cell Count", "Platelets", "MCV", "INR", "PT", "PTT",
+        "Erythrocyte Sedimentation Rate", "CRP", "C Reactive Protein",
+        "Urine Analysis", "Urine Protein", "Microalbumin", "Hemoglobin A1c/Hemoglobin.Total",
+        "Creatinine Clearance", "eGFR", "Estimated Glomerular Filtration Rate",
+        "Lactate", "Magnesium", "Phosphorus", "Uric Acid", "Amylase", "Lipase",
+        "Troponin", "BNP", "Natriuretic Peptide", "CEA", "PSA",
+        "Blood Culture", "Stool Culture",
+        "Glucose [Mass/volume] in Blood", "Creatinine:MCnc:Pt:Ser",
+        "Fecal Calprotectin", "24-hour urinary cortisol excretion"
       ]
     },
     "vital": {
       "prototype_texts": [
-        "Heart Rate",
-        "Body Weight",
-        "Intravascular Systolic",
-        "Body Temperature Measurement Site",
-        "Body Mass Index (BMI)",
-        "Oxygen Saturation"
+        "Systolic Blood Pressure", "Diastolic Blood Pressure", "Blood Pressure Systolic",
+        "Blood Pressure Diastolic", "Heart Rate", "Pulse", "Respiratory Rate",
+        "Oxygen Saturation", "SpO2", "Pulse Oximetry", "Temperature", "Body Temperature",
+        "Body Weight", "Weight", "Body Height", "Height", "BMI", "Body Mass Index",
+        "Head Circumference", "Waist Circumference", "Intravascular Systolic",
+        "Intravascular Diastolic", "Resting Heart Rate", "Blood Pressure",
+        "Mean Arterial Pressure", "Central Venous Pressure",
+        "Peak Expiratory Flow", "Resting Metabolic Rate Measurement"
       ]
     },
     "other": {
       "prototype_texts": [
         "Public Health Laboratory Ask at Order Entry Panel",
-        "Total Score",
-        "Patient Health Questionnaire 9 Item Total Score",
-        "Total Physical Activity"
+        "Total Score", "Patient Health Questionnaire 9 Item Total Score",
+        "PHQ-9 Score", "Depression Screen", "Alcohol Use Screen", "AUDIT Score",
+        "Tobacco Use", "Tobacco Smoking Status", "Alcohol Consumption",
+        "Exercise Frequency", "Sexual Orientation", "Gender Identity",
+        "Education Level", "Employment Status", "Housing Status",
+        "Food Insecurity", "Social Determinants of Health",
+        "Advance Directive", "Code Status", "Functional Status",
+        "Pregnancy Status", "Last Menstrual Period"
       ]
     }
   }

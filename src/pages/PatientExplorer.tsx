@@ -47,6 +47,7 @@ import {
   HeartPulse,
   Info,
   Layers,
+  LayoutDashboard,
   List,
   ListCollapse,
   Pill,
@@ -79,6 +80,21 @@ import type {
   PatientGroupingResult,
   PatientObservationBucket
 } from "../lib/fhir/patient-groups";
+import {
+  resolveGroupReferenceRange,
+  groupHasOutOfRangeValue,
+  type GroupReferenceRange,
+  type PatientSex
+} from "../lib/fhir/reference-ranges";
+import {
+  loadCanonicalCodes,
+  preloadCanonicalCodes,
+  lookupCanonicalCodeInFile,
+  categoryForResourceType,
+  type CanonicalCode,
+  type CanonicalCodeCategory
+} from "../lib/fhir/canonical-codes";
+import { loadGbdWeights, lookupDwForCode } from "../lib/priority/gbd-weights";
 import {
   emptyGroupingCache,
   GROUPING_CACHE_ID,
@@ -164,6 +180,7 @@ import {
   type NamingIncrementalUpdate,
   type NamingWarmupStatus
 } from "../lib/llm/naming";
+import { subscribeLlmLoadStatus, type LlmLoadStatus } from "../lib/llm/transformers-llm";
 import {
   associateLabGroupWithConditions,
   type ConditionAssociationChoice,
@@ -185,6 +202,7 @@ import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 import { localVault } from "../lib/vault/store";
 
 type ExplorerTab =
+  | "PatientSummary"
   | "MedicationRequest"
   | "AllergyIntolerance"
   | "Condition"
@@ -196,7 +214,7 @@ type ExplorerTab =
 type ExplorerGroupingSource = PatientGroupingResult["source"];
 type ObservationBucket = PatientObservationBucket;
 type LocalGroupingMode = "one-b-batch" | "one-b-single" | "three-b-batch" | "custom-single";
-type ExplorerViewMode = "grouped" | "date";
+type ExplorerViewMode = "summary" | "grouped" | "date";
 type ExplorerDensity = "comfortable" | "compact";
 type GroupSortMode = "group-name" | "newest" | "oldest" | "most-records";
 type DateSortMode = "newest" | "oldest";
@@ -227,6 +245,8 @@ const EXPLORER_TABS = Object.keys(RESOURCE_LABELS) as ExplorerTab[];
 
 function resourceTypeIcon(type: ExplorerTab, size = 20) {
   switch (type) {
+    case "PatientSummary":
+      return <LayoutDashboard size={size} />;
     case "MedicationRequest":
       return <Pill size={size} />;
     case "AllergyIntolerance":
@@ -422,10 +442,12 @@ function resourceTypesWithActiveFirst(active: ExplorerTab): ExplorerTab[] {
 }
 
 function recordsByType(records: GroupableRecord[], type: ExplorerTab): GroupableRecord[] {
+  if (type === "PatientSummary") return records.filter((record) => !record.hidden);
   return records.filter((record) => record.resourceType === type && !record.hidden);
 }
 
 function groupsByType(groups: PatientFriendlyGroup[], type: ExplorerTab): PatientFriendlyGroup[] {
+  if (type === "PatientSummary") return groups;
   return groups.filter((group) => group.resourceTypes.includes(type));
 }
 
@@ -680,6 +702,14 @@ function patientBirthDateLabel(patient: FhirResource): string | undefined {
 
 function patientGenderLabel(patient: FhirResource): string | undefined {
   return typeof patient.gender === "string" && patient.gender.trim() ? patient.gender : undefined;
+}
+
+function formatGroupReferenceRange(range: GroupReferenceRange): string {
+  if (range.text) return range.text;
+  const low = Number.isFinite(range.low) ? String(range.low) : "—";
+  const high = Number.isFinite(range.high) ? String(range.high) : "—";
+  const unit = range.unit ? ` ${range.unit}` : "";
+  return `Normal range: ${low}–${high}${unit}`;
 }
 
 function patientAddressLabel(patient: FhirResource): string | undefined {
@@ -1176,6 +1206,7 @@ export function PatientExplorer() {
   const [status, setStatus] = useState("Ready");
   const [busy, setBusy] = useState(false);
   const [modelBusy, setModelBusy] = useState(false);
+  const [llmLoadStatus, setLlmLoadStatus] = useState<LlmLoadStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [groupingDiagnostics, setGroupingDiagnostics] = useState<string[]>([]);
   const [sources, setSources] = useState<ConnectedSource[]>([]);
@@ -1183,13 +1214,18 @@ export function PatientExplorer() {
   const [activeSourceId, setActiveSourceId] = useState("all");
   const [patches, setPatches] = useState<PatientPatch[]>([]);
   const [patientAuthoredRecords, setPatientAuthoredRecords] = useState<PatientAuthoredRecord[]>([]);
+  const [groupReferenceRanges, setGroupReferenceRanges] = useState<Record<string, GroupReferenceRange | null>>({});
+  const [groupOutOfRangeFlags, setGroupOutOfRangeFlags] = useState<Record<string, boolean | null>>({});
+  const [canonicalResolvedGroups, setCanonicalResolvedGroups] = useState<Set<string>>(new Set());
+  const [groupPriorityScores, setGroupPriorityScores] = useState<Record<string, number>>({});
+  const [medClaimedByCondition, setMedClaimedByCondition] = useState<Record<string, string>>({});
   const [groupingCache, setGroupingCache] = useState<GroupingCacheRecord>(() => emptyGroupingCache());
   const [classificationCache, setClassificationCache] = useState<ClassificationCacheRecord>(() => emptyClassificationCache());
   const [relationshipCache, setRelationshipCache] = useState<RelationshipCacheRecord>(() => emptyRelationshipCache());
   const [groups, setGroups] = useState<PatientFriendlyGroup[]>([]);
   const [groupingSource, setGroupingSource] = useState<ExplorerGroupingSource>("source");
   const [groupingProgress, setGroupingProgress] = useState<{ completed: number; total: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<ExplorerTab>("MedicationRequest");
+  const [activeTab, setActiveTab] = useState<ExplorerTab>("PatientSummary");
   const [localGroupingMode, setLocalGroupingMode] = useState<LocalGroupingMode>("three-b-batch" as LocalGroupingMode);
   const [activeObservationBucket, setActiveObservationBucket] = useState<ObservationBucket>("labs");
   const [resourceStatusFilter, setResourceStatusFilter] = useState<ResourceStatusFilter>("active");
@@ -1547,6 +1583,7 @@ export function PatientExplorer() {
       canRunLocalModel: boolean;
       selectedModelId: string;
       isCurrentRun: () => boolean;
+      nameByRecordId?: Map<string, string>;
     }
   ) {
     interface ClassificationPlan {
@@ -1657,7 +1694,9 @@ export function PatientExplorer() {
       if (needsEmbedding.length === 0) continue;
 
       setStatus(`Classifying ${plan.transform}... (${needsEmbedding.length} concepts)`);
-      const texts = needsEmbedding.map((record) => record.sourceLabel || record.resourceType);
+      const texts = needsEmbedding.map((record) =>
+        options.nameByRecordId?.get(record.id) || record.sourceLabel || record.resourceType
+      );
       groupingConsoleLog("info", "classification-embedding-batch", {
         transform: plan.transform,
         embeddingTask: plan.embeddingTask,
@@ -2254,10 +2293,19 @@ export function PatientExplorer() {
         });
         setStatus(lookupEntries.length ? "Records grouped from patient-friendly lookup and local cache" : "Records grouped from local cache");
         setGroupingProgress(null);
+        const cacheNameByRecordId = new Map<string, string>();
+        for (const group of initialCombined.groups) {
+          for (const recordId of group.resourceIds) {
+            if (!cacheNameByRecordId.has(recordId)) {
+              cacheNameByRecordId.set(recordId, group.patientFriendlyName);
+            }
+          }
+        }
         await runPostGroupingClassification(nextRecords, key, {
           canRunLocalModel,
           selectedModelId,
-          isCurrentRun
+          isCurrentRun,
+          nameByRecordId: cacheNameByRecordId
         });
         await runPostGroupingRelationships(initialCombined.groups, nextRecords, key, {
           canRunLocalModel,
@@ -2282,7 +2330,8 @@ export function PatientExplorer() {
         await runPostGroupingClassification(nextRecords, key, {
           canRunLocalModel: false,
           selectedModelId,
-          isCurrentRun
+          isCurrentRun,
+          nameByRecordId: cacheNameByRecordId
         });
         // Deterministic relationships already ran in the upfront pass above.
         // LLM enrichment is skipped because the model is unavailable.
@@ -2290,7 +2339,7 @@ export function PatientExplorer() {
       }
 
       setModelBusy(true);
-      setStatus("Organizing medical records...");
+      setStatus(llmLoadStatus === "ready" ? "Organizing medical records..." : "Loading app data...");
       setGroupingProgress({ completed: 0, total: totalUncachedClusters });
 
       const failures: string[] = [];
@@ -2322,7 +2371,7 @@ export function PatientExplorer() {
           uncachedConceptCount: uncachedCompactRecords.length,
           uncachedRecordIds: uncachedCompactRecords.map((record) => record.id)
         });
-        setStatus("Organizing medical records...");
+        setStatus(llmLoadStatus === "ready" ? "Organizing medical records..." : "Loading app data...");
 
         try {
           for await (const update of groupWithNamingIncrementalStream(uncachedCompactRecords, {
@@ -2425,10 +2474,21 @@ export function PatientExplorer() {
           ? `Local grouping fallback details: ${visibleFailures.join("; ")}`
           : null
       );
+      // Build recordId → patientFriendlyName map from the final groups so
+      // classification uses patient-friendly names (not raw source labels).
+      const nameByRecordId = new Map<string, string>();
+      for (const group of combined.groups) {
+        for (const recordId of group.resourceIds) {
+          if (!nameByRecordId.has(recordId)) {
+            nameByRecordId.set(recordId, group.patientFriendlyName);
+          }
+        }
+      }
       await runPostGroupingClassification(nextRecords, key, {
         canRunLocalModel,
         selectedModelId,
-        isCurrentRun
+        isCurrentRun,
+        nameByRecordId
       });
       await runPostGroupingRelationships(combined.groups, nextRecords, key, {
         canRunLocalModel,
@@ -2543,6 +2603,350 @@ export function PatientExplorer() {
   }, []);
 
   useEffect(() => subscribeNamingWarmupStatus(setNamingWarmupStatus), []);
+
+  useEffect(() => subscribeLlmLoadStatus(setLlmLoadStatus), []);
+
+  // When refine is in progress and the model just finished loading, swap the
+  // status from "Loading app data" to "Organizing medical records". Without
+  // this, the user sees "Loading app data" the whole time even after the
+  // model is ready.
+  useEffect(() => {
+    if (!modelBusy) return;
+    if (llmLoadStatus === "ready" && (status.startsWith("Loading app data") || status.startsWith("Downloading app data"))) {
+      setStatus("Organizing medical records...");
+    }
+  }, [llmLoadStatus, modelBusy, status]);
+
+  // Resolve canonical codes for groups via the canonical-codes name lookup
+  // tables. Runs once per group (tracked by canonicalResolvedGroups). Sets
+  // group.canonicalCode so downstream consumers (reference ranges, GBD DW
+  // lookup, future features) can read from a single field. Resource types
+  // without a canonical system (Encounter, Procedure, etc.) are skipped.
+  useEffect(() => {
+    const unresolved = groups.filter(
+      (g) => !canonicalResolvedGroups.has(g.groupId) && g.canonicalCode === undefined
+    );
+    if (unresolved.length === 0) return;
+
+    const categoriesNeeded = new Set<CanonicalCodeCategory>();
+    for (const g of unresolved) {
+      const cat = categoryForResourceType(g.resourceTypes);
+      if (cat) categoriesNeeded.add(cat);
+    }
+    if (categoriesNeeded.size === 0) {
+      setCanonicalResolvedGroups((prev) => {
+        const next = new Set(prev);
+        for (const g of unresolved) next.add(g.groupId);
+        return next;
+      });
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        await preloadCanonicalCodes([...categoriesNeeded]);
+        const resolvedByGroupId = new Map<string, CanonicalCode | undefined>();
+        const noMatchIds = new Set<string>();
+        for (const g of unresolved) {
+          const cat = categoryForResourceType(g.resourceTypes);
+          if (!cat) {
+            noMatchIds.add(g.groupId);
+            continue;
+          }
+          const file = await loadCanonicalCodes(cat);
+          const canonical = lookupCanonicalCodeInFile(g.patientFriendlyName, file);
+          if (canonical) {
+            resolvedByGroupId.set(g.groupId, canonical);
+          } else {
+            noMatchIds.add(g.groupId);
+          }
+        }
+        if (cancelled) return;
+        setGroups((prevGroups) =>
+          prevGroups.map((g) => {
+            const resolved = resolvedByGroupId.get(g.groupId);
+            if (resolvedByGroupId.has(g.groupId)) {
+              return { ...g, canonicalCode: resolved };
+            }
+            return g;
+          })
+        );
+        // Only track NO-MATCH groups in the resolved set. Groups that HAD a
+        // match are NOT added here — if they lose canonicalCode later (because
+        // the naming pipeline calls setGroups with fresh objects), the filter
+        // picks them up again and re-resolves them. This prevents conditions
+        // from permanently losing their DW-based score after LLM renames labs.
+        if (noMatchIds.size > 0) {
+          setCanonicalResolvedGroups((prev) => {
+            const next = new Set(prev);
+            for (const id of noMatchIds) next.add(id);
+            return next;
+          });
+        }
+      } catch (err) {
+        console.warn("[fhir4px:canonical-codes]", {
+          event: "resolve-failed",
+          error: err instanceof Error ? err.message : String(err)
+        });
+        // Mark as no-match even on failure so we don't retry every render
+        setCanonicalResolvedGroups((prev) => {
+          const next = new Set(prev);
+          for (const g of unresolved) next.add(g.groupId);
+          return next;
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groups, canonicalResolvedGroups]);
+
+  // Compute a simple priority score per group for the Summary view mode.
+  // Formula is intentionally lightweight (no full booster chain) — we layer
+  // the full scoring engine later. Inputs: canonical DW (conditions), out-of-
+  // range flag (labs), group confidence (fallback signal), and a small recency
+  // bump so ties break toward more-recent activity.
+  //
+  // Scoring tiers (so conditions generally outrank labs/meds):
+  //   Conditions      : 0.7 × DW (from ICD-10 canonical) + 0.10 tier boost
+  //   Labs/vitals     : 0.3 × (max owning-condition DW via relationship cache)
+  //                     + 0.10 out-of-range + small confidence/recency
+  //   Medications     : 0.3 × (max treated-condition DW) — TODO, falls back to confidence only
+  //   Other (Enc etc.): confidence + recency only
+  //
+  // The inherited-DW path means a lab is bounded above by its owning
+  // condition's score, so the condition always ranks higher. Unclaimed labs
+  // (no relationship) get a small base so they surface below conditions.
+  useEffect(() => {
+    if (groups.length === 0) {
+      if (Object.keys(groupPriorityScores).length > 0) setGroupPriorityScores({});
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      let gbdTable: Awaited<ReturnType<typeof loadGbdWeights>> | null = null;
+      try {
+        gbdTable = await loadGbdWeights();
+      } catch {
+        // GBD unavailable — score with whatever we have
+      }
+
+      // Index condition groups by relationshipGroupKey for fast lookup
+      const conditionByKey = new Map<string, PatientFriendlyGroup>();
+      for (const g of groups) {
+        if (g.resourceTypes.includes("Condition")) {
+          conditionByKey.set(relationshipGroupKey(g), g);
+        }
+      }
+
+      // Build lab-key → set of owning condition keys from the relationship cache
+      const labOwnersByKey = new Map<string, Set<string>>();
+      for (const entry of relationshipCache.entries) {
+        if (
+          entry.relationship === "none" ||
+          entry.sourceResourceType !== "Observation" ||
+          entry.targetResourceType !== "Condition"
+        ) {
+          continue;
+        }
+        let set = labOwnersByKey.get(entry.sourceGroupId);
+        if (!set) {
+          set = new Set();
+          labOwnersByKey.set(entry.sourceGroupId, set);
+        }
+        set.add(entry.targetGroupId);
+      }
+
+      // For each lab group, find the max DW across owning conditions
+      const labInheritedDwByGroupId = new Map<string, number>();
+      for (const labGroup of groups) {
+        if (!labGroup.resourceTypes.includes("Observation")) continue;
+        const labKey = relationshipGroupKey(labGroup);
+        const owners = labOwnersByKey.get(labKey);
+        if (!owners || owners.size === 0) continue;
+        let maxDw = 0;
+        for (const ownerKey of owners) {
+          const ownerGroup = conditionByKey.get(ownerKey);
+          if (ownerGroup?.canonicalCode?.system === "icd10" && gbdTable) {
+            const dw = lookupDwForCode(ownerGroup.canonicalCode.code, gbdTable);
+            if (dw > maxDw) maxDw = dw;
+          }
+        }
+        if (maxDw > 0) labInheritedDwByGroupId.set(labGroup.groupId, maxDw);
+      }
+
+      const now = Date.now();
+      const RECENCY_MS = 90 * 24 * 60 * 60 * 1000;
+      const scored: Record<string, number> = {};
+      for (const group of groups) {
+        let score = 0;
+        const isCondition = group.resourceTypes.includes("Condition");
+        const isObservation = group.resourceTypes.includes("Observation");
+
+        if (isCondition) {
+          // Tier 1: condition. Full-weight DW + flat tier boost so even mild
+          // conditions (low DW) outrank the labs that monitor them.
+          if (group.canonicalCode?.system === "icd10" && gbdTable) {
+            score += 0.7 * lookupDwForCode(group.canonicalCode.code, gbdTable);
+          }
+          score += 0.10; // condition tier boost
+        } else if (isObservation) {
+          // Tier 2: lab/vital. Inherit DW from owning condition at lower
+          // weight (0.3 vs 0.7) so the lab ranks below its condition.
+          const inheritedDw = labInheritedDwByGroupId.get(group.groupId);
+          if (inheritedDw && inheritedDw > 0) {
+            score += 0.3 * inheritedDw;
+          }
+          if (groupOutOfRangeFlags[group.groupId] === true) {
+            score += 0.10;
+          }
+        } else {
+          // Tier 3: meds, encounters, procedures, etc.
+          score += 0.05;
+        }
+
+        // Common: group confidence (LLM/lookup certainty) + recency bump
+        score += 0.05 * group.confidence;
+        const memberDates = group.resourceIds
+          .map((id) => observationById.get(id)?.effectiveDate)
+          .filter((d): d is string => Boolean(d));
+        if (memberDates.some((d) => {
+          const parsed = new Date(d);
+          return !Number.isNaN(parsed.getTime()) && (now - parsed.getTime()) < RECENCY_MS;
+        })) {
+          score += 0.03;
+        }
+        scored[group.groupId] = score;
+      }
+      if (!cancelled) setGroupPriorityScores(scored);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [groups, groupOutOfRangeFlags, observationById, relationshipCache]);
+
+  // Build med→condition claim map via the deterministic condition_medication
+  // lookup table. For each med group, we check whether its patient-friendly
+  // name (or ingredient) maps to a condition. If so, the med is "claimed" by
+  // that condition — it shows inline on the condition card in the cross-domain
+  // Summary view and is filtered from the standalone list.
+  useEffect(() => {
+    const medGroups = groups.filter((g) => g.resourceTypes.includes("MedicationRequest"));
+    const conditionGroups = groups.filter((g) => g.resourceTypes.includes("Condition"));
+    if (medGroups.length === 0 || conditionGroups.length === 0) {
+      if (Object.keys(medClaimedByCondition).length > 0) setMedClaimedByCondition({});
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const claims: Record<string, string> = {};
+      for (const mg of medGroups) {
+        try {
+          // Pass ingredients from underlying records so the lookup still
+          // works even if the LLM renamed the med (ingredients don't change).
+          const medRecords = records.filter((r) => mg.resourceIds.includes(r.id));
+          const ingredients = [...new Set(medRecords.flatMap((r) => r.ingredients ?? []))];
+          const conditionNames = await findDeterministicConditionsForMedication(
+            mg.patientFriendlyName,
+            { ingredients }
+          );
+          for (const cn of conditionNames) {
+            const cnLower = cn.toLowerCase().trim();
+            // Try exact match first
+            const exact = conditionGroups.find(
+              (cg) => cg.patientFriendlyName.toLowerCase().trim() === cnLower
+            );
+            if (exact) {
+              claims[mg.groupId] = exact.groupId;
+              break;
+            }
+            // Fallback: substring match — handles LLM-renamed conditions like
+            // "Mild Asthma" still containing "Asthma" from the lookup table.
+            if (cnLower.length >= 4) {
+              const substring = conditionGroups.find((cg) => {
+                const condName = cg.patientFriendlyName.toLowerCase().trim();
+                return (
+                  (condName.length >= 4 && (condName.includes(cnLower) || cnLower.includes(condName)))
+                );
+              });
+              if (substring) {
+                claims[mg.groupId] = substring.groupId;
+                break;
+              }
+            }
+          }
+        } catch {
+          // lookup not loaded yet — skip
+        }
+      }
+      if (!cancelled) setMedClaimedByCondition(claims);
+    })();
+    return () => { cancelled = true; };
+  }, [groups, records]);
+
+  // Resolve reference ranges for lab groups once grouping stabilizes. The
+  // resolver prefers a range from a member Observation's referenceRange; falls
+  // back to ACP ranges looked up by canonicalCode (or patient-friendly
+  // name for LLM-named groups). Stores null too so we don't re-attempt every
+  // render — setGroupReferenceRanges acts as a "processed" marker.
+  useEffect(() => {
+    const primary = patientProfiles[0]?.patient ?? summary?.patient;
+    if (!primary) return;
+    const sex: PatientSex = (() => {
+      const g = typeof primary.gender === "string" ? primary.gender.trim().toLowerCase() : "";
+      if (g === "male") return "male";
+      if (g === "female") return "female";
+      return g ? "other" : "unknown";
+    })();
+    const age = patientAge(primary.birthDate) ?? null;
+
+    const labGroupsToResolve = groups.filter(
+      (g) =>
+        (g.observationBucket === "labs" || g.observationBucket === "vitals") &&
+        !(g.groupId in groupReferenceRanges)
+    );
+    if (labGroupsToResolve.length === 0) return;
+
+    let cancelled = false;
+    void (async () => {
+      const newRanges: Record<string, GroupReferenceRange | null> = {};
+      const newFlags: Record<string, boolean | null> = {};
+      for (const group of labGroupsToResolve) {
+        const observations = group.resourceIds
+          .map((id) => observationById.get(id))
+          .filter((o): o is NonNullable<typeof o> => Boolean(o));
+        try {
+          const range = await resolveGroupReferenceRange({
+            group,
+            observations,
+            patientSex: sex,
+            patientAgeYears: age
+          });
+          newRanges[group.groupId] = range;
+          if (range) {
+            newFlags[group.groupId] = await groupHasOutOfRangeValue(observations, range);
+          }
+        } catch (err) {
+          console.warn("[fhir4px:reference-ranges]", {
+            event: "resolve-failed",
+            groupId: group.groupId,
+            error: err instanceof Error ? err.message : String(err)
+          });
+          newRanges[group.groupId] = null;
+        }
+      }
+      if (cancelled) return;
+      setGroupReferenceRanges((prev) => ({ ...prev, ...newRanges }));
+      setGroupOutOfRangeFlags((prev) => ({ ...prev, ...newFlags }));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, patientProfiles, summary, observationById]);
 
   useEffect(() => {
     const onSmartAuthComplete = (event: Event) => {
@@ -2849,6 +3253,13 @@ export function PatientExplorer() {
           }
         }}
       >
+        <Tab
+          key="PatientSummary"
+          value="PatientSummary"
+          icon={resourceTypeIcon("PatientSummary", isVertical ? 22 : 20)}
+          iconPosition="top"
+          label="Summary"
+        />
         {EXPLORER_TABS.map((type) => (
           <Tab
             key={type}
@@ -2954,15 +3365,14 @@ export function PatientExplorer() {
   function dataStatusPrimaryText() {
     if (busy) return "Downloading medical records...";
     if (modelBusy) {
-      const warmup = getNamingWarmupStatus();
-      if (warmup.phase === "loading" && !groupingProgress) return "Loading AI model (first use only)...";
+      if (llmLoadStatus === "downloading") return "Downloading app data...";
+      if (llmLoadStatus === "loading") return "Loading app data...";
       if (status.startsWith("Classifying") || status.startsWith("Linking") || status.startsWith("Switching")) return status;
-      if (status.startsWith("Loading AI model")) return status;
       return groupingProgress && groupingProgress.total > 0
         ? `Organizing medical records... ${groupingProgress.completed}/${groupingProgress.total}`
         : "Organizing medical records...";
     }
-    if (appDataIsLoading()) return webLlmWarmupStatus.message ?? "Loading AI model...";
+    if (appDataIsLoading()) return "Loading app data...";
     return dataStatusSummary();
   }
 
@@ -4133,7 +4543,20 @@ export function PatientExplorer() {
             {density !== "compact" && portalCount > 1 && <Chip size="small" variant="outlined" label={`${portalCount} portals`} />}
             {density !== "compact" && <Chip size="small" label={`${Math.round(group.confidence * 100)}%`} />}
             {group.fallback && <Chip size="small" variant="outlined" label="Review" />}
+            {groupOutOfRangeFlags[group.groupId] === true && (
+              <Chip
+                size="small"
+                color="warning"
+                variant="outlined"
+                label="Value outside typical range"
+              />
+            )}
           </Stack>
+          {groupReferenceRanges[group.groupId] && (
+            <Typography variant="caption" color="text.secondary">
+              {formatGroupReferenceRange(groupReferenceRanges[group.groupId]!)}
+            </Typography>
+          )}
           {density !== "compact" && renderObservationTracking(group, clusters)}
           {density !== "compact" && renderSuggestedGroupLinks(group)}
           {density !== "compact" && renderExplicitGroupLinks(group)}
@@ -4159,6 +4582,514 @@ export function PatientExplorer() {
           )}
         </Stack>
       </Box>
+    );
+  }
+
+  function renderCrossDomainSummary() {
+    const OVERVIEW_CAP = 8;
+    // Build maps:
+    //   conditionKeyToGroup    — for resolving owning conditions
+    //   labKeyToConditionKey   — labs claimed by a condition (via cache + recency)
+    //   conditionKeyToClaimedLab — for showing the most recent claimed lab inline
+    const LAB_RECENCY_MS = 180 * 24 * 60 * 60 * 1000;
+    const conditionByKey = new Map<string, PatientFriendlyGroup>();
+    for (const g of displayGroups) {
+      if (g.resourceTypes.includes("Condition")) {
+        conditionByKey.set(relationshipGroupKey(g), g);
+      }
+    }
+    const labKeyToConditionKey = new Map<string, string>();
+    const labByKey = new Map<string, PatientFriendlyGroup>();
+    for (const g of displayGroups) {
+      if (g.resourceTypes.includes("Observation")) {
+        labByKey.set(relationshipGroupKey(g), g);
+      }
+    }
+    for (const entry of relationshipCache.entries) {
+      if (
+        entry.relationship === "none" ||
+        entry.sourceResourceType !== "Observation" ||
+        entry.targetResourceType !== "Condition"
+      ) {
+        continue;
+      }
+      const labGroup = labByKey.get(entry.sourceGroupId);
+      if (!labGroup) continue;
+      // Only claim if the lab has a value within the recency window
+      const hasRecent = labGroup.resourceIds.some((id) => {
+        const obs = observationById.get(id);
+        if (!obs?.effectiveDate) return false;
+        const parsed = new Date(obs.effectiveDate);
+        if (Number.isNaN(parsed.getTime())) return false;
+        const age = Date.now() - parsed.getTime();
+        return age >= 0 && age <= LAB_RECENCY_MS;
+      });
+      if (hasRecent) labKeyToConditionKey.set(entry.sourceGroupId, entry.targetGroupId);
+    }
+
+    // For each condition, pick the most recent claimed lab for inline display
+    const conditionKeyToInlineLab = new Map<string, { group: PatientFriendlyGroup; value: string; effectiveDate?: string; outOfRange: boolean }>();
+    for (const [labKey, condKey] of labKeyToConditionKey) {
+      const labGroup = labByKey.get(labKey);
+      if (!labGroup) continue;
+      // Find latest observation in the lab group
+      let latestObs: ReferralSummary["observations"][number] | undefined;
+      let latestTs = 0;
+      for (const id of labGroup.resourceIds) {
+        const obs = observationById.get(id);
+        if (!obs?.effectiveDate) continue;
+        const parsed = new Date(obs.effectiveDate);
+        if (Number.isNaN(parsed.getTime())) continue;
+        if (parsed.getTime() > latestTs) {
+          latestTs = parsed.getTime();
+          latestObs = obs;
+        }
+      }
+      if (!latestObs) continue;
+      const value = latestObs.value || "(no value)";
+      const outOfRange = groupOutOfRangeFlags[labGroup.groupId] === true;
+      const existing = conditionKeyToInlineLab.get(condKey);
+      // Pick the out-of-range one if any; otherwise keep the first
+      if (!existing || (outOfRange && !existing.outOfRange)) {
+        conditionKeyToInlineLab.set(condKey, {
+          group: labGroup,
+          value,
+          effectiveDate: latestObs.effectiveDate,
+          outOfRange
+        });
+      }
+    }
+
+    // Build condition → claimed meds map (from medClaimedByCondition state)
+    const conditionKeyToInlineMeds = new Map<string, PatientFriendlyGroup[]>();
+    for (const g of displayGroups) {
+      if (!g.resourceTypes.includes("MedicationRequest")) continue;
+      const condId = medClaimedByCondition[g.groupId];
+      if (!condId) continue;
+      // Find the condition's relationshipGroupKey from its groupId
+      const condGroup = displayGroups.find((cg) => cg.groupId === condId);
+      if (!condGroup) continue;
+      const condKey = relationshipGroupKey(condGroup);
+      if (!conditionKeyToInlineMeds.has(condKey)) {
+        conditionKeyToInlineMeds.set(condKey, []);
+      }
+      conditionKeyToInlineMeds.get(condKey)!.push(g);
+    }
+
+    // Filter out labs AND meds claimed by a condition — they show inline
+    const allScored = displayGroups
+      .filter((g) => {
+        if (g.resourceTypes.includes("Observation")) {
+          const claimed = labKeyToConditionKey.has(relationshipGroupKey(g));
+          return !claimed;
+        }
+        if (g.resourceTypes.includes("MedicationRequest")) {
+          const claimed = g.groupId in medClaimedByCondition;
+          return !claimed;
+        }
+        return true;
+      })
+      .map((group) => ({
+        group,
+        score: groupPriorityScores[group.groupId] ?? 0
+      }))
+      .sort((a, b) => b.score - a.score);
+    const positiveScores = allScored.map((s) => s.score).filter((s) => s > 0).sort((a, b) => a - b);
+    const visible = allScored.filter((s) => s.score > 0).slice(0, OVERVIEW_CAP);
+    const hiddenCount = Math.max(0, allScored.length - visible.length);
+
+    if (visible.length === 0) {
+      return (
+        <Alert severity="info">
+          No prioritized items yet. Items need a canonical code match (ICD-10/LOINC/RxNorm)
+          or an out-of-range flag to surface here.
+        </Alert>
+      );
+    }
+
+    const q25 = positiveScores[Math.floor(positiveScores.length * 0.25)] ?? 0;
+    const q75 = positiveScores[Math.floor(positiveScores.length * 0.75)] ?? 0;
+    const impactFor = (score: number): { label: string; color: "default" | "warning" | "error" } => {
+      if (score >= q75) return { label: "High impact", color: "error" };
+      if (score >= q25) return { label: "Moderate impact", color: "warning" };
+      return { label: "Low impact", color: "default" };
+    };
+
+    return (
+      <Stack spacing={1.5}>
+        <Typography variant="caption" color="text.secondary">
+          Top {visible.length} items across all domains by priority
+          {hiddenCount > 0 ? ` · ${hiddenCount} more lower-priority hidden` : ""}
+        </Typography>
+        {visible.map(({ group, score }) => {
+          const impact = impactFor(score);
+          const range = groupReferenceRanges[group.groupId];
+          const outOfRange = groupOutOfRangeFlags[group.groupId] === true;
+          const domainLabel = group.resourceTypes[0]
+            ? RESOURCE_LABELS[group.resourceTypes[0] as ExplorerTab] ?? group.resourceTypes[0]
+            : "Record";
+          const inlineLab = group.resourceTypes.includes("Condition")
+            ? conditionKeyToInlineLab.get(relationshipGroupKey(group))
+            : undefined;
+          const inlineMeds = group.resourceTypes.includes("Condition")
+            ? conditionKeyToInlineMeds.get(relationshipGroupKey(group))
+            : undefined;
+          return (
+            <Box
+              key={group.groupId}
+              sx={{
+                p: 1.5,
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 1,
+                cursor: "pointer",
+                "&:hover": { borderColor: "primary.main" }
+              }}
+              onClick={() => {
+                const firstType = group.resourceTypes[0] as ExplorerTab | undefined;
+                if (firstType && firstType !== "PatientSummary") setActiveTab(firstType);
+                openDetails(group, undefined);
+              }}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                <Typography fontWeight={700}>{group.patientFriendlyName}</Typography>
+                <Chip size="small" color={impact.color} variant="outlined" label={impact.label} />
+              </Stack>
+              <Stack direction="row" spacing={1} mt={0.75} flexWrap="wrap" useFlexGap>
+                <Chip size="small" color="primary" variant="outlined" label={domainLabel} />
+                <Chip size="small" label={`${group.resourceIds.length} ${group.resourceIds.length === 1 ? "record" : "records"}`} />
+                {range && (
+                  <Chip size="small" variant="outlined" label={`Range: ${formatGroupReferenceRange(range)}`} />
+                )}
+                {outOfRange && (
+                  <Chip size="small" color="warning" variant="outlined" label="Outside typical range" />
+                )}
+                {group.fallback && <Chip size="small" variant="outlined" label="Review" />}
+              </Stack>
+              {inlineLab && (
+                <Box
+                  sx={{
+                    mt: 1,
+                    p: 1,
+                    bgcolor: inlineLab.outOfRange ? "rgba(255, 180, 0, 0.06)" : "rgba(255, 255, 255, 0.03)",
+                    border: 1,
+                    borderColor: inlineLab.outOfRange ? "warning.main" : "divider",
+                    borderRadius: 1
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const firstType = inlineLab.group.resourceTypes[0] as ExplorerTab | undefined;
+                    if (firstType) setActiveTab(firstType);
+                    openDetails(inlineLab.group, undefined);
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                    <Typography variant="caption" color="text.secondary">
+                      Latest related lab:
+                    </Typography>
+                    <Typography variant="caption" fontWeight={700}>
+                      {inlineLab.group.patientFriendlyName}
+                    </Typography>
+                    <Typography variant="caption">{inlineLab.value}</Typography>
+                    {inlineLab.outOfRange && (
+                      <Chip size="small" color="warning" variant="outlined" label="Outside typical range" />
+                    )}
+                    {inlineLab.effectiveDate && (
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(inlineLab.effectiveDate).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </Stack>
+                </Box>
+              )}
+              {inlineMeds && inlineMeds.length > 0 && (
+                <Box
+                  sx={{
+                    mt: 1,
+                    p: 1,
+                    bgcolor: "rgba(255, 255, 255, 0.03)",
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 1
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                    <Typography variant="caption" color="text.secondary">
+                      {inlineMeds.length === 1 ? "Medication:" : `Medications (${inlineMeds.length}):`}
+                    </Typography>
+                    {inlineMeds.map((med) => (
+                      <Chip
+                        key={med.groupId}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        label={med.patientFriendlyName}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setActiveTab("MedicationRequest");
+                          openDetails(med, undefined);
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                </Box>
+              )}
+            </Box>
+          );
+        })}
+      </Stack>
+    );
+  }
+
+  function renderSummaryView(tabGroups: PatientFriendlyGroup[]) {
+    const SUMMARY_CAP = 8;
+    const scored = tabGroups
+      .map((group) => ({ group, score: groupPriorityScores[group.groupId] ?? 0 }))
+      .sort((a, b) => b.score - a.score);
+    const positiveScores = scored.map((s) => s.score).filter((s) => s > 0).sort((a, b) => a - b);
+    const visible = scored.filter((s) => s.score > 0).slice(0, SUMMARY_CAP);
+    const hiddenCount = Math.max(0, scored.length - visible.length);
+
+    if (visible.length === 0) {
+      return (
+        <Alert severity="info">
+          No prioritized {RESOURCE_LABELS[activeTab].toLowerCase()} yet. Group
+          records carry patient-friendly names that match the GBD/canonical-code
+          tables; items without a match don't surface here.
+        </Alert>
+      );
+    }
+
+    const q25 = positiveScores[Math.floor(positiveScores.length * 0.25)] ?? 0;
+    const q75 = positiveScores[Math.floor(positiveScores.length * 0.75)] ?? 0;
+    const impactFor = (score: number): { label: string; color: "default" | "warning" | "error" } => {
+      if (score >= q75) return { label: "High impact", color: "error" };
+      if (score >= q25) return { label: "Moderate impact", color: "warning" };
+      return { label: "Low impact", color: "default" };
+    };
+
+    // Build relationship maps for association display
+    const conditionByKey = new Map<string, PatientFriendlyGroup>();
+    const labByKey = new Map<string, PatientFriendlyGroup>();
+    for (const g of groups) {
+      if (g.resourceTypes.includes("Condition")) conditionByKey.set(relationshipGroupKey(g), g);
+      if (g.resourceTypes.includes("Observation")) labByKey.set(relationshipGroupKey(g), g);
+    }
+    // Lab ↔ condition (from relationship cache)
+    const labToConditionKey = new Map<string, string>();
+    const conditionToLabKeys = new Map<string, Set<string>>();
+    for (const entry of relationshipCache.entries) {
+      if (entry.relationship === "none" || entry.sourceResourceType !== "Observation" || entry.targetResourceType !== "Condition") continue;
+      labToConditionKey.set(entry.sourceGroupId, entry.targetGroupId);
+      if (!conditionToLabKeys.has(entry.targetGroupId)) conditionToLabKeys.set(entry.targetGroupId, new Set());
+      conditionToLabKeys.get(entry.targetGroupId)!.add(entry.sourceGroupId);
+    }
+
+    // Helper: find latest record date + value for a group
+    const latestForGroup = (group: PatientFriendlyGroup): { date?: string; value?: string } => {
+      const memberIds = group.resourceIds;
+      let bestDate = "";
+      let bestId = "";
+      for (const id of memberIds) {
+        const obs = observationById.get(id);
+        const d = obs?.effectiveDate;
+        if (d && d > bestDate) { bestDate = d; bestId = id; }
+      }
+      if (!bestDate) {
+        // Fall back to record dates for non-observation types
+        for (const id of memberIds) {
+          const rec = records.find((r) => r.id === id);
+          const d = rec?.latestDate ?? rec?.date ?? "";
+          if (d && d > bestDate) { bestDate = d; bestId = id; }
+        }
+      }
+      const latestObs = bestId ? observationById.get(bestId) : undefined;
+      return {
+        date: bestDate || undefined,
+        value: latestObs?.value || undefined
+      };
+    };
+
+    // Helper: format date compactly
+    const formatDate = (iso?: string): string | undefined => {
+      if (!iso) return undefined;
+      const parsed = new Date(iso);
+      if (Number.isNaN(parsed.getTime())) return undefined;
+      return parsed.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    };
+
+    return (
+      <Stack spacing={1.5}>
+        <Typography variant="caption" color="text.secondary">
+          Top {visible.length} {RESOURCE_LABELS[activeTab].toLowerCase()} by priority
+          {hiddenCount > 0 ? ` · ${hiddenCount} more lower-priority hidden` : ""}
+        </Typography>
+        {visible.map(({ group, score }) => {
+          const impact = impactFor(score);
+          const range = groupReferenceRanges[group.groupId];
+          const outOfRange = groupOutOfRangeFlags[group.groupId] === true;
+          const groupKey = relationshipGroupKey(group);
+          const isCondition = group.resourceTypes.includes("Condition");
+          const isMed = group.resourceTypes.includes("MedicationRequest");
+          const isLab = group.resourceTypes.includes("Observation");
+
+          // Latest date + value
+          const latest = latestForGroup(group);
+          const latestDateLabel = formatDate(latest.date);
+
+          // Associations
+          let relatedCondition: PatientFriendlyGroup | undefined;
+          let relatedLabs: PatientFriendlyGroup[] = [];
+          let relatedMeds: PatientFriendlyGroup[] = [];
+
+          if (isCondition) {
+            // Related labs (top 3 most recent)
+            const labKeys = conditionToLabKeys.get(groupKey);
+            if (labKeys) {
+              relatedLabs = [...labKeys]
+                .map((k) => labByKey.get(k))
+                .filter((g): g is PatientFriendlyGroup => Boolean(g))
+                .map((g) => ({ g, d: latestForGroup(g).date ?? "" }))
+                .sort((a, b) => b.d.localeCompare(a.d))
+                .slice(0, 3)
+                .map((x) => x.g);
+            }
+            // Related meds
+            for (const [medId, condId] of Object.entries(medClaimedByCondition)) {
+              if (condId === group.groupId) {
+                const medGroup = groups.find((g) => g.groupId === medId);
+                if (medGroup) relatedMeds.push(medGroup);
+              }
+            }
+          } else if (isMed) {
+            const condId = medClaimedByCondition[group.groupId];
+            if (condId) relatedCondition = groups.find((g) => g.groupId === condId);
+          } else if (isLab) {
+            const condKey = labToConditionKey.get(groupKey);
+            if (condKey) relatedCondition = conditionByKey.get(condKey);
+          }
+
+          return (
+            <Box
+              key={group.groupId}
+              sx={{
+                p: 1.5,
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 1,
+                cursor: "pointer",
+                "&:hover": { borderColor: "primary.main" }
+              }}
+              onClick={() => openDetails(group, undefined)}
+            >
+              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                <Typography fontWeight={700}>{group.patientFriendlyName}</Typography>
+                <Chip size="small" color={impact.color} variant="outlined" label={impact.label} />
+              </Stack>
+
+              {/* Latest date + value */}
+              {latestDateLabel && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+                  {latest.value ? `${latest.value} · ` : ""}
+                  {latestDateLabel}
+                </Typography>
+              )}
+
+              {/* Existing chips */}
+              <Stack direction="row" spacing={1} mt={0.5} flexWrap="wrap" useFlexGap>
+                <Chip size="small" label={`${group.resourceIds.length} ${group.resourceIds.length === 1 ? "record" : "records"}`} />
+                {range && (
+                  <Chip size="small" variant="outlined" label={`Range: ${formatGroupReferenceRange(range)}`} />
+                )}
+                {outOfRange && (
+                  <Chip size="small" color="warning" variant="outlined" label="Outside typical range" />
+                )}
+                {group.fallback && <Chip size="small" variant="outlined" label="Review" />}
+              </Stack>
+
+              {/* Associated condition (for labs/meds) */}
+              {relatedCondition && (
+                <Stack direction="row" spacing={1} mt={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="caption" color="text.secondary">
+                    {isMed ? "Treats:" : "Related:"}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                    label={relatedCondition.patientFriendlyName}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab("Condition");
+                      openDetails(relatedCondition!, undefined);
+                    }}
+                  />
+                </Stack>
+              )}
+
+              {/* Related labs (for conditions) */}
+              {relatedLabs.length > 0 && (
+                <Stack direction="row" spacing={1} mt={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="caption" color="text.secondary">
+                    {relatedLabs.length === 1 ? "Lab:" : `Labs (${relatedLabs.length}):`}
+                  </Typography>
+                  {relatedLabs.map((lab) => {
+                    const labLatest = latestForGroup(lab);
+                    const labOutOfRange = groupOutOfRangeFlags[lab.groupId] === true;
+                    return (
+                      <Chip
+                        key={lab.groupId}
+                        size="small"
+                        color={labOutOfRange ? "warning" : "default"}
+                        variant="outlined"
+                        label={`${lab.patientFriendlyName}${labLatest.value ? `: ${labLatest.value}` : ""}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveTab("Observation");
+                          openDetails(lab, undefined);
+                        }}
+                      />
+                    );
+                  })}
+                </Stack>
+              )}
+
+              {/* Related medications (for conditions) */}
+              {relatedMeds.length > 0 && (
+                <Stack direction="row" spacing={1} mt={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <Typography variant="caption" color="text.secondary">
+                    {relatedMeds.length === 1 ? "Medication:" : `Medications (${relatedMeds.length}):`}
+                  </Typography>
+                  {relatedMeds.map((med) => (
+                    <Chip
+                      key={med.groupId}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      label={med.patientFriendlyName}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveTab("MedicationRequest");
+                        openDetails(med, undefined);
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Box>
+          );
+        })}
+        {hiddenCount > 0 && (
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setViewMode("grouped")}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            Show all {scored.length}
+          </Button>
+        )}
+      </Stack>
     );
   }
 
@@ -4264,7 +5195,12 @@ export function PatientExplorer() {
     : { active: 0, all: 0 };
   const sortedVisibleTabGroups = sortGroupsForDisplay(visibleTabGroups);
   const canUseGroupedView = sortedVisibleTabGroups.length > 0;
-  const effectiveViewMode: ExplorerViewMode = canUseGroupedView ? viewMode : "date";
+  const isCrossDomainSummary = activeTab === "PatientSummary";
+  const effectiveViewMode: ExplorerViewMode = isCrossDomainSummary
+    ? "summary"
+    : canUseGroupedView
+      ? viewMode
+      : "date";
   const dateViewClusters = sortedDateClusters(visibleTabRecords);
   const labelsByRecordId = groupLabelByRecordId(visibleTabGroups);
   const groupingProgressValue =
@@ -4273,6 +5209,7 @@ export function PatientExplorer() {
       : null;
 
   function renderRecordViewToolbar() {
+    if (isCrossDomainSummary) return null;
     const recordCount = visibleTabRecords.length;
     const totalCount = tabRecords.length;
     const recordLabel =
@@ -4344,6 +5281,12 @@ export function PatientExplorer() {
                     "& .MuiToggleButton-root": { whiteSpace: "nowrap", minWidth: 74 }
                   }}
                 >
+                  <ToggleButton value="summary" aria-label="Summary view" disabled={!canUseGroupedView}>
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <LayoutDashboard size={15} />
+                      <span>Summary</span>
+                    </Stack>
+                  </ToggleButton>
                   <ToggleButton value="grouped" aria-label="Grouped view" disabled={!canUseGroupedView}>
                     <Stack direction="row" spacing={0.75} alignItems="center">
                       <Layers size={15} />
@@ -4512,8 +5455,12 @@ export function PatientExplorer() {
             {visibleTabRecords.length === 0 ? (
               <Alert severity="info">
                 No {statusFilterEnabled && resourceStatusFilter === "active" ? "active " : ""}
-                {RESOURCE_LABELS[activeTab].toLowerCase()} available.
+                {isCrossDomainSummary ? "records" : `${RESOURCE_LABELS[activeTab].toLowerCase()} `}available.
               </Alert>
+            ) : isCrossDomainSummary ? (
+              renderCrossDomainSummary()
+            ) : effectiveViewMode === "summary" ? (
+              renderSummaryView(sortedVisibleTabGroups)
             ) : effectiveViewMode === "date" ? (
               renderDateView(dateViewClusters, labelsByRecordId)
             ) : (

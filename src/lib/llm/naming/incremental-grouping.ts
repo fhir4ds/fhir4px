@@ -46,6 +46,11 @@ export async function* groupWithNamingIncrementalStream(
     const batch = batches[batchIndex];
     options.onProgress?.(`Naming records... ${completedCount + 1}/${records.length}`);
 
+    // Yield to the event loop before each batch so pending UI events (tab
+    // clicks, scroll, state updates) can process. Inference itself still
+    // blocks the calling thread, but between batches the UI catches up.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
     console.info("[fhir4px:naming]", {
       event: "naming-batch-start",
       batchIndex: batchIndex + 1,

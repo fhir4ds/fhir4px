@@ -1,13 +1,14 @@
 /**
  * Embedding model wrapper for transformers.js.
  *
- * Loads joelmontavon/fhir4px-embeddings-onnx (fp32 WASM) — a fhir4px-hosted
- * ONNX conversion of NeuML/pubmedbert-base-embeddings (PubMedBERT fine-tuned for
- * sentence similarity). Selected over gte-modernbert-base for better accuracy on
- * medical text: wins on 3 of 4 categorization tasks plus lab↔condition matching.
+ * Loads joelmontavon/fhir4px-embeddings-onnx (q8) — a fhir4px-hosted ONNX
+ * conversion of NeuML/pubmedbert-base-embeddings (PubMedBERT fine-tuned for
+ * sentence similarity). Selected over gte-modernbert-base for better accuracy
+ * on medical text: wins on 3 of 4 categorization tasks plus lab↔condition
+ * matching.
  *
- * Uses q8 dtype (standard int8 dynamic quantization). WASM-compatible —
- * no block-quantized operators. ~105MB download.
+ * Prefers WebGPU (3-10× faster inference). Falls back to WASM if WebGPU is
+ * unavailable or crashes. ~105MB download.
  */
 
 const EMBEDDING_MODEL_ID = "joelmontavon/fhir4px-embeddings-onnx";
@@ -23,11 +24,33 @@ async function getPipeline(): Promise<Extractor> {
     const { pipeline, env } = await import("@huggingface/transformers");
     env.allowLocalModels = false;
     env.allowRemoteModels = true;
-    const extractor = await pipeline("feature-extraction", EMBEDDING_MODEL_ID, {
-      dtype: "q8",
-      device: "wasm"
-    });
-    return extractor as Extractor;
+
+    const isNode = typeof process !== "undefined" && process.versions?.node;
+    const hasWebGPU = !isNode && typeof navigator !== "undefined" && "gpu" in navigator;
+    // Browser: "webgpu" → "wasm" fallback. Node: "cpu" (no wasm backend).
+    const device = hasWebGPU ? "webgpu" : isNode ? "cpu" : "wasm";
+
+    try {
+      const extractor = await pipeline("feature-extraction", EMBEDDING_MODEL_ID, {
+        dtype: "q8",
+        device
+      });
+      return extractor as Extractor;
+    } catch (error) {
+      if (device === "webgpu") {
+        console.warn("[fhir4px:embeddings]", {
+          event: "webgpu-fallback",
+          error: error instanceof Error ? error.message : String(error),
+          message: "WebGPU failed for embeddings — falling back to WASM"
+        });
+        const extractor = await pipeline("feature-extraction", EMBEDDING_MODEL_ID, {
+          dtype: "q8",
+          device: "wasm"
+        });
+        return extractor as Extractor;
+      }
+      throw error;
+    }
   })();
 
   return pipelinePromise as Promise<Extractor>;
