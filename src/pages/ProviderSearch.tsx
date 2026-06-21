@@ -30,6 +30,7 @@ import { useNavigate } from "react-router-dom";
 import { resolveDirectoryOrigin, searchProviders } from "../lib/directory/client";
 import type { DirectoryOrigin, DirectoryProvider, DirectorySort } from "../lib/directory/types";
 import { preloadNamingModel } from "../lib/llm/naming";
+import { LLM_ENABLED } from "../lib/llm/config";
 import { buildAuthorizeUrl } from "../lib/smart/oauth";
 import { fetchSandboxPatients, configuredSandboxPatients, mergeSandboxPatients } from "../lib/smart/sandbox";
 import { upsertLocalTestSource } from "../lib/smart/sources";
@@ -291,7 +292,7 @@ export function ProviderSearch() {
           nextRoute: "/records"
         });
         navigate("/records");
-        window.setTimeout(() => void preloadNamingModel(), 0);
+        if (LLM_ENABLED) window.setTimeout(() => void preloadNamingModel(), 0);
         return;
       }
 
@@ -332,7 +333,7 @@ export function ProviderSearch() {
       });
       if (popup) {
         popup.location.assign(url);
-        void preloadNamingModel();
+        if (LLM_ENABLED) void preloadNamingModel();
         setConnectStatus("Patient portal opened in a popup.");
         setConnectingProviderId(null);
       } else {

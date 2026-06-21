@@ -9,6 +9,7 @@ import {
 } from "../../lib/smart/popup";
 import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
 import { preloadNamingModel } from "../../lib/llm/naming";
+import { LLM_ENABLED } from "../../lib/llm/config";
 
 const navItems = [
   { to: "/providers", label: "Providers", icon: <Search size={18} /> },
@@ -23,7 +24,10 @@ export function AppFrame({ children }: PropsWithChildren) {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // LLM preload disabled while fine-tuned model is in development.
+  // Re-enable by uncommenting the preload call below.
   useEffect(() => {
+    if (!LLM_ENABLED) return;
     const timer = window.setTimeout(() => void preloadNamingModel(), 250);
     return () => window.clearTimeout(timer);
   }, []);

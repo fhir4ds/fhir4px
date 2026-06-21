@@ -180,7 +180,9 @@ import {
   type NamingIncrementalUpdate,
   type NamingWarmupStatus
 } from "../lib/llm/naming";
+import { LLM_ENABLED } from "../lib/llm/config";
 import { subscribeLlmLoadStatus, type LlmLoadStatus } from "../lib/llm/transformers-llm";
+import { resolveBm25Name } from "../lib/fhir/bm25-naming";
 import {
   associateLabGroupWithConditions,
   type ConditionAssociationChoice,
@@ -861,18 +863,21 @@ function isLocalModelCacheEntry(entry: GroupingCacheEntry): boolean {
   );
 }
 
+const BM25_MODEL = "bm25";
+
 function cacheEntryCompleteForRecord(
   record: GroupableRecord,
   entry: GroupingCacheEntry | undefined,
   options: { allowLookup: boolean; modelId?: string } = { allowLookup: true }
 ): entry is GroupingCacheEntry {
   if (!entry || entry.resourceType !== record.resourceType) return false;
-  if (entry.model !== PATIENT_FRIENDLY_LOOKUP_MODEL) {
-    return options.modelId ? entry.model === options.modelId : isLocalModelCacheEntry(entry);
+  // Deterministic lookup and BM25 are both "complete" naming sources
+  if (entry.model === PATIENT_FRIENDLY_LOOKUP_MODEL || entry.model === BM25_MODEL) {
+    if (!options.allowLookup) return false;
+    if (record.resourceType !== "Observation") return true;
+    return Boolean(entry.observationBucket || observationBucketFromKnownCategory(record));
   }
-  if (!options.allowLookup) return false;
-  if (record.resourceType !== "Observation") return true;
-  return Boolean(entry.observationBucket || observationBucketFromKnownCategory(record));
+  return options.modelId ? entry.model === options.modelId : isLocalModelCacheEntry(entry);
 }
 
 function upsertLookupEntriesWithoutReplacingModelResults(
@@ -2181,7 +2186,7 @@ export function PatientExplorer() {
       let cache = await loadGroupingCache(key);
       let cacheById = groupingCacheByCompactId(cache);
       const selectedModelId = TRANSFORMERS_LLM_MODEL_ID;
-      const canRunLocalModel = browserCanAttemptNaming();
+      const canRunLocalModel = LLM_ENABLED;
       groupingConsoleLog("info", "cache-loaded", {
         runId,
         cacheEntryCount: cache.entries.length,
@@ -2220,6 +2225,50 @@ export function PatientExplorer() {
         cacheById = groupingCacheByCompactId(cache);
         setGroupingCache(cache);
         await saveGroupingCache(key, cache);
+      }
+
+      // Tier 2: BM25 naming pass — resolves patient-friendly names for
+      // records that the deterministic lookup missed (no code or code not in
+      // lookup table). ~81% accuracy, ~10ms per query. Runs before LLM (Tier 3).
+      const bm25Uncached = basePlans.flatMap((plan) =>
+        plan.compactRecords.filter(
+          (record) => !cacheEntryCompleteForRecord(record, cacheById.get(record.id), { allowLookup: true, modelId: selectedModelId })
+        )
+      );
+      if (bm25Uncached.length > 0) {
+        groupingConsoleLog("info", "bm25-naming-start", {
+          runId,
+          uncachedCount: bm25Uncached.length
+        });
+        setStatus(`Searching patient-friendly names...`);
+        const bm25Entries: GroupingCacheEntry[] = [];
+        const now = Date.now();
+        for (const record of bm25Uncached) {
+          const match = await resolveBm25Name(record);
+          if (match) {
+            bm25Entries.push({
+              compactRecordId: record.id,
+              resourceType: record.resourceType,
+              patientFriendlyName: match.patientFriendlyName,
+              observationBucket: observationBucketFromKnownCategory(record),
+              confidence: match.confidence,
+              fallback: false,
+              model: "bm25",
+              updatedAt: now
+            });
+          }
+        }
+        if (bm25Entries.length > 0) {
+          cache = upsertLookupEntriesWithoutReplacingModelResults(cache, bm25Entries);
+          cacheById = groupingCacheByCompactId(cache);
+          setGroupingCache(cache);
+          await saveGroupingCache(key, cache);
+        }
+        groupingConsoleLog("info", "bm25-naming-complete", {
+          runId,
+          matched: bm25Entries.length,
+          total: bm25Uncached.length
+        });
       }
       const plans = basePlans.map(({ type, subset, compactRecords }) => {
         const completeOptions = {
@@ -2285,6 +2334,17 @@ export function PatientExplorer() {
         deterministicOnly: true
       });
 
+      // Build recordId → patientFriendlyName from groups for classification.
+      // Defined here so both the cache-only and model-unavailable paths can use it.
+      const cacheNameByRecordId = new Map<string, string>();
+      for (const group of initialCombined.groups) {
+        for (const recordId of group.resourceIds) {
+          if (!cacheNameByRecordId.has(recordId)) {
+            cacheNameByRecordId.set(recordId, group.patientFriendlyName);
+          }
+        }
+      }
+
       if (totalUncachedClusters === 0) {
         groupingConsoleLog("info", "refine-complete-from-cache", {
           runId,
@@ -2293,14 +2353,6 @@ export function PatientExplorer() {
         });
         setStatus(lookupEntries.length ? "Records grouped from patient-friendly lookup and local cache" : "Records grouped from local cache");
         setGroupingProgress(null);
-        const cacheNameByRecordId = new Map<string, string>();
-        for (const group of initialCombined.groups) {
-          for (const recordId of group.resourceIds) {
-            if (!cacheNameByRecordId.has(recordId)) {
-              cacheNameByRecordId.set(recordId, group.patientFriendlyName);
-            }
-          }
-        }
         await runPostGroupingClassification(nextRecords, key, {
           canRunLocalModel,
           selectedModelId,
@@ -2318,13 +2370,13 @@ export function PatientExplorer() {
       if (!canRunLocalModel) {
         groupingConsoleLog("warn", "naming-unavailable", {
           runId,
-          reason: "WebGPU unavailable or webdriver browser",
+          reason: "LLM disabled — using deterministic + source labels only",
           totalUncachedConcepts: totalUncachedClusters
         });
         setStatus(
           lookupEntries.length
-            ? "Patient-friendly lookup applied; local model unavailable for remaining records"
-            : "Cached groups restored; local model unavailable for new records"
+            ? "Patient-friendly lookup applied; LLM disabled for remaining records"
+            : "Cached groups restored; LLM disabled for new records"
         );
         setGroupingProgress(null);
         await runPostGroupingClassification(nextRecords, key, {
