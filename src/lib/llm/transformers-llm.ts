@@ -185,12 +185,12 @@ async function getGenerator(): Promise<Generator> {
           event: "pipeline-attempt",
           modelId,
           dtype: preferredDtype,
-          device,
+          device: device as "webgpu" | "wasm",
           timestamp: new Date().toISOString()
         });
         generator = await pipeline("text-generation", modelId, {
           dtype: preferredDtype,
-          device,
+          device: device as "webgpu" | "wasm",
           progress_callback: progressCallback
         });
       } catch (primaryError) {
@@ -198,7 +198,7 @@ async function getGenerator(): Promise<Generator> {
           event: "pipeline-primary-failed",
           modelId,
           dtype: preferredDtype,
-          device,
+          device: device as "webgpu" | "wasm",
           error: primaryError instanceof Error ? primaryError.message : String(primaryError),
           fallbackDtype,
           timestamp: new Date().toISOString()
@@ -210,7 +210,7 @@ async function getGenerator(): Promise<Generator> {
         }
         generator = await pipeline("text-generation", modelId, {
           dtype: fallbackDtype,
-          device: usedDevice,
+          device: usedDevice as "webgpu" | "wasm" | "cpu",
           progress_callback: progressCallback
         });
       }
@@ -218,7 +218,7 @@ async function getGenerator(): Promise<Generator> {
         event: "pipeline-loaded",
         modelId,
         dtype: usedDtype,
-        device: usedDevice,
+        device: usedDevice as "webgpu" | "wasm" | "cpu",
         timestamp: new Date().toISOString()
       });
 

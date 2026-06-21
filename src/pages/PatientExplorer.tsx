@@ -233,6 +233,7 @@ interface GroupStatusRollup {
 }
 
 const RESOURCE_LABELS: Record<ExplorerTab, string> = {
+  PatientSummary: "Summary",
   MedicationRequest: "Medications",
   AllergyIntolerance: "Allergies",
   Condition: "Conditions",
@@ -243,7 +244,7 @@ const RESOURCE_LABELS: Record<ExplorerTab, string> = {
   DiagnosticReport: "Reports"
 };
 
-const EXPLORER_TABS = Object.keys(RESOURCE_LABELS) as ExplorerTab[];
+const EXPLORER_TABS = (Object.keys(RESOURCE_LABELS) as ExplorerTab[]).filter((t) => t !== "PatientSummary");
 
 function resourceTypeIcon(type: ExplorerTab, size = 20) {
   switch (type) {
@@ -3153,10 +3154,10 @@ export function PatientExplorer() {
 
   function groupPrimaryTab(group: PatientFriendlyGroup): ExplorerTab {
     return (
-      group.resourceTypes.find((resourceType): resourceType is ExplorerTab =>
+      group.resourceTypes.find((resourceType) =>
         (EXPLORER_TABS as readonly string[]).includes(resourceType)
-      ) ?? activeTab
-    );
+      ) as ExplorerTab | undefined
+    ) ?? activeTab;
   }
 
   function groupExpansionKey(group: PatientFriendlyGroup, tab = activeTab) {
@@ -4800,7 +4801,7 @@ export function PatientExplorer() {
               onClick={() => {
                 const firstType = group.resourceTypes[0] as ExplorerTab | undefined;
                 if (firstType && firstType !== "PatientSummary") setActiveTab(firstType);
-                openDetails(group, undefined);
+                openDetails(group as unknown as GroupableRecord, undefined);
               }}
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
@@ -4832,7 +4833,7 @@ export function PatientExplorer() {
                     event.stopPropagation();
                     const firstType = inlineLab.group.resourceTypes[0] as ExplorerTab | undefined;
                     if (firstType) setActiveTab(firstType);
-                    openDetails(inlineLab.group, undefined);
+                    openDetails(inlineLab.group as unknown as GroupableRecord, undefined);
                   }}
                 >
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
@@ -4879,7 +4880,7 @@ export function PatientExplorer() {
                         onClick={(event) => {
                           event.stopPropagation();
                           setActiveTab("MedicationRequest");
-                          openDetails(med, undefined);
+                          openDetails(med as unknown as GroupableRecord, undefined);
                         }}
                       />
                     ))}
@@ -5032,7 +5033,7 @@ export function PatientExplorer() {
                 cursor: "pointer",
                 "&:hover": { borderColor: "primary.main" }
               }}
-              onClick={() => openDetails(group, undefined)}
+              onClick={() => openDetails(group as unknown as GroupableRecord, undefined)}
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                 <Typography fontWeight={700}>{group.patientFriendlyName}</Typography>
@@ -5073,7 +5074,7 @@ export function PatientExplorer() {
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveTab("Condition");
-                      openDetails(relatedCondition!, undefined);
+                      openDetails(relatedCondition! as unknown as GroupableRecord, undefined);
                     }}
                   />
                 </Stack>
@@ -5098,7 +5099,7 @@ export function PatientExplorer() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setActiveTab("Observation");
-                          openDetails(lab, undefined);
+                          openDetails(lab as unknown as GroupableRecord, undefined);
                         }}
                       />
                     );
@@ -5122,7 +5123,7 @@ export function PatientExplorer() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setActiveTab("MedicationRequest");
-                        openDetails(med, undefined);
+                        openDetails(med as unknown as GroupableRecord, undefined);
                       }}
                     />
                   ))}

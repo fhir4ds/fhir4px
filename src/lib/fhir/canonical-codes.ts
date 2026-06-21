@@ -26,7 +26,7 @@ export interface CanonicalCode {
   code: string;
 }
 
-interface CanonicalCodeFile {
+export interface CanonicalCodeFile {
   version: number;
   generatedAt: string;
   source: string;

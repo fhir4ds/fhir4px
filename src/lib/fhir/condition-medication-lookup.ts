@@ -51,16 +51,9 @@ async function getReverseIndex(): Promise<Map<string, string[]> | null> {
 }
 
 export interface MedicationLookupOptions {
-  /**
-   * RxNorm codes for this medication group (e.g. ["860975"] for Metformin
-   * 500 MG Oral Tablet). When provided, each code is decomposed into active
-   * ingredients via the rxnorm_ingredient_decomposition dataset, and each
-   * ingredient name is looked up in the condition reverse index. This is the
-   * most authoritative path: it handles branded drugs (e.g. "Glucophage" →
-   * metformin) and combination products (e.g. "Janumet" → sitagliptin +
-   * metformin) via RxNorm's own decomposition.
-   */
   rxnormCodes?: string[];
+  /** Active ingredient names (e.g. ["metformin"]). Used as fallback when RxNorm codes aren't available. */
+  ingredients?: string[];
 }
 
 /**
