@@ -266,6 +266,15 @@ export async function fetchAndStoreSourceDataset(
       maxReferenceFetches: DEFAULT_REFERENCE_FETCH_LIMIT,
       fetcher: options.fetcher
     });
+
+    // Delete the old dataset before writing the new one to avoid doubling
+    // storage usage during the write (which can trigger QuotaExceededError
+    // if the browser's per-origin quota is tight).
+    const oldDataset = await vault.getJson<FhirDataset>(key, { type: "source-dataset", id: current.id });
+    if (oldDataset) {
+      await vault.delete({ type: "source-dataset", id: current.id });
+    }
+
     await putSourceDataset(key, current.id, dataset, vault);
     const summary = buildReferralSummary(dataset.resources);
     const nextPatientName = patientName(summary.patient);
