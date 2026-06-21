@@ -1,5 +1,6 @@
 import type {
   AllergyClassification,
+  EncounterTypeClassification,
   EncounterVisitClassification,
   ObservationCategoryClassification
 } from "./local-classification";
@@ -10,13 +11,15 @@ export const CLASSIFICATION_CACHE_VERSION = 1;
 
 export const CLASSIFICATION_TRANSFORM_VERSIONS = {
   "AllergyIntolerance.classifyAllergy": 1,
-  "Encounter.classifyVisit": 1,
+  "Encounter.classifyClass": 1,
+  "Encounter.classifyType": 1,
   "Observation.classifyCategory": 1
 } as const;
 
 export type ClassificationTransform = keyof typeof CLASSIFICATION_TRANSFORM_VERSIONS;
 export type ClassificationResult =
   | AllergyClassification
+  | EncounterTypeClassification
   | EncounterVisitClassification
   | ObservationCategoryClassification;
 

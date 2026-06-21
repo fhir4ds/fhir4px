@@ -1,0 +1,128 @@
+{
+  "task": "encounter_class",
+  "model": "NeuML/pubmedbert-base-embeddings",
+  "version": 2,
+  "classes": {
+    "inpatient": {
+      "prototype_texts": [
+        "Hospital admission",
+        "Acute care admission",
+        "Admitted to hospital",
+        "Inpatient stay",
+        "Inpatient hospital care",
+        "Overnight hospital stay",
+        "Hospital discharge",
+        "Inpatient discharge",
+        "Hospital inpatient visit",
+        "Inpatient consultation",
+        "Admission to hospital",
+        "Transfer to inpatient",
+        "Skilled nursing facility admission",
+        "Rehabilitation admission",
+        "Long-term care admission",
+        "Observation admission",
+        "Inpatient surgery",
+        "Emergency admission",
+        "Direct admission",
+        "Hospital readmission",
+        "Inpatient stay 3 days"
+      ]
+    },
+    "outpatient": {
+      "prototype_texts": [
+        "Ambulatory visit",
+        "Follow-up clinic visit",
+        "Routine checkup",
+        "Office visit established patient",
+        "Specialist consultation",
+        "Office visit new patient",
+        "Outpatient visit",
+        "Clinic visit",
+        "Primary care visit",
+        "Annual wellness visit",
+        "Preventive care visit",
+        "Outpatient follow-up",
+        "Post-operative follow-up",
+        "Outpatient consultation",
+        "Urgent care visit",
+        "Walk-in clinic visit",
+        "Outpatient evaluation",
+        "Diagnostic outpatient visit",
+        "Home health visit",
+        "Hospice visit"
+      ]
+    },
+    "emergency": {
+      "prototype_texts": [
+        "Emergency room",
+        "ED visit",
+        "Emergency department visit",
+        "Emergency assessment",
+        "Trauma activation",
+        "Emergency room visit",
+        "ER visit",
+        "Emergency care",
+        "Urgent emergency care",
+        "Emergency evaluation",
+        "Emergency trauma activation",
+        "Emergency department admission",
+        "Emergency department discharge",
+        "Acute emergency visit",
+        "Emergency services",
+        "Triage assessment",
+        "Emergency stabilization",
+        "Critical care emergency",
+        "Emergency department observation",
+        "Emergency transfer"
+      ]
+    },
+    "telehealth": {
+      "prototype_texts": [
+        "E-visit",
+        "Telehealth visit",
+        "Virtual visit",
+        "Virtual check-in",
+        "Remote patient visit",
+        "Telemedicine consultation",
+        "Video visit",
+        "Phone visit",
+        "Telephone visit",
+        "Telehealth follow-up",
+        "Virtual appointment",
+        "Teleconsultation",
+        "Remote visit",
+        "Telehealth appointment",
+        "Online visit",
+        "Telehealth check-in"
+      ]
+    },
+    "procedure": {
+      "prototype_texts": [
+        "Procedure room visit",
+        "Cardiac catheterization",
+        "Surgical operation",
+        "Outpatient surgery",
+        "Colonoscopy",
+        "Endoscopy",
+        "Cardiac procedure",
+        "Catheterization procedure",
+        "Surgical procedure",
+        "Outpatient procedure",
+        "Minor procedure",
+        "Diagnostic procedure",
+        "Bronchoscopy",
+        "Cystoscopy",
+        "Biopsy procedure",
+        "Joint injection",
+        "Wound debridement",
+        "Cataract surgery",
+        "Hernia repair",
+        "Appendectomy",
+        "Cholecystectomy",
+        "Arthroscopy",
+        "Angioplasty",
+        "Pacemaker implantation"
+      ]
+    }
+  }
+}

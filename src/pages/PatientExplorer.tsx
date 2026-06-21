@@ -134,6 +134,7 @@ import {
   type AllergyDomain,
   type EncounterVisitClass,
   type EncounterVisitClassification,
+  type EncounterTypeClassification,
   type ObservationCategoryClassification
 } from "../lib/fhir/local-classification";
 import {
@@ -1446,9 +1447,21 @@ export function PatientExplorer() {
   const encounterVisitClassificationByRecordId = useMemo(() => {
     const map = new Map<string, EncounterVisitClassification>();
     for (const compactRecord of compactClassificationRecords.Encounter) {
-      const entry = preferredClassificationEntry(classificationCache, "Encounter.classifyVisit", compactRecord.id);
+      const entry = preferredClassificationEntry(classificationCache, "Encounter.classifyClass", compactRecord.id);
       const result = (entry?.result as EncounterVisitClassification | undefined) ?? deterministicEncounterVisitClassification(compactRecord);
       for (const id of compactMemberIds(compactRecord)) map.set(id, result);
+    }
+    return map;
+  }, [classificationCache, compactClassificationRecords]);
+
+  const encounterTypeClassificationByRecordId = useMemo(() => {
+    const map = new Map<string, EncounterTypeClassification>();
+    for (const compactRecord of compactClassificationRecords.Encounter) {
+      const entry = preferredClassificationEntry(classificationCache, "Encounter.classifyType", compactRecord.id);
+      if (entry?.result) {
+        const result = entry.result as EncounterTypeClassification;
+        for (const id of compactMemberIds(compactRecord)) map.set(id, result);
+      }
     }
     return map;
   }, [classificationCache, compactClassificationRecords]);
@@ -1471,6 +1484,10 @@ export function PatientExplorer() {
 
   function encounterVisitClassForRecord(record: GroupableRecord): EncounterVisitClass {
     return encounterVisitClassificationByRecordId.get(record.id)?.visitClass ?? deterministicEncounterVisitClassification(record).visitClass;
+  }
+
+  function encounterTypeForRecord(record: GroupableRecord): string | undefined {
+    return encounterTypeClassificationByRecordId.get(record.id)?.encounterType;
   }
 
   const activeSpecificAllergyDomains = useMemo(() => {
@@ -1614,10 +1631,17 @@ export function PatientExplorer() {
         deterministic: deterministicAllergyClassification
       },
       {
-        transform: "Encounter.classifyVisit",
+        transform: "Encounter.classifyClass",
         records: compactRecordsForModel(recordsByType(nextRecords, "Encounter")),
-        embeddingTask: "visit_type",
+        embeddingTask: "encounter_class",
         deterministic: deterministicEncounterVisitClassification
+      },
+      {
+        transform: "Encounter.classifyType",
+        records: compactRecordsForModel(recordsByType(nextRecords, "Encounter")),
+        embeddingTask: "encounter_type"
+        // No deterministic — encounter type uses the UMLS SNOMED/CPT index via embeddings.
+        // The resolved friendly_name doubles as both the patient-friendly name AND the type.
       }
     ];
     const total = plans.reduce((sum, plan) => sum + plan.records.length, 0);
@@ -1656,7 +1680,7 @@ export function PatientExplorer() {
           source: "embedding"
         } as AllergyClassification;
       }
-      // Encounter.classifyVisit
+      // Encounter.classifyClass
       return {
         visitClass: className as EncounterVisitClass,
         confidence,
@@ -4561,6 +4585,10 @@ export function PatientExplorer() {
       activeTab === "Encounter" && groupRecords.length > 0
         ? encounterVisitClassForRecord(groupRecords[0])
         : null;
+    const encounterType =
+      activeTab === "Encounter" && groupRecords.length > 0
+        ? encounterTypeForRecord(groupRecords[0])
+        : undefined;
     const clusters = dedupeGroupedRecords(groupRecords);
     const canonicalRecords = clusters.map((cluster) => cluster.canonical);
     const duplicateCount = clusters.reduce((total, cluster) => total + cluster.duplicateCount, 0);
@@ -4587,6 +4615,9 @@ export function PatientExplorer() {
             {groupStatus && <Chip size="small" color={groupStatus.color} label={groupStatus.label} />}
             {encounterVisitClass && encounterVisitClass !== "unknown" && (
               <Chip size="small" color="primary" variant="outlined" label={visitClassLabel(encounterVisitClass)} />
+            )}
+            {encounterType && (
+              <Chip size="small" variant="outlined" label={encounterType} />
             )}
             <Chip size="small" label={`${canonicalRecords.length} ${canonicalRecords.length === 1 ? "result" : "results"}`} />
             {latestLabel && latestLabel !== "No date" && <Chip size="small" variant="outlined" label={`Latest: ${latestLabel}`} />}

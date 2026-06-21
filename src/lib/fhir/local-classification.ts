@@ -29,6 +29,13 @@ export interface EncounterVisitClassification {
   source: LocalClassificationSource;
 }
 
+export interface EncounterTypeClassification {
+  encounterType: string;
+  confidence: number;
+  fallback: boolean;
+  source: LocalClassificationSource;
+}
+
 export interface ObservationCategoryClassification {
   observationCategory: PatientObservationBucket | "unknown";
   confidence: number;
