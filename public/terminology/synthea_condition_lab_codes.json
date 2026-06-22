@@ -1,0 +1,1313 @@
+{
+  "_meta": {
+    "description": "Synthea condition-lab associations crosswalked to ICD-10 and LOINC codes",
+    "source": "condition_lab_relationships.json (Synthea modules, 34 conditions)",
+    "strength": "all strong (manually curated clinical relationships)",
+    "medications_note": "empty arrays \u2014 model team fills from UMLS may_treat",
+    "generated_at": "2026-06-22T00:00:00Z"
+  },
+  "conditions": {
+    "I21": {
+      "labs": [
+        {
+          "code": "3184-9",
+          "strength": "strong"
+        },
+        {
+          "code": "10230-1",
+          "strength": "strong"
+        },
+        {
+          "code": "18752-6",
+          "strength": "strong"
+        },
+        {
+          "code": "24336-0",
+          "strength": "strong"
+        },
+        {
+          "code": "55405-5",
+          "strength": "strong"
+        },
+        {
+          "code": "17855-8",
+          "strength": "strong"
+        },
+        {
+          "code": "10880-3",
+          "strength": "strong"
+        },
+        {
+          "code": "103808-2",
+          "strength": "strong"
+        },
+        {
+          "code": "106735-4",
+          "strength": "strong"
+        },
+        {
+          "code": "108011-8",
+          "strength": "strong"
+        },
+        {
+          "code": "110665-7",
+          "strength": "strong"
+        },
+        {
+          "code": "108346-8",
+          "strength": "strong"
+        },
+        {
+          "code": "24356-8",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "D50": {
+      "labs": [
+        {
+          "code": "58410-2",
+          "strength": "strong"
+        },
+        {
+          "code": "104647-3",
+          "strength": "strong"
+        },
+        {
+          "code": "20570-8",
+          "strength": "strong"
+        },
+        {
+          "code": "105090-5",
+          "strength": "strong"
+        },
+        {
+          "code": "110280-5",
+          "strength": "strong"
+        },
+        {
+          "code": "103750-6",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "109420-0",
+          "strength": "strong"
+        },
+        {
+          "code": "108738-6",
+          "strength": "strong"
+        },
+        {
+          "code": "100849-9",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "104705-9",
+          "strength": "strong"
+        },
+        {
+          "code": "4544-3",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "J45": {
+      "labs": [
+        {
+          "code": "20126-5",
+          "strength": "strong"
+        },
+        {
+          "code": "19224-5",
+          "strength": "strong"
+        },
+        {
+          "code": "LP115839-5",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "C50": {
+      "labs": [
+        {
+          "code": "21907-1",
+          "strength": "strong"
+        },
+        {
+          "code": "31150-6",
+          "strength": "strong"
+        },
+        {
+          "code": "40556-3",
+          "strength": "strong"
+        },
+        {
+          "code": "10480-2",
+          "strength": "strong"
+        },
+        {
+          "code": "109336-8",
+          "strength": "strong"
+        },
+        {
+          "code": "85343-2",
+          "strength": "strong"
+        },
+        {
+          "code": "85344-0",
+          "strength": "strong"
+        },
+        {
+          "code": "40557-1",
+          "strength": "strong"
+        },
+        {
+          "code": "21906-3",
+          "strength": "strong"
+        },
+        {
+          "code": "21920-4",
+          "strength": "strong"
+        },
+        {
+          "code": "21908-9",
+          "strength": "strong"
+        },
+        {
+          "code": "21924-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "J44": {
+      "labs": [
+        {
+          "code": "81887-9",
+          "strength": "strong"
+        },
+        {
+          "code": "19224-5",
+          "strength": "strong"
+        },
+        {
+          "code": "LP6469-3",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "U07.1": {
+      "labs": [
+        {
+          "code": "94040-3",
+          "strength": "strong"
+        },
+        {
+          "code": "57023-4",
+          "strength": "strong"
+        },
+        {
+          "code": "26444-0",
+          "strength": "strong"
+        },
+        {
+          "code": "11291-2",
+          "strength": "strong"
+        },
+        {
+          "code": "16688-4",
+          "strength": "strong"
+        },
+        {
+          "code": "10327-5",
+          "strength": "strong"
+        },
+        {
+          "code": "108010-0",
+          "strength": "strong"
+        },
+        {
+          "code": "101290-5",
+          "strength": "strong"
+        },
+        {
+          "code": "100344-1",
+          "strength": "strong"
+        },
+        {
+          "code": "80381-7",
+          "strength": "strong"
+        },
+        {
+          "code": "108602-4",
+          "strength": "strong"
+        },
+        {
+          "code": "100343-3",
+          "strength": "strong"
+        },
+        {
+          "code": "108610-7",
+          "strength": "strong"
+        },
+        {
+          "code": "10328-3",
+          "strength": "strong"
+        },
+        {
+          "code": "100850-7",
+          "strength": "strong"
+        },
+        {
+          "code": "12238-2",
+          "strength": "strong"
+        },
+        {
+          "code": "101864-7",
+          "strength": "strong"
+        },
+        {
+          "code": "104776-0",
+          "strength": "strong"
+        },
+        {
+          "code": "104711-7",
+          "strength": "strong"
+        },
+        {
+          "code": "108811-1",
+          "strength": "strong"
+        },
+        {
+          "code": "108160-3",
+          "strength": "strong"
+        },
+        {
+          "code": "101298-8",
+          "strength": "strong"
+        },
+        {
+          "code": "103559-1",
+          "strength": "strong"
+        },
+        {
+          "code": "94306-8",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "C80": {
+      "labs": [
+        {
+          "code": "110094-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100158-5",
+          "strength": "strong"
+        },
+        {
+          "code": "109532-2",
+          "strength": "strong"
+        },
+        {
+          "code": "10568-4",
+          "strength": "strong"
+        },
+        {
+          "code": "10834-0",
+          "strength": "strong"
+        },
+        {
+          "code": "110238-3",
+          "strength": "strong"
+        },
+        {
+          "code": "105103-6",
+          "strength": "strong"
+        },
+        {
+          "code": "13616-8",
+          "strength": "strong"
+        },
+        {
+          "code": "34533-0",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "24357-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "M54.5": {
+      "labs": [
+        {
+          "code": "24349-3",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "B18.1": {
+      "labs": [
+        {
+          "code": "72109-2",
+          "strength": "strong"
+        },
+        {
+          "code": "100856-4",
+          "strength": "strong"
+        },
+        {
+          "code": "10351-5",
+          "strength": "strong"
+        },
+        {
+          "code": "44249-1",
+          "strength": "strong"
+        },
+        {
+          "code": "111296-0",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "B18.2": {
+      "labs": [
+        {
+          "code": "72109-2",
+          "strength": "strong"
+        },
+        {
+          "code": "100856-4",
+          "strength": "strong"
+        },
+        {
+          "code": "10351-5",
+          "strength": "strong"
+        },
+        {
+          "code": "44249-1",
+          "strength": "strong"
+        },
+        {
+          "code": "111296-0",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "G89.4": {
+      "labs": [
+        {
+          "code": "24349-3",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "S42.0": {
+      "labs": [
+        {
+          "code": "104938-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "C18": {
+      "labs": [
+        {
+          "code": "110094-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100158-5",
+          "strength": "strong"
+        },
+        {
+          "code": "109532-2",
+          "strength": "strong"
+        },
+        {
+          "code": "110764-8",
+          "strength": "strong"
+        },
+        {
+          "code": "108015-9",
+          "strength": "strong"
+        },
+        {
+          "code": "24323-8",
+          "strength": "strong"
+        },
+        {
+          "code": "10834-0",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "107377-4",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "K63.5": {
+      "labs": [
+        {
+          "code": "110094-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100158-5",
+          "strength": "strong"
+        },
+        {
+          "code": "109532-2",
+          "strength": "strong"
+        },
+        {
+          "code": "110764-8",
+          "strength": "strong"
+        },
+        {
+          "code": "24323-8",
+          "strength": "strong"
+        },
+        {
+          "code": "10834-0",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "107191-9",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "33756-8",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "E11": {
+      "labs": [
+        {
+          "code": "2339-0",
+          "strength": "strong"
+        },
+        {
+          "code": "58410-2",
+          "strength": "strong"
+        },
+        {
+          "code": "104647-3",
+          "strength": "strong"
+        },
+        {
+          "code": "20570-8",
+          "strength": "strong"
+        },
+        {
+          "code": "105090-5",
+          "strength": "strong"
+        },
+        {
+          "code": "100746-7",
+          "strength": "strong"
+        },
+        {
+          "code": "103750-6",
+          "strength": "strong"
+        },
+        {
+          "code": "41995-2",
+          "strength": "strong"
+        },
+        {
+          "code": "17855-8",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100849-9",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "104705-9",
+          "strength": "strong"
+        },
+        {
+          "code": "4548-4",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "E11.2": {
+      "labs": [
+        {
+          "code": "24321-2",
+          "strength": "strong"
+        },
+        {
+          "code": "104654-9",
+          "strength": "strong"
+        },
+        {
+          "code": "11211-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100745-9",
+          "strength": "strong"
+        },
+        {
+          "code": "101475-2",
+          "strength": "strong"
+        },
+        {
+          "code": "102097-3",
+          "strength": "strong"
+        },
+        {
+          "code": "100746-7",
+          "strength": "strong"
+        },
+        {
+          "code": "108797-2",
+          "strength": "strong"
+        },
+        {
+          "code": "111263-0",
+          "strength": "strong"
+        },
+        {
+          "code": "108689-1",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "L20": {
+      "labs": [
+        {
+          "code": "66519-0",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "J43": {
+      "labs": [
+        {
+          "code": "58410-2",
+          "strength": "strong"
+        },
+        {
+          "code": "104647-3",
+          "strength": "strong"
+        },
+        {
+          "code": "20570-8",
+          "strength": "strong"
+        },
+        {
+          "code": "105090-5",
+          "strength": "strong"
+        },
+        {
+          "code": "81887-9",
+          "strength": "strong"
+        },
+        {
+          "code": "103750-6",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100849-9",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "104705-9",
+          "strength": "strong"
+        },
+        {
+          "code": "19925-7",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "S72": {
+      "labs": [
+        {
+          "code": "104938-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "I50": {
+      "labs": [
+        {
+          "code": "30934-4",
+          "strength": "strong"
+        },
+        {
+          "code": "51990-0",
+          "strength": "strong"
+        },
+        {
+          "code": "103693-8",
+          "strength": "strong"
+        },
+        {
+          "code": "110280-5",
+          "strength": "strong"
+        },
+        {
+          "code": "88020-3",
+          "strength": "strong"
+        },
+        {
+          "code": "109420-0",
+          "strength": "strong"
+        },
+        {
+          "code": "108738-6",
+          "strength": "strong"
+        },
+        {
+          "code": "72068-0",
+          "strength": "strong"
+        },
+        {
+          "code": "14801-5",
+          "strength": "strong"
+        },
+        {
+          "code": "50190-8",
+          "strength": "strong"
+        },
+        {
+          "code": "106735-4",
+          "strength": "strong"
+        },
+        {
+          "code": "93124-6",
+          "strength": "strong"
+        },
+        {
+          "code": "88021-1",
+          "strength": "strong"
+        },
+        {
+          "code": "75317-8",
+          "strength": "strong"
+        },
+        {
+          "code": "29463-7",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "I10": {
+      "labs": [
+        {
+          "code": "18684-1",
+          "strength": "strong"
+        },
+        {
+          "code": "85354-9",
+          "strength": "strong"
+        },
+        {
+          "code": "11377-9",
+          "strength": "strong"
+        },
+        {
+          "code": "11378-7",
+          "strength": "strong"
+        },
+        {
+          "code": "8462-4",
+          "strength": "strong"
+        },
+        {
+          "code": "8480-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "E78.5": {
+      "labs": [
+        {
+          "code": "110094-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100158-5",
+          "strength": "strong"
+        },
+        {
+          "code": "109532-2",
+          "strength": "strong"
+        },
+        {
+          "code": "110764-8",
+          "strength": "strong"
+        },
+        {
+          "code": "58410-2",
+          "strength": "strong"
+        },
+        {
+          "code": "101339-0",
+          "strength": "strong"
+        },
+        {
+          "code": "111273-9",
+          "strength": "strong"
+        },
+        {
+          "code": "108018-3",
+          "strength": "strong"
+        },
+        {
+          "code": "24323-8",
+          "strength": "strong"
+        },
+        {
+          "code": "104647-3",
+          "strength": "strong"
+        },
+        {
+          "code": "20570-8",
+          "strength": "strong"
+        },
+        {
+          "code": "105090-5",
+          "strength": "strong"
+        },
+        {
+          "code": "10834-0",
+          "strength": "strong"
+        },
+        {
+          "code": "103750-6",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100849-9",
+          "strength": "strong"
+        },
+        {
+          "code": "57698-3",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "104705-9",
+          "strength": "strong"
+        },
+        {
+          "code": "107377-4",
+          "strength": "strong"
+        },
+        {
+          "code": "108346-8",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "N18": {
+      "labs": [
+        {
+          "code": "3094-0",
+          "strength": "strong"
+        },
+        {
+          "code": "24321-2",
+          "strength": "strong"
+        },
+        {
+          "code": "108015-9",
+          "strength": "strong"
+        },
+        {
+          "code": "104654-9",
+          "strength": "strong"
+        },
+        {
+          "code": "11211-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100745-9",
+          "strength": "strong"
+        },
+        {
+          "code": "10568-4",
+          "strength": "strong"
+        },
+        {
+          "code": "101475-2",
+          "strength": "strong"
+        },
+        {
+          "code": "102097-3",
+          "strength": "strong"
+        },
+        {
+          "code": "100746-7",
+          "strength": "strong"
+        },
+        {
+          "code": "110238-3",
+          "strength": "strong"
+        },
+        {
+          "code": "105103-6",
+          "strength": "strong"
+        },
+        {
+          "code": "13616-8",
+          "strength": "strong"
+        },
+        {
+          "code": "34533-0",
+          "strength": "strong"
+        },
+        {
+          "code": "108797-2",
+          "strength": "strong"
+        },
+        {
+          "code": "107377-4",
+          "strength": "strong"
+        },
+        {
+          "code": "111263-0",
+          "strength": "strong"
+        },
+        {
+          "code": "108689-1",
+          "strength": "strong"
+        },
+        {
+          "code": "24357-6",
+          "strength": "strong"
+        },
+        {
+          "code": "10582-5",
+          "strength": "strong"
+        },
+        {
+          "code": "33914-3",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "Z79.01": {
+      "labs": [
+        {
+          "code": "LP449094-4",
+          "strength": "strong"
+        },
+        {
+          "code": "6301-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "C34": {
+      "labs": [
+        {
+          "code": "110094-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100158-5",
+          "strength": "strong"
+        },
+        {
+          "code": "109532-2",
+          "strength": "strong"
+        },
+        {
+          "code": "10568-4",
+          "strength": "strong"
+        },
+        {
+          "code": "10834-0",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "110238-3",
+          "strength": "strong"
+        },
+        {
+          "code": "105103-6",
+          "strength": "strong"
+        },
+        {
+          "code": "13616-8",
+          "strength": "strong"
+        },
+        {
+          "code": "34533-0",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "24357-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "S02.6": {
+      "labs": [
+        {
+          "code": "104938-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "E88.81": {
+      "labs": [
+        {
+          "code": "58410-2",
+          "strength": "strong"
+        },
+        {
+          "code": "104647-3",
+          "strength": "strong"
+        },
+        {
+          "code": "20570-8",
+          "strength": "strong"
+        },
+        {
+          "code": "105090-5",
+          "strength": "strong"
+        },
+        {
+          "code": "103750-6",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100849-9",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "104705-9",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "Z34": {
+      "labs": [
+        {
+          "code": "58410-2",
+          "strength": "strong"
+        },
+        {
+          "code": "104647-3",
+          "strength": "strong"
+        },
+        {
+          "code": "20570-8",
+          "strength": "strong"
+        },
+        {
+          "code": "105090-5",
+          "strength": "strong"
+        },
+        {
+          "code": "103750-6",
+          "strength": "strong"
+        },
+        {
+          "code": "24360-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100849-9",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "104705-9",
+          "strength": "strong"
+        },
+        {
+          "code": "11449-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "C61": {
+      "labs": [
+        {
+          "code": "110094-0",
+          "strength": "strong"
+        },
+        {
+          "code": "100158-5",
+          "strength": "strong"
+        },
+        {
+          "code": "109532-2",
+          "strength": "strong"
+        },
+        {
+          "code": "10568-4",
+          "strength": "strong"
+        },
+        {
+          "code": "10834-0",
+          "strength": "strong"
+        },
+        {
+          "code": "106255-3",
+          "strength": "strong"
+        },
+        {
+          "code": "110238-3",
+          "strength": "strong"
+        },
+        {
+          "code": "105103-6",
+          "strength": "strong"
+        },
+        {
+          "code": "13616-8",
+          "strength": "strong"
+        },
+        {
+          "code": "34533-0",
+          "strength": "strong"
+        },
+        {
+          "code": "28542-9",
+          "strength": "strong"
+        },
+        {
+          "code": "32207-3",
+          "strength": "strong"
+        },
+        {
+          "code": "24357-6",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "M06": {
+      "labs": [
+        {
+          "code": "30522-7",
+          "strength": "strong"
+        },
+        {
+          "code": "30313-1",
+          "strength": "strong"
+        },
+        {
+          "code": "105081-4",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "A41": {
+      "labs": [
+        {
+          "code": "100906-7",
+          "strength": "strong"
+        },
+        {
+          "code": "88262-1",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "J02.0": {
+      "labs": [
+        {
+          "code": "104063-3",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "E07.9": {
+      "labs": [
+        {
+          "code": "3024-7",
+          "strength": "strong"
+        },
+        {
+          "code": "3051-5",
+          "strength": "strong"
+        },
+        {
+          "code": "110665-7",
+          "strength": "strong"
+        },
+        {
+          "code": "111274-7",
+          "strength": "strong"
+        },
+        {
+          "code": "3016-3",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    },
+    "E55.9": {
+      "labs": [
+        {
+          "code": "46269-7",
+          "strength": "strong"
+        },
+        {
+          "code": "110260-7",
+          "strength": "strong"
+        },
+        {
+          "code": "62292-8",
+          "strength": "strong"
+        }
+      ],
+      "medications": []
+    }
+  }
+}
