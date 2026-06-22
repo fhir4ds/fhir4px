@@ -1,31 +1,31 @@
 # Response to medterm4ds Questions on Simplified Data Spec
 
 **From:** fhir4px app team
-**Date:** 2026-06-21 (revised)
+**Date:** 2026-06-21 (revised 2)
 
 ---
 
-## 1. Condition associations: ICD-10 only
+## 1. Condition associations: ICD-10 preferred, SNOMED fallback
 
-**ICD-10 canonical keys only.** The associations are between canonical (ICD-10) condition codes and downstream codes (LOINC, RxNorm). No SNOMED keys needed.
+**Both ICD-10 and SNOMED keys in the associations file.** ICD-10 is preferred as canonical when available; SNOMED is used as canonical for conditions without an ICD-10 equivalent. This preserves coverage — ~50K SNOMED-only conditions that would otherwise get `null` canonical codes still participate in associations.
 
-The SNOMED → ICD-10 canonicalization happens at the **naming** level, not the association level. The condition BM25 index carries the ICD-10 canonical code for every entry — including SNOMED entries (build-time crosswalk via UMLS CUIs).
+**Key format:** bare codes, no system prefix. ICD-10 codes always start with a letter (`E11`, `J45.909`); SNOMED codes are always pure numeric (`44054006`). They cannot collide.
 
-**BM25 condition index entry (example):**
-```jsonc
-{
-  "code": "44054006",              // SNOMED code (from FHIR resource)
-  "system": "snomed",
-  "canonical_code": "E11",         // ICD-10 equivalent (for downstream lookups)
-  "canonical_system": "icd10",
-  "rid_to_friendly_name": "Diabetes Type 2",
-  "search_texts": ["Type 2 diabetes mellitus", "44054006", ...]
-}
-```
+**BM25 condition index `canonical_code` priority:**
+1. ICD-10 equivalent (via UMLS CUI crosswalk) → `canonical_code: "E11"`, `canonical_system: "icd10"`
+2. No ICD-10 → SNOMED self-canonical → `canonical_code: "233833007"`, `canonical_system: "snomed"`
+3. No associations data at all → `canonical_code: null`
 
-The resolver returns `canonical_code` for associations, GBD weights, and priority scoring. The original `code`/`system` are preserved for reference.
+**Downstream impact:**
 
-**Associations file:** ~28K ICD-10 keys (not 106K). Smaller and simpler.
+| Consumer | ICD-10 canonical | SNOMED canonical | null canonical |
+|---|---|---|---|
+| Associations | ✓ (ICD-10 key) | ✓ (SNOMED key) | ✗ |
+| GBD weights | ✓ (ICD-10 keyed) | ✗ (returns 0) | ✗ |
+| Priority scoring | Full (DW + boosters) | Boosters only | Boosters only |
+| Patient-friendly name | ✓ | ✓ | ✓ |
+
+**Associations file:** ~106K keys (28K ICD-10 + 78K SNOMED) at ~200 bytes each = ~20MB. Keys are bare codes — distinguishable by format.
 
 ---
 
@@ -74,18 +74,25 @@ We'll provide a `synthea_condition_lab_codes.json` file with the lab side crossw
 
 ```json
 {
-  "icd10:E11": {
+  "E11": {
     "labs": [
       {"code": "4548-4", "strength": "strong"},
       {"code": "2339-0", "strength": "strong"},
       {"code": "3094-0", "strength": "weak"}
     ],
     "medications": [
-      {"code": "6809", "strength": "strong"},
-      {"code": "860975", "strength": "strong"},
-      {"code": "161", "strength": "strong"},
-      {"code": "1191", "strength": "moderate"},
-      {"code": "865098", "strength": "weak"}
+      {"code": "860975", "strength": "strong", "relationship": "treats"},
+      {"code": "161", "strength": "strong", "relationship": "treats"},
+      {"code": "1191", "strength": "moderate", "relationship": "treats"},
+      {"code": "854899", "strength": "weak", "relationship": "prevents"}
+    ]
+  },
+  "44054006": {
+    "labs": [
+      {"code": "4548-4", "strength": "strong"}
+    ],
+    "medications": [
+      {"code": "860975", "strength": "strong", "relationship": "treats"}
     ]
   }
 }
@@ -115,13 +122,13 @@ Instead of:
 Do:
 ```json
 "medications": [
-  {"code": "6809", "strength": "strong"},      // IN metformin
-  {"code": "860975", "strength": "strong"},     // SCD metformin 500 MG Oral Tablet
-  {"code": "860976", "strength": "strong"},     // SCD metformin 1000 MG Oral Tablet
-  {"code": "860977", "strength": "strong"},     // SCD metformin 850 MG Oral Tablet
-  {"code": "866138", "strength": "strong"},     // SBD Glucophage 500 MG Oral Tablet
-  {"code": "866139", "strength": "strong"},     // SBD Glucophage 1000 MG Oral Tablet
-  {"code": "860972", "strength": "strong"}      // SCDG metformin Oral Product
+  {"code": "6809", "strength": "strong", "relationship": "treats"},       // IN metformin
+  {"code": "860975", "strength": "strong", "relationship": "treats"},     // SCD metformin 500 MG Oral Tablet
+  {"code": "860976", "strength": "strong", "relationship": "treats"},     // SCD metformin 1000 MG Oral Tablet
+  {"code": "860977", "strength": "strong", "relationship": "treats"},     // SCD metformin 850 MG Oral Tablet
+  {"code": "866138", "strength": "strong", "relationship": "treats"},     // SBD Glucophage 500 MG Oral Tablet
+  {"code": "866139", "strength": "strong", "relationship": "treats"},     // SBD Glucophage 1000 MG Oral Tablet
+  {"code": "860972", "strength": "strong", "relationship": "treats"}      // SCDG metformin Oral Product
 ]
 ```
 
@@ -136,7 +143,7 @@ Do:
 
 Skip: BN, SBDC, SCDC, SBDG, MIN, PIN, DF, DFG — rarely appear on FHIR MedicationRequest.
 
-**Build step:** For each ingredient-level may_treat association, look up all SCD/SBD/SCDG codes containing that ingredient (via existing `rxnorm_ingredient_decomposition.csv`), union into the medications array, and apply the ingredient's strength to all expanded codes.
+**Build step:** For each ingredient-level may_treat/may_prevent association, look up all SCD/SBD/SCDG codes containing that ingredient (via existing `rxnorm_ingredient_decomposition.csv`), union into the medications array, and apply the ingredient's strength and relationship to all expanded codes.
 
 **What this eliminates:**
 - `rid_to_ingredient_codes` in the BM25 medication index (not needed — the code is directly in the associations array)
@@ -161,27 +168,53 @@ BM25 index stores both:
 
   "rid_to_code": ["860975", "860976", "6809", ...],
   "rid_to_system": ["rxnorm", "rxnorm", "rxnorm", ...],
-  "rid_to_canonical_code": ["860975", "860976", "6809", ...],      // for conditions: ICD-10 equivalent
-  "rid_to_canonical_system": ["rxnorm", "rxnorm", "rxnorm", ...]     // for conditions: "icd10"
+  "rid_to_canonical_code": ["860975", "860976", "6809", ...],
+  // For conditions: ICD-10 preferred, SNOMED fallback, null if neither
+  // For other categories: same as rid_to_code
+  "rid_to_canonical_system": ["rxnorm", "rxnorm", "rxnorm", ...]
 }
 ```
 
-Note: `rid_to_ingredient_codes` is no longer needed (see resolution #4 — medications are pre-expanded in the associations file). For conditions, `rid_to_canonical_code` carries the ICD-10 equivalent (see resolution #1).
+Note: `rid_to_ingredient_codes` is no longer needed (see resolution #4 — medications are pre-expanded in the associations file).
 
 When BM25 matches, the resolver returns:
 
 ```json
 {
-  "patient_friendly_name": "Metformin Oral Product",   // from rid_to_friendly_name
-  "code": "860975",                                      // from rid_to_code
-  "system": "rxnorm",                                    // from rid_to_system
-  "canonical_code": "860975",                            // from rid_to_canonical_code (same for meds; ICD-10 for conditions)
-  "canonical_system": "rxnorm",                          // from rid_to_canonical_system
+  "patient_friendly_name": "Metformin Oral Product",
+  "code": "860975",
+  "system": "rxnorm",
+  "canonical_code": "860975",
+  "canonical_system": "rxnorm",
   "score": 15.2
 }
 ```
 
-The `names` array is for matching (technical, per-code, distinguishable). The `rid_to_friendly_name` is for display (patient-friendly, consistent across dose forms). Different concerns, different data.
+For a SNOMED-coded condition, the resolver returns:
+
+```json
+{
+  "patient_friendly_name": "Diabetes Type 2",
+  "code": "44054006",
+  "system": "snomed",
+  "canonical_code": "E11",
+  "canonical_system": "icd10",
+  "score": 15.2
+}
+```
+
+Or for a SNOMED-only condition without ICD-10:
+
+```json
+{
+  "patient_friendly_name": "Some Rare Condition",
+  "code": "233833007",
+  "system": "snomed",
+  "canonical_code": "233833007",
+  "canonical_system": "snomed",
+  "score": 8.3
+}
+```
 
 ---
 
@@ -197,7 +230,7 @@ Pre-computed centroids for classification prototypes are a separate optimization
 
 | # | Question | Resolution |
 |---|---|---|
-| 1 | ICD-10 or SNOMED keys? | ICD-10 only. Condition BM25 index carries ICD-10 canonical code per entry. |
+| 1 | ICD-10 or SNOMED keys? | Both. Bare codes, no prefix. ICD-10 preferred as canonical; SNOMED as fallback. ~106K keys total. |
 | 2 | Synthea crosswalk | App team provides code-keyed crosswalk for 34 conditions + labs. |
 | 3 | match_depth cap | No hard cap. Depths 0–4 included with strength tags (strong/moderate/weak). Depth 5 excluded. |
 | 4 | Medication pre-expansion | Pre-expand ingredient associations to IN + SCD + SBD + SCDG at build time. Eliminates runtime decomposition. |
