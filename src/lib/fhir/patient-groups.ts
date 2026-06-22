@@ -1,6 +1,12 @@
 import type { PatientAuthoredRecord, PatientPatch } from "./patches";
-import type { CanonicalCode } from "./canonical-codes";
 import type { GroupReferenceRange } from "./reference-ranges";
+
+export type CanonicalCodeSystem = "icd10" | "loinc" | "rxnorm" | "snomed" | "cvx" | "cpt";
+
+export interface CanonicalCode {
+  system: CanonicalCodeSystem;
+  code: string;
+}
 import type {
   DisplayCodingSummary,
   DisplayCondition,
@@ -65,10 +71,10 @@ export interface PatientFriendlyGroup {
   reason: string;
   fallback: boolean;
   /**
-   * Canonical code resolved from patient-friendly name via the canonical-codes
-   * tables (ICD-10 for conditions, LOINC for labs/vitals, RxNorm for meds).
-   * Populated post-grouping in PatientExplorer. Used by GBD DW lookup,
-   * reference-range resolver, and future code-keyed features.
+   * Canonical code resolved from BM25 or deterministic lookup.
+   * ICD-10 for conditions (or SNOMED fallback), LOINC for labs/vitals,
+   * RxNorm for meds. Used by GBD DW lookup, reference-range resolver,
+   * and association lookups.
    */
   canonicalCode?: CanonicalCode;
   referenceRange?: GroupReferenceRange;

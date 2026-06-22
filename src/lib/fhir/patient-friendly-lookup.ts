@@ -1,22 +1,22 @@
 import type { GroupableRecord, GroupableResourceType } from "./patient-groups";
 
-export const PATIENT_FRIENDLY_LOOKUP_MODEL = "patient-friendly-lookup-v1";
+export const PATIENT_FRIENDLY_LOOKUP_MODEL = "patient-friendly-lookup-v2";
 
 export type PatientFriendlyLookupSystem =
   | "loinc"
   | "rxnorm"
   | "icd10cm"
+  | "icd10pcs"
   | "snomed"
   | "cvx"
   | "cpt"
   | "hcpcs";
 
-type LookupEntryTuple = [name: string, friendlySource: string, matchType: string];
-
-interface LookupShard {
-  version: number;
-  system: PatientFriendlyLookupSystem;
-  entries: Record<string, LookupEntryTuple>;
+interface NewFormatEntry {
+  name: string;
+  friendly_source: string;
+  match_type: string;
+  cui?: string;
 }
 
 export interface PatientFriendlyLookupEntry {
@@ -25,6 +25,7 @@ export interface PatientFriendlyLookupEntry {
   name: string;
   friendlySource: string;
   matchType: string;
+  cui?: string;
 }
 
 export interface PatientFriendlyLookupResult extends PatientFriendlyLookupEntry {
@@ -40,6 +41,7 @@ const SYSTEMS = new Set<PatientFriendlyLookupSystem>([
   "loinc",
   "rxnorm",
   "icd10cm",
+  "icd10pcs",
   "snomed",
   "cvx",
   "cpt",
@@ -53,12 +55,24 @@ const SYSTEM_ALIASES: Record<string, PatientFriendlyLookupSystem> = {
   rxnormn: "rxnorm",
   icd10: "icd10cm",
   icd10cm: "icd10cm",
+  icd10pcs: "icd10pcs",
   snomed: "snomed",
   snomedct: "snomed",
   snomedct_us: "snomed",
   cvx: "cvx",
   cpt: "cpt",
   hcpcs: "hcpcs"
+};
+
+const SYSTEM_FILE_MAP: Record<PatientFriendlyLookupSystem, string> = {
+  loinc: "patient_friendly_lnc.json",
+  rxnorm: "patient_friendly_rxnorm.json",
+  icd10cm: "patient_friendly_icd10cm.json",
+  icd10pcs: "patient_friendly_icd10pcs.json",
+  snomed: "patient_friendly_snomedct_us.json",
+  cvx: "patient_friendly_cvx.json",
+  cpt: "patient_friendly_cpt.json",
+  hcpcs: "patient_friendly_hcpcs.json"
 };
 
 const RESOURCE_SYSTEM_PRIORITY: Record<GroupableResourceType, PatientFriendlyLookupSystem[]> = {
@@ -68,7 +82,7 @@ const RESOURCE_SYSTEM_PRIORITY: Record<GroupableResourceType, PatientFriendlyLoo
   Observation: ["loinc", "snomed", "cpt", "hcpcs"],
   Immunization: ["cvx"],
   Encounter: ["snomed", "cpt", "hcpcs"],
-  Procedure: ["snomed", "cpt", "hcpcs"],
+  Procedure: ["snomed", "cpt", "hcpcs", "icd10pcs"],
   DiagnosticReport: ["loinc", "snomed", "cpt", "hcpcs"]
 };
 
@@ -83,14 +97,15 @@ const MATCH_CONFIDENCE: Record<string, number> = {
   broader: 0.76,
   snomed_to_target_native_hierarchy: 0.72,
   snomed_to_target_snomed_fallback: 0.68,
-  snomed_fallback: 0.64
+  snomed_fallback: 0.64,
+  original: 0.5
 };
 
 const shardPromises = new Map<PatientFriendlyLookupSystem, Promise<Map<string, PatientFriendlyLookupEntry>>>();
 
 function terminologyBaseUrl(): string {
   const base = import.meta.env.BASE_URL || "/";
-  return `${base.replace(/\/?$/, "/")}terminology/patient-friendly`;
+  return `${base.replace(/\/?$/, "/")}terminology`;
 }
 
 function normalizeText(value: string | undefined): string {
@@ -115,20 +130,23 @@ async function loadShard(system: PatientFriendlyLookupSystem): Promise<Map<strin
   const existing = shardPromises.get(system);
   if (existing) return existing;
 
-  const promise = fetch(`${terminologyBaseUrl()}/${system}.json`)
+  const fileName = SYSTEM_FILE_MAP[system];
+  const promise = fetch(`${terminologyBaseUrl()}/${fileName}`)
     .then(async (response) => {
-      if (!response.ok) throw new Error(`Patient-friendly lookup ${system} unavailable`);
-      return (await response.json()) as LookupShard;
+      if (!response.ok) throw new Error(`Patient-friendly lookup ${system} unavailable (${response.status})`);
+      return (await response.json()) as Record<string, NewFormatEntry>;
     })
-    .then((shard) => {
+    .then((raw) => {
       const entries = new Map<string, PatientFriendlyLookupEntry>();
-      for (const [code, tuple] of Object.entries(shard.entries ?? {})) {
+      for (const [code, entry] of Object.entries(raw)) {
+        if (!entry || typeof entry.name !== "string") continue;
         entries.set(code, {
           system,
           code,
-          name: tuple[0],
-          friendlySource: tuple[1],
-          matchType: tuple[2]
+          name: entry.name,
+          friendlySource: entry.friendly_source ?? "",
+          matchType: entry.match_type ?? "",
+          cui: entry.cui
         });
       }
       return entries;

@@ -49,17 +49,28 @@ const LARGE_FIXTURE_CASES = [
 ];
 
 async function loadLocalPatientFriendlyLookup(): Promise<PatientFriendlyLookup> {
+  const systemFileMap: Record<string, string> = {
+    loinc: "patient_friendly_lnc.json",
+    rxnorm: "patient_friendly_rxnorm.json",
+    icd10cm: "patient_friendly_icd10cm.json",
+    snomed: "patient_friendly_snomedct_us.json",
+    cvx: "patient_friendly_cvx.json",
+    cpt: "patient_friendly_cpt.json",
+    hcpcs: "patient_friendly_hcpcs.json"
+  };
   const entries = await Promise.all(
     LOOKUP_SYSTEMS.map(async (system) => {
-      const shard = JSON.parse(await readFile(`public/terminology/patient-friendly/${system}.json`, "utf8")) as {
-        entries: Record<string, [name: string, friendlySource: string, matchType: string]>;
-      };
+      const fileName = systemFileMap[system] || `patient_friendly_${system}.json`;
+      const raw = JSON.parse(await readFile(`public/terminology/${fileName}`, "utf8")) as Record<
+        string,
+        { name: string; friendly_source: string; match_type: string; cui?: string }
+      >;
       return [
         system,
         new Map(
-          Object.entries(shard.entries).map(([code, tuple]) => [
+          Object.entries(raw).map(([code, entry]) => [
             code,
-            { system, code, name: tuple[0], friendlySource: tuple[1], matchType: tuple[2] }
+            { system, code, name: entry.name, friendlySource: entry.friendly_source, matchType: entry.match_type, cui: entry.cui }
           ])
         )
       ] as const;

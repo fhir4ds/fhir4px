@@ -75,6 +75,7 @@ import {
   validateGroupingResult
 } from "../lib/fhir/patient-groups";
 import type {
+  CanonicalCode,
   GroupableRecord,
   PatientFriendlyGroup,
   PatientGroupingResult,
@@ -87,13 +88,22 @@ import {
   type PatientSex
 } from "../lib/fhir/reference-ranges";
 import {
-  loadCanonicalCodes,
-  preloadCanonicalCodes,
-  lookupCanonicalCodeInFile,
-  categoryForResourceType,
-  type CanonicalCode,
-  type CanonicalCodeCategory
-} from "../lib/fhir/canonical-codes";
+  findConditionsForMedication,
+  findConditionsForLab
+} from "../lib/fhir/condition-associations";
+
+// Build a map from condition canonical code → relationshipGroupKey for code-keyed matching.
+// Also indexes by lowercase friendly name as fallback for groups without canonicalCode.
+function buildConditionCodeIndex(conditionGroups: PatientFriendlyGroup[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const cg of conditionGroups) {
+    const key = relationshipGroupKey(cg);
+    if (cg.canonicalCode?.code) map.set(cg.canonicalCode.code, key);
+    map.set(cg.patientFriendlyName.toLowerCase(), key);
+  }
+  return map;
+}
+
 import { loadGbdWeights, lookupDwForCode } from "../lib/priority/gbd-weights";
 import {
   emptyGroupingCache,
@@ -153,8 +163,6 @@ import {
 } from "../lib/fhir/relationships";
 import { completedObservationRecordsForRelationship } from "../lib/fhir/relationship-eligibility";
 import { buildReferralSummary } from "../lib/fhir/normalize";
-import { findDeterministicConditionsForLab } from "../lib/fhir/condition-lab-lookup";
-import { findDeterministicConditionsForMedication } from "../lib/fhir/condition-medication-lookup";
 import {
   createPatientAuthoredRecord,
   createPatientPatch,
@@ -925,7 +933,11 @@ function cachedCompactGrouping(
       observationBucket: entryObservationBucket,
       confidence: entry.confidence,
       reason: "Restored from local grouping cache.",
-      fallback: entry.fallback
+      fallback: entry.fallback,
+      canonicalCode:
+        entry.lookupSystem && entry.lookupCode
+          ? { system: entry.lookupSystem as CanonicalCode["system"], code: entry.lookupCode }
+          : undefined
     });
   }
 
@@ -1882,11 +1894,25 @@ export function PatientExplorer() {
       for (const group of labGroups) {
         if (!options.isCurrentRun()) return;
         const groupId = relationshipGroupKey(group);
-        const deterministicConditions = await findDeterministicConditionsForLab(group.patientFriendlyName);
+        const deterministicConditions = await findConditionsForLab(group.canonicalCode?.code ?? "");
         if (deterministicConditions.length === 0) continue;
         const matchedGroupIds: string[] = [];
-        for (const conditionName of deterministicConditions) {
-          const match = conditionChoices.find((choice) => choice.name === conditionName);
+        for (const cond of deterministicConditions) {
+          // New code-keyed: cond has { conditionCode, strength }
+          // Match against condition groups by canonical code or fallback to name
+          const condEntry = cond as unknown as { conditionCode?: string; name?: string };
+          const code = condEntry.conditionCode ?? (typeof condEntry === "string" ? condEntry : undefined);
+          const name = typeof condEntry === "string" ? condEntry : condEntry.name;
+          let match: { conditionGroupId: string } | undefined;
+          if (code) {
+            match = conditionChoices.find((choice) => {
+              const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
+              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+            });
+          }
+          if (!match && name) {
+            match = conditionChoices.find((choice) => choice.name === name);
+          }
           if (match) matchedGroupIds.push(match.conditionGroupId);
         }
         if (matchedGroupIds.length === 0) continue;
@@ -1925,11 +1951,25 @@ export function PatientExplorer() {
       for (const group of nonLabObservationGroups) {
         if (!options.isCurrentRun()) return;
         const groupId = relationshipGroupKey(group);
-        const deterministicConditions = await findDeterministicConditionsForLab(group.patientFriendlyName);
+        const deterministicConditions = await findConditionsForLab(group.canonicalCode?.code ?? "");
         if (deterministicConditions.length === 0) continue;
         const matchedGroupIds: string[] = [];
-        for (const conditionName of deterministicConditions) {
-          const match = conditionChoices.find((choice) => choice.name === conditionName);
+        for (const cond of deterministicConditions) {
+          // New code-keyed: cond has { conditionCode, strength }
+          // Match against condition groups by canonical code or fallback to name
+          const condEntry = cond as unknown as { conditionCode?: string; name?: string };
+          const code = condEntry.conditionCode ?? (typeof condEntry === "string" ? condEntry : undefined);
+          const name = typeof condEntry === "string" ? condEntry : condEntry.name;
+          let match: { conditionGroupId: string } | undefined;
+          if (code) {
+            match = conditionChoices.find((choice) => {
+              const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
+              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+            });
+          }
+          if (!match && name) {
+            match = conditionChoices.find((choice) => choice.name === name);
+          }
           if (match) matchedGroupIds.push(match.conditionGroupId);
         }
         if (matchedGroupIds.length === 0) continue;
@@ -1979,14 +2019,29 @@ export function PatientExplorer() {
             )
           )
         );
-        const deterministicConditions = await findDeterministicConditionsForMedication(
-          group.patientFriendlyName,
-          rxnormCodes.length > 0 ? { rxnormCodes } : undefined
-        );
+        const deterministicConditions = rxnormCodes.length > 0
+          ? (await Promise.all(rxnormCodes.map((code) => findConditionsForMedication(code)))).flat()
+          : group.canonicalCode?.code
+            ? await findConditionsForMedication(group.canonicalCode.code)
+            : [];
         if (deterministicConditions.length === 0) continue;
         const matchedGroupIds: string[] = [];
-        for (const conditionName of deterministicConditions) {
-          const match = conditionChoices.find((choice) => choice.name === conditionName);
+        for (const cond of deterministicConditions) {
+          // New code-keyed: cond has { conditionCode, strength }
+          // Match against condition groups by canonical code or fallback to name
+          const condEntry = cond as unknown as { conditionCode?: string; name?: string };
+          const code = condEntry.conditionCode ?? (typeof condEntry === "string" ? condEntry : undefined);
+          const name = typeof condEntry === "string" ? condEntry : condEntry.name;
+          let match: { conditionGroupId: string } | undefined;
+          if (code) {
+            match = conditionChoices.find((choice) => {
+              const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
+              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+            });
+          }
+          if (!match && name) {
+            match = conditionChoices.find((choice) => choice.name === name);
+          }
           if (match) matchedGroupIds.push(match.conditionGroupId);
         }
         if (matchedGroupIds.length === 0) continue;
@@ -2072,11 +2127,25 @@ export function PatientExplorer() {
       setStatus(`Enriching lab associations... ${index + 1}/${enrichmentLabGroups.length}`);
 
       // Deterministic re-check (safety net — same lookup as the upfront pass).
-      const deterministicConditions = await findDeterministicConditionsForLab(group.patientFriendlyName);
+      const deterministicConditions = await findConditionsForLab(group.canonicalCode?.code ?? "");
       if (deterministicConditions.length > 0) {
         const matchedGroupIds: string[] = [];
-        for (const conditionName of deterministicConditions) {
-          const match = conditionChoices.find((choice) => choice.name === conditionName);
+        for (const cond of deterministicConditions) {
+          // New code-keyed: cond has { conditionCode, strength }
+          // Match against condition groups by canonical code or fallback to name
+          const condEntry = cond as unknown as { conditionCode?: string; name?: string };
+          const code = condEntry.conditionCode ?? (typeof condEntry === "string" ? condEntry : undefined);
+          const name = typeof condEntry === "string" ? condEntry : condEntry.name;
+          let match: { conditionGroupId: string } | undefined;
+          if (code) {
+            match = conditionChoices.find((choice) => {
+              const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
+              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+            });
+          }
+          if (!match && name) {
+            match = conditionChoices.find((choice) => choice.name === name);
+          }
           if (match) matchedGroupIds.push(match.conditionGroupId);
         }
         if (matchedGroupIds.length > 0) {
@@ -2279,6 +2348,8 @@ export function PatientExplorer() {
               confidence: match.confidence,
               fallback: false,
               model: "bm25",
+              lookupSystem: match.system,
+              lookupCode: match.code,
               updatedAt: now
             });
           }
@@ -2694,90 +2765,22 @@ export function PatientExplorer() {
     }
   }, [llmLoadStatus, modelBusy, status]);
 
-  // Resolve canonical codes for groups via the canonical-codes name lookup
-  // tables. Runs once per group (tracked by canonicalResolvedGroups). Sets
-  // group.canonicalCode so downstream consumers (reference ranges, GBD DW
-  // lookup, future features) can read from a single field. Resource types
-  // without a canonical system (Encounter, Procedure, etc.) are skipped.
+  // Mark all groups as resolved for canonical codes — they now come directly
+  // from the BM25 resolver or deterministic lookup at naming time, not from a
+  // separate name→code lookup pass. This effect is kept to preserve the
+  // canonicalResolvedGroups state (used elsewhere) but is a no-op.
   useEffect(() => {
     const unresolved = groups.filter(
       (g) => !canonicalResolvedGroups.has(g.groupId) && g.canonicalCode === undefined
     );
     if (unresolved.length === 0) return;
-
-    const categoriesNeeded = new Set<CanonicalCodeCategory>();
-    for (const g of unresolved) {
-      const cat = categoryForResourceType(g.resourceTypes);
-      if (cat) categoriesNeeded.add(cat);
-    }
-    if (categoriesNeeded.size === 0) {
-      setCanonicalResolvedGroups((prev) => {
-        const next = new Set(prev);
-        for (const g of unresolved) next.add(g.groupId);
-        return next;
-      });
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        await preloadCanonicalCodes([...categoriesNeeded]);
-        const resolvedByGroupId = new Map<string, CanonicalCode | undefined>();
-        const noMatchIds = new Set<string>();
-        for (const g of unresolved) {
-          const cat = categoryForResourceType(g.resourceTypes);
-          if (!cat) {
-            noMatchIds.add(g.groupId);
-            continue;
-          }
-          const file = await loadCanonicalCodes(cat);
-          const canonical = lookupCanonicalCodeInFile(g.patientFriendlyName, file);
-          if (canonical) {
-            resolvedByGroupId.set(g.groupId, canonical);
-          } else {
-            noMatchIds.add(g.groupId);
-          }
-        }
-        if (cancelled) return;
-        setGroups((prevGroups) =>
-          prevGroups.map((g) => {
-            const resolved = resolvedByGroupId.get(g.groupId);
-            if (resolvedByGroupId.has(g.groupId)) {
-              return { ...g, canonicalCode: resolved };
-            }
-            return g;
-          })
-        );
-        // Only track NO-MATCH groups in the resolved set. Groups that HAD a
-        // match are NOT added here — if they lose canonicalCode later (because
-        // the naming pipeline calls setGroups with fresh objects), the filter
-        // picks them up again and re-resolves them. This prevents conditions
-        // from permanently losing their DW-based score after LLM renames labs.
-        if (noMatchIds.size > 0) {
-          setCanonicalResolvedGroups((prev) => {
-            const next = new Set(prev);
-            for (const id of noMatchIds) next.add(id);
-            return next;
-          });
-        }
-      } catch (err) {
-        console.warn("[fhir4px:canonical-codes]", {
-          event: "resolve-failed",
-          error: err instanceof Error ? err.message : String(err)
-        });
-        // Mark as no-match even on failure so we don't retry every render
-        setCanonicalResolvedGroups((prev) => {
-          const next = new Set(prev);
-          for (const g of unresolved) next.add(g.groupId);
-          return next;
-        });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    // Groups without canonicalCode from BM25/lookup don't have one — mark them
+    // as resolved so we don't retry.
+    setCanonicalResolvedGroups((prev) => {
+      const next = new Set(prev);
+      for (const g of unresolved) next.add(g.groupId);
+      return next;
+    });
   }, [groups, canonicalResolvedGroups]);
 
   // Compute a simple priority score per group for the Summary view mode.
@@ -2925,33 +2928,29 @@ export function PatientExplorer() {
           // works even if the LLM renamed the med (ingredients don't change).
           const medRecords = records.filter((r) => mg.resourceIds.includes(r.id));
           const ingredients = [...new Set(medRecords.flatMap((r) => r.ingredients ?? []))];
-          const conditionNames = await findDeterministicConditionsForMedication(
-            mg.patientFriendlyName,
-            { ingredients }
-          );
-          for (const cn of conditionNames) {
-            const cnLower = cn.toLowerCase().trim();
-            // Try exact match first
-            const exact = conditionGroups.find(
-              (cg) => cg.patientFriendlyName.toLowerCase().trim() === cnLower
-            );
-            if (exact) {
-              claims[mg.groupId] = exact.groupId;
+          const medCode = mg.canonicalCode?.code;
+          const conditions = medCode
+            ? await findConditionsForMedication(medCode, { ingredients })
+            : ingredients.length > 0
+              ? (await Promise.all(
+                  ingredients.map(() => findConditionsForMedication("", { ingredients }))
+                )).flat()
+              : [];
+          for (const cond of conditions) {
+            const condCode = cond.conditionCode;
+            // Match by canonical code first
+            const byCode = conditionGroups.find((cg) => cg.canonicalCode?.code === condCode);
+            if (byCode) {
+              claims[mg.groupId] = byCode.groupId;
               break;
             }
-            // Fallback: substring match — handles LLM-renamed conditions like
-            // "Mild Asthma" still containing "Asthma" from the lookup table.
-            if (cnLower.length >= 4) {
-              const substring = conditionGroups.find((cg) => {
-                const condName = cg.patientFriendlyName.toLowerCase().trim();
-                return (
-                  (condName.length >= 4 && (condName.includes(cnLower) || cnLower.includes(condName)))
-                );
-              });
-              if (substring) {
-                claims[mg.groupId] = substring.groupId;
-                break;
-              }
+            // Fallback: match by condition friendly name (for groups without canonicalCode)
+            const byName = conditionGroups.find(
+              (cg) => cg.patientFriendlyName.toLowerCase().trim() === condCode.toLowerCase()
+            );
+            if (byName) {
+              claims[mg.groupId] = byName.groupId;
+              break;
             }
           }
         } catch {

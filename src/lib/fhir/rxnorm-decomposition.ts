@@ -1,4 +1,14 @@
-type RxnormDecomposition = Record<string, Array<{ c: string; n: string }>>;
+interface IngredientEntry {
+  c: string;
+  n: string;
+}
+
+type RxnormDecomposition = Record<string, IngredientEntry[]>;
+
+interface RxnormFile {
+  _meta?: { schema_version?: string; count?: number };
+  [key: string]: IngredientEntry[] | { schema_version?: string; count?: number } | undefined;
+}
 
 let loaded: RxnormDecomposition | null = null;
 let loadPromise: Promise<RxnormDecomposition | null> | null = null;
@@ -10,11 +20,15 @@ async function loadDecomposition(): Promise<RxnormDecomposition | null> {
   loadPromise = fetch("/terminology/rxnorm-ingredients.json")
     .then(async (response) => {
       if (!response.ok) return null;
-      return (await response.json()) as RxnormDecomposition;
+      return (await response.json()) as RxnormFile;
     })
     .then((data) => {
-      loaded = data;
-      return data;
+      if (!data) return null;
+      // Strip _meta key — new format has a header object
+      const { _meta, ...rest } = data;
+      void _meta;
+      loaded = rest as RxnormDecomposition;
+      return loaded;
     })
     .catch(() => null);
 

@@ -1,16 +1,19 @@
 /**
  * BM25 naming wrapper — Tier 2 fallback for records without a code.
  *
- * Uses the pre-built per-category BM25 indexes hosted on HuggingFace
+ * Uses pre-built per-category BM25 indexes hosted on HuggingFace
  * (joelmontavon/fhir4px-bm25). Runs after deterministic lookup (Tier 1)
  * misses and before the LLM (Tier 3). ~81% accuracy, ~10ms per query.
  *
- * Indexes are lazy-loaded per category (medication, lab, condition,
- * procedure, vaccine) and cached for the session.
+ * The updated BM25 indexes return the code, system, friendly name,
+ * canonical code (ICD-10 for conditions), and ingredient codes
+ * (for medications) alongside the match score.
+ *
+ * Indexes are lazy-loaded per category and cached for the session.
  */
 
 import { BM25Resolver } from "./bm25-resolver.js";
-import type { GroupableRecord } from "./patient-groups";
+import type { GroupableRecord, CanonicalCode } from "./patient-groups";
 
 const BM25_BASE_URL = "https://huggingface.co/joelmontavon/fhir4px-bm25/resolve/main";
 const SCORE_THRESHOLD = 8.0;
@@ -24,17 +27,26 @@ function getResolver(): BM25Resolver {
   return resolver;
 }
 
+export interface Bm25NamingResult {
+  patientFriendlyName: string;
+  code: string;
+  system: string;
+  canonicalCode?: CanonicalCode;
+  ingredientCodes?: string[];
+  confidence: number;
+  score: number;
+}
+
 /**
  * Resolve a patient-friendly name for a record via BM25 search.
  * Returns null if no confident match (score below threshold or no category).
  */
 export async function resolveBm25Name(
   record: GroupableRecord
-): Promise<{ patientFriendlyName: string; confidence: number; score: number } | null> {
+): Promise<Bm25NamingResult | null> {
   const category = BM25Resolver.resourceTypeToCategory(record.resourceType);
   if (!category) return null;
 
-  // Use the best available display text as the BM25 query
   const query =
     record.sourceLabel ||
     record.codeTexts?.[0] ||
@@ -45,12 +57,28 @@ export async function resolveBm25Name(
   try {
     const result = await getResolver().resolve(query, category, 1);
     if (!result.name || result.score < SCORE_THRESHOLD) return null;
+    if (!result.code || !result.system) return null;
 
-    return {
-      patientFriendlyName: result.name,
+    const namingResult: Bm25NamingResult = {
+      patientFriendlyName: result.friendly_name || result.name,
+      code: result.code,
+      system: result.system,
       confidence: Math.min(result.score / 20, 0.85),
       score: result.score
     };
+
+    if (result.canonical_code && result.canonical_system) {
+      namingResult.canonicalCode = {
+        system: result.canonical_system as CanonicalCode["system"],
+        code: result.canonical_code
+      };
+    }
+
+    if (result.ingredient_codes && result.ingredient_codes.length > 0) {
+      namingResult.ingredientCodes = result.ingredient_codes;
+    }
+
+    return namingResult;
   } catch (err) {
     console.warn("[fhir4px:bm25]", {
       event: "resolve-failed",
@@ -63,13 +91,12 @@ export async function resolveBm25Name(
 }
 
 /**
- * Batch-resolve BM25 names for multiple records. More efficient than individual
- * calls since category indexes are loaded once and reused.
+ * Batch-resolve BM25 names for multiple records.
  */
 export async function resolveBm25Names(
   records: GroupableRecord[]
-): Promise<Map<string, { patientFriendlyName: string; confidence: number; score: number }>> {
-  const results = new Map<string, { patientFriendlyName: string; confidence: number; score: number }>();
+): Promise<Map<string, Bm25NamingResult>> {
+  const results = new Map<string, Bm25NamingResult>();
   for (const record of records) {
     const match = await resolveBm25Name(record);
     if (match) {
@@ -81,7 +108,6 @@ export async function resolveBm25Names(
 
 /**
  * Pre-load BM25 indexes for the categories present in a record set.
- * Call during idle time to avoid latency on first resolution.
  */
 export async function preloadBm25Categories(resourceTypes: string[]): Promise<void> {
   const r = getResolver();

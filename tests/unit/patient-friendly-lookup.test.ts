@@ -42,20 +42,16 @@ describe("patient-friendly lookup", () => {
 
   it("loads only needed shards and returns the best patient-friendly name", async () => {
     const fetchMock = vi.fn(async (url: string) => {
-      const system = url.match(/\/([^/]+)\.json$/)?.[1];
       return {
         ok: true,
         async json() {
-          return {
-            version: 1,
-            system,
-            entries:
-              system === "loinc"
-                ? {
-                    "4548-4": ["Hemoglobin A1c", "CHV", "broader"]
-                  }
-                : {}
-          };
+          // New format: flat dict keyed by code → { name, friendly_source, match_type, cui }
+          if (url.includes("patient_friendly_lnc.json")) {
+            return {
+              "4548-4": { name: "Hemoglobin A1c", friendly_source: "CHV", match_type: "broader", cui: "C4519732" }
+            };
+          }
+          return {};
         }
       };
     });
@@ -73,7 +69,7 @@ describe("patient-friendly lookup", () => {
     const result = lookupPatientFriendlyName(records[0], lookup);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toContain("/terminology/patient-friendly/loinc.json");
+    expect(fetchMock.mock.calls[0][0]).toContain("/terminology/patient_friendly_lnc.json");
     expect(result).toMatchObject({
       patientFriendlyName: "Hemoglobin A1c",
       system: "loinc",
@@ -83,15 +79,18 @@ describe("patient-friendly lookup", () => {
       fallback: false,
       needsModelFallback: false
     });
-    expect(PATIENT_FRIENDLY_LOOKUP_MODEL).toBe("patient-friendly-lookup-v1");
+    expect(PATIENT_FRIENDLY_LOOKUP_MODEL).toBe("patient-friendly-lookup-v2");
   });
 
-  it("includes CSV names that differ from technical names in the generated LOINC shard", async () => {
-    const shard = JSON.parse(await readFile("public/terminology/patient-friendly/loinc.json", "utf8")) as {
-      entries: Record<string, [string, string, string]>;
-    };
+  it("reads the generated LOINC file in new format", async () => {
+    const data = JSON.parse(await readFile("public/terminology/patient_friendly_lnc.json", "utf8"));
 
-    expect(shard.entries["4548-4"]).toEqual(["Hemoglobin A1c/Hemoglobin.Total", "LNC", "first_axis"]);
+    // New format: flat dict { code: { name, friendly_source, match_type, cui } }
+    const entry = data["4548-4"];
+    expect(entry).toBeTruthy();
+    expect(typeof entry.name).toBe("string");
+    expect(typeof entry.friendly_source).toBe("string");
+    expect(typeof entry.match_type).toBe("string");
   });
 
   it("prefers resource-specific target systems and uses generated lookup entries directly", () => {

@@ -112,7 +112,7 @@ function findAcpEntryByLoinc(
 
 /**
  * Gather every LOINC code carried by the group: the group's canonicalCode
- * (resolved from patient-friendly name via canonical-codes tables, when
+ * (resolved from patient-friendly name via the canonicalCode on the group,
  * system is loinc) plus every observation's codingKeys. Multiple codes
  * commonly map to the same patient-friendly name (e.g., 8480-6 direct vs
  * 85354-9 panel for systolic BP); we try each in order against the ACP
