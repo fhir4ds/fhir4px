@@ -51,9 +51,11 @@ Already produced. Two additions needed:
   "code": { "source": "RXNORM", "code": "860975", ... },
   "friendly_name": "Metformin Oral Product",
   "atc": { "level1": "A", ... },
+  "ingredient_codes": ["6809"],          // NEW — RxNorm ingredient codes per entry
+                                         // IN entries: [self]
+                                         // SCD/SBD/SCDG: ingredient codes via JOIN with rxnorm_ingredient_decomposition.csv
+                                         // BN/PIN without ingredients: []
   "vectors": { ... }
-  // Ingredient codes: confirm these are available per entry, or we'll
-  // look them up from rxnorm-ingredients.json at BM25 build time
 }
 ```
 
@@ -161,7 +163,7 @@ The app team builds BM25 inverted indexes from `embedding_index_*.jsonl`. Each i
   "rid_to_canonical_system": [...],  // "icd10" | "snomed" | "rxnorm" | "loinc" | ...
 
   // Medication only
-  "rid_to_ingredient_codes": [...]   // from rxnorm-ingredients.json lookup at build time
+  "rid_to_ingredient_codes": [...]   // copied from embedding_index_medication.jsonl ingredient_codes field
 }
 ```
 
