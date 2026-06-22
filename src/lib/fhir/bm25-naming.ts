@@ -16,7 +16,7 @@ import { BM25Resolver } from "./bm25-resolver.js";
 import type { GroupableRecord, CanonicalCode } from "./patient-groups";
 
 const BM25_BASE_URL = "https://huggingface.co/joelmontavon/fhir4px-bm25/resolve/main";
-const SCORE_THRESHOLD = 8.0;
+const SCORE_THRESHOLD = 5.0;
 
 let resolver: BM25Resolver | null = null;
 
