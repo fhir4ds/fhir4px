@@ -4,20 +4,8 @@
  * Tier 2 fallback for FHIR records without a code.
  * Uses pre-built per-category BM25 inverted indexes.
  *
- * Usage:
- *   import { BM25Resolver } from "./bm25_resolver.js";
- *
- *   const resolver = new BM25Resolver({
- *     baseUrl: "https://cdn.example.com/naming_bm25",  // where .json.gz files are hosted
- *   });
- *
- *   // Resolve a medication
- *   const result = await resolver.resolve("Gabitril", "medication");
- *   // → { name: "Tiagabine", score: 12.5, rank: 1 }
- *
- *   // Get top-5 candidates
- *   const results = await resolver.resolve("breast cancer malignant", "condition", 5);
- *   // → [{ name: "Breast Cancer", score: 16.8 }, ...]
+ * Updated for v2 indexes that return code, system, friendly_name,
+ * canonical_code, and ingredient_codes per record.
  *
  * Architecture:
  *   Tier 1: Deterministic code lookup (your existing resolver, 94% accuracy)
@@ -65,21 +53,12 @@ function bm25Score(tf, idf, docLength, avgDocLength) {
 // --- Resolver ---
 
 export class BM25Resolver {
-  /**
-   * @param {Object} options
-   * @param {string} options.baseUrl - Base URL where category_bm25.json.gz files are hosted
-   * @param {boolean} options.debug - Enable debug logging
-   */
   constructor(options = {}) {
     this.baseUrl = options.baseUrl || "./";
     this.debug = options.debug || false;
-    this.cache = new Map(); // category → loaded index
+    this.cache = new Map();
   }
 
-  /**
-   * Load a category's BM25 index (cached after first load).
-   * @param {string} category - "medication" | "lab" | "condition" | "procedure" | "vaccine"
-   */
   async loadCategory(category) {
     if (this.cache.has(category)) return this.cache.get(category);
 
@@ -101,25 +80,25 @@ export class BM25Resolver {
   /**
    * Resolve a patient-friendly name via BM25 search.
    *
-   * @param {string} query - Input display string (technical name, brand name, etc.)
+   * @param {string} query - Input display string
    * @param {string} category - Category to search within
-   * @param {number} topK - Number of results to return (default: 1)
-   * @returns {Promise<{name: string|null, score: number, candidates: Array}>}
+   * @param {number} topK - Number of results (default: 1)
+   * @returns {Promise<object>}
    */
   async resolve(query, category, topK = 1) {
     if (!query || !query.trim()) {
-      return { name: null, score: 0, candidates: [] };
+      return { name: null, score: 0, friendly_name: null, code: null, system: null, canonical_code: null, canonical_system: null, ingredient_codes: [], candidates: [] };
     }
 
     const index = await this.loadCategory(category);
     const queryTokens = tokenize(query);
 
     if (queryTokens.length === 0) {
-      return { name: null, score: 0, candidates: [] };
+      return { name: null, score: 0, friendly_name: null, code: null, system: null, canonical_code: null, canonical_system: null, ingredient_codes: [], candidates: [] };
     }
 
     // Score documents
-    const scores = new Map(); // rid → score
+    const scores = new Map();
 
     for (const token of queryTokens) {
       const postings = index.postings[token];
@@ -140,29 +119,55 @@ export class BM25Resolver {
       .sort((a, b) => b[1] - a[1])
       .slice(0, topK);
 
-    // Map to friendly names (deduplicated)
+    // Map to results with per-record metadata from the v2 index
     const candidates = [];
     const seenNames = new Set();
 
     for (const [rid, score] of ranked) {
-      const nameIdx = index.rid_to_name[rid];
-      const name = index.names[nameIdx];
-      if (!seenNames.has(name)) {
-        seenNames.add(name);
-        candidates.push({ name, score: Math.round(score * 100) / 100 });
+      // v2 indexes: names is indexed by rid directly (no rid_to_name intermediate)
+      const name = index.names[rid] ?? null;
+      const friendlyName = index.rid_to_friendly_name?.[rid] ?? name;
+      const code = index.rid_to_code?.[rid] ?? null;
+      const system = index.rid_to_system?.[rid] ?? null;
+      const canonicalCode = index.rid_to_canonical_code?.[rid] ?? null;
+      const canonicalSystem = index.rid_to_canonical_system?.[rid] ?? null;
+      const ingredientCodes = index.rid_to_ingredient_codes?.[rid] ?? [];
+
+      const dedupKey = friendlyName || name;
+      if (dedupKey && !seenNames.has(dedupKey)) {
+        seenNames.add(dedupKey);
+        candidates.push({
+          name,
+          friendly_name: friendlyName,
+          code,
+          system,
+          canonical_code: canonicalCode,
+          canonical_system: canonicalSystem,
+          ingredient_codes: ingredientCodes,
+          score: Math.round(score * 100) / 100
+        });
       }
     }
 
-    const best = candidates[0] || { name: null, score: 0 };
+    const best = candidates[0] || { name: null, score: 0, friendly_name: null, code: null, system: null, canonical_code: null, canonical_system: null, ingredient_codes: [] };
 
-    this._log(`  Query "${query.slice(0, 40)}" → top: "${best.name}" (score: ${best.score})`);
-    return { name: best.name, score: best.score, candidates };
+    this._log(`  Query "${query.slice(0, 40)}" → top: "${best.friendly_name || best.name}" (code: ${best.code}, score: ${best.score})`);
+
+    return {
+      name: best.name,
+      score: best.score,
+      friendly_name: best.friendly_name,
+      code: best.code,
+      system: best.system,
+      canonical_code: best.canonical_code,
+      canonical_system: best.canonical_system,
+      ingredient_codes: best.ingredient_codes,
+      candidates
+    };
   }
 
   /**
    * Map FHIR resourceType to search category.
-   * @param {string} resourceType
-   * @returns {string|null}
    */
   static resourceTypeToCategory(resourceType) {
     const map = {
@@ -178,61 +183,21 @@ export class BM25Resolver {
     return map[resourceType] || null;
   }
 
-  /**
-   * Full resolution pipeline for a FHIR record.
-   * Combines with deterministic lookup (Tier 1) and BM25 (Tier 2).
-   *
-   * @param {Object} record - FHIR-like record
-   * @param {Object} deterministicResolver - Your existing deterministic resolver
-   * @returns {Promise<{name: string, tier: string, confidence: number}>}
-   */
-  static async resolveRecord(record, deterministicResolver, bm25Resolver) {
-    // Tier 1: Deterministic code lookup
-    if (record?.concept?.coding?.[0]?.code) {
-      const detResult = deterministicResolver.resolve(record);
-      if (detResult?.name) {
-        return { name: detResult.name, tier: "deterministic", confidence: 0.95 };
-      }
-    }
-
-    // Tier 2: BM25 search
-    const category = BM25Resolver.resourceTypeToCategory(record?.resourceType);
-    const display = record?.concept?.coding?.[0]?.display
-      || record?.concept?.text?.[0]
-      || "";
-
-    if (category && display) {
-      const bm25Result = await bm25Resolver.resolve(display, category);
-      if (bm25Result.name) {
-        return {
-          name: bm25Result.name,
-          tier: "bm25",
-          confidence: Math.min(bm25Result.score / 20, 0.85), // scale score to confidence
-        };
-      }
-    }
-
-    // Tier 3: No match (LLM fallback would go here)
-    return { name: null, tier: "no_match", confidence: 0 };
-  }
-
   _log(msg) {
     if (this.debug) console.log(`[BM25Resolver] ${msg}`);
   }
 
-  /** Clear cache (useful for testing). */
   clearCache() {
     this.cache.clear();
   }
 
-  /** Get stats about loaded indexes. */
   stats() {
     const stats = {};
     for (const [category, index] of this.cache) {
       stats[category] = {
         records: index.num_records,
         tokens: Object.keys(index.idf).length,
-        names: index.names.length,
+        names: index.names?.length ?? 0,
       };
     }
     return stats;
