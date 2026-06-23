@@ -83,8 +83,8 @@ describe("detectTrend", () => {
   });
 
   it("filters non-numeric values", () => {
-    const values = [
-      { normalizedValue: { kind: "string", display: "trace" }, effectiveDate: "2026-01-01" },
+    const values: Array<{ normalizedValue: NormalizedObservationValue; effectiveDate?: string }> = [
+      { normalizedValue: { kind: "string", display: "trace" } as NormalizedObservationValue, effectiveDate: "2026-01-01" },
       { normalizedValue: makeValue(4), effectiveDate: "2026-01-02" },
       { normalizedValue: makeValue(6), effectiveDate: "2026-01-03" },
       { normalizedValue: makeValue(7), effectiveDate: "2026-01-04" }
