@@ -4590,6 +4590,10 @@ export function PatientExplorer() {
         ? encounterTypeForRecord(groupRecords[0])
         : undefined;
 
+    const clusters = dedupeGroupedRecords(groupRecords);
+    const canonicalRecords = clusters.map((cluster) => cluster.canonical);
+    const duplicateCount = clusters.reduce((total, cluster) => total + cluster.duplicateCount, 0);
+
     // Trend detection for observation groups
     const trend: TrendResult | null =
       activeTab === "Observation"
@@ -4602,9 +4606,6 @@ export function PatientExplorer() {
               .filter((v): v is NonNullable<typeof v> => Boolean(v))
           )
         : null;
-    const clusters = dedupeGroupedRecords(groupRecords);
-    const canonicalRecords = clusters.map((cluster) => cluster.canonical);
-    const duplicateCount = clusters.reduce((total, cluster) => total + cluster.duplicateCount, 0);
     const expansionKey = groupExpansionKey(group);
     const collapsedLimit = density === "compact" ? 1 : MAX_COLLAPSED_GROUP_RECORDS;
     const hasMoreRecords = clusters.length > collapsedLimit;
