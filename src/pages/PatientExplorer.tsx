@@ -81,6 +81,7 @@ import type {
   PatientGroupingResult,
   PatientObservationBucket
 } from "../lib/fhir/patient-groups";
+import { detectTrend, type TrendResult } from "../lib/fhir/trend-detection";
 import {
   resolveGroupReferenceRange,
   groupHasOutOfRangeValue,
@@ -4588,6 +4589,19 @@ export function PatientExplorer() {
       activeTab === "Encounter" && groupRecords.length > 0
         ? encounterTypeForRecord(groupRecords[0])
         : undefined;
+
+    // Trend detection for observation groups
+    const trend: TrendResult | null =
+      activeTab === "Observation"
+        ? detectTrend(
+            canonicalRecords
+              .map((r) => {
+                const obs = observationById.get(r.id);
+                return obs ? { normalizedValue: obs.normalizedValue, effectiveDate: obs.effectiveDate } : null;
+              })
+              .filter((v): v is NonNullable<typeof v> => Boolean(v))
+          )
+        : null;
     const clusters = dedupeGroupedRecords(groupRecords);
     const canonicalRecords = clusters.map((cluster) => cluster.canonical);
     const duplicateCount = clusters.reduce((total, cluster) => total + cluster.duplicateCount, 0);
@@ -4632,6 +4646,22 @@ export function PatientExplorer() {
                 color="warning"
                 variant="outlined"
                 label="Value outside typical range"
+              />
+            )}
+            {trend?.direction === "up" && (
+              <Chip
+                size="small"
+                variant="outlined"
+                color="warning"
+                label={`↑ Trending up${trend.percentChange !== undefined ? ` ${trend.percentChange >= 0 ? "+" : ""}${trend.percentChange}%` : ""}`}
+              />
+            )}
+            {trend?.direction === "down" && (
+              <Chip
+                size="small"
+                variant="outlined"
+                color="info"
+                label={`↓ Trending down${trend.percentChange !== undefined ? ` ${trend.percentChange >= 0 ? "+" : ""}${trend.percentChange}%` : ""}`}
               />
             )}
           </Stack>
