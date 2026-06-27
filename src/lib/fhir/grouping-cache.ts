@@ -13,6 +13,8 @@ export interface GroupingCacheEntry {
   model: string;
   lookupSystem?: string;
   lookupCode?: string;
+  canonicalSystem?: string;
+  canonicalCode?: string;
   friendlySource?: string;
   matchType?: string;
   updatedAt: number;

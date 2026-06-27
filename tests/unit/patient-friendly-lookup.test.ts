@@ -175,4 +175,158 @@ describe("patient-friendly lookup", () => {
 
     expect(lookupPatientFriendlyName(medication, lookup)).toBeNull();
   });
+
+  it("prefers RxNorm SCD (specific drug) over IN (ingredient) by TTY", () => {
+    const lookup: PatientFriendlyLookup = {
+      rxnorm: new Map([
+        [
+          "860975",
+          {
+            system: "rxnorm",
+            code: "860975",
+            name: "Metformin 500 MG Oral Tablet",
+            friendlySource: "RXNORM",
+            matchType: "exact",
+            tty: "SCD"
+          }
+        ],
+        [
+          "6809",
+          {
+            system: "rxnorm",
+            code: "6809",
+            name: "Metformin",
+            friendlySource: "RXNORM",
+            matchType: "ingredient",
+            tty: "IN"
+          }
+        ]
+      ])
+    };
+
+    const medication = record({
+      id: "med-metformin",
+      resourceType: "MedicationRequest",
+      sourceLabel: "Metformin 500mg tablet",
+      codingKeys: ["rxnorm:860975", "rxnorm:6809"]
+    });
+
+    const result = lookupPatientFriendlyName(medication, lookup);
+    expect(result?.code).toBe("860975");
+    expect(result?.patientFriendlyName).toBe("Metformin 500 MG Oral Tablet");
+  });
+
+  it("prefers RxNorm GPCK (pack) over SCD (specific drug) by TTY", () => {
+    const lookup: PatientFriendlyLookup = {
+      rxnorm: new Map([
+        [
+          "1000000",
+          {
+            system: "rxnorm",
+            code: "1000000",
+            name: "Metformin + Glipizide Pack",
+            friendlySource: "RXNORM",
+            matchType: "group",
+            tty: "GPCK"
+          }
+        ],
+        [
+          "860975",
+          {
+            system: "rxnorm",
+            code: "860975",
+            name: "Metformin 500 MG Oral Tablet",
+            friendlySource: "RXNORM",
+            matchType: "exact",
+            tty: "SCD"
+          }
+        ]
+      ])
+    };
+
+    const medication = record({
+      id: "med-pack",
+      resourceType: "MedicationRequest",
+      sourceLabel: "Metformin/Glipizide pack",
+      codingKeys: ["rxnorm:1000000", "rxnorm:860975"]
+    });
+
+    const result = lookupPatientFriendlyName(medication, lookup);
+    expect(result?.code).toBe("1000000");
+  });
+
+  it("prefers more specific ICD-10 code (E11.22 over E11.9)", () => {
+    const lookup: PatientFriendlyLookup = {
+      icd10cm: new Map([
+        [
+          "E11.9",
+          {
+            system: "icd10cm",
+            code: "E11.9",
+            name: "Type 2 Diabetes",
+            friendlySource: "CHV",
+            matchType: "broader"
+          }
+        ],
+        [
+          "E11.22",
+          {
+            system: "icd10cm",
+            code: "E11.22",
+            name: "Type 2 Diabetes with CKD",
+            friendlySource: "CHV",
+            matchType: "broader"
+          }
+        ]
+      ])
+    };
+
+    const condition = record({
+      id: "cond-diabetes",
+      resourceType: "Condition",
+      sourceLabel: "Type 2 diabetes with CKD",
+      codingKeys: ["icd10cm:E11.9", "icd10cm:E11.22"]
+    });
+
+    const result = lookupPatientFriendlyName(condition, lookup);
+    expect(result?.code).toBe("E11.22");
+    expect(result?.patientFriendlyName).toBe("Type 2 Diabetes with CKD");
+  });
+
+  it("prefers full-length ICD-10 code over 3-character category", () => {
+    const lookup: PatientFriendlyLookup = {
+      icd10cm: new Map([
+        [
+          "E11",
+          {
+            system: "icd10cm",
+            code: "E11",
+            name: "Type 2 Diabetes",
+            friendlySource: "CHV",
+            matchType: "broader"
+          }
+        ],
+        [
+          "E11.65",
+          {
+            system: "icd10cm",
+            code: "E11.65",
+            name: "Type 2 Diabetes with hyperglycemia",
+            friendlySource: "CHV",
+            matchType: "broader"
+          }
+        ]
+      ])
+    };
+
+    const condition = record({
+      id: "cond-diabetes",
+      resourceType: "Condition",
+      sourceLabel: "Type 2 diabetes mellitus with hyperglycemia",
+      codingKeys: ["icd10cm:E11", "icd10cm:E11.65"]
+    });
+
+    const result = lookupPatientFriendlyName(condition, lookup);
+    expect(result?.code).toBe("E11.65");
+  });
 });

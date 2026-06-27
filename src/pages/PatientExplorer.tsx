@@ -509,6 +509,30 @@ function recordKey(record: GroupableRecord): string {
   return `${record.resourceType}/${record.id}`;
 }
 
+/**
+ * Check if a condition group's canonical code matches an association code.
+ *
+ * Exact match is tried first. For ICD-10, also matches parent category:
+ * an association keyed at the 3-character category level (e.g., "E11") will
+ * match conditions coded at any specificity below it (e.g., "E11.9",
+ * "E11.65"). This bridges the gap between the associations table (keyed at
+ * category level) and real-world conditions (often coded more specifically).
+ *
+ * Note: cross-system matching (e.g., SNOMED condition ↔ ICD-10 association)
+ * is NOT handled here — that requires a terminology crosswalk from the data
+ * team.
+ */
+function conditionCodeMatches(conditionCode: string | undefined, associationCode: string): boolean {
+  if (!conditionCode) return false;
+  if (conditionCode === associationCode) return true;
+  // ICD-10 parent match: association is 3-char category (letter + 2 digits),
+  // condition code is a more specific variant starting with "category."
+  if (/^[A-Z]\d{2}$/.test(associationCode) && conditionCode.startsWith(`${associationCode}.`)) {
+    return true;
+  }
+  return false;
+}
+
 function scopedResourceId(sourceId: string, id?: string): string | undefined {
   return id ? `${sourceId}:${id}` : undefined;
 }
@@ -914,12 +938,17 @@ function cachedCompactGrouping(
     const entry = cacheById.get(record.id);
     if (!cacheEntryCompleteForRecord(record, entry)) continue;
     usedModels.add(entry.model);
-    const canonical = normalizedGroupName(entry.patientFriendlyName);
+    // Scope group key by resourceType so records of different types (e.g.
+    // a Procedure and an Observation with the same patient-friendly name)
+    // don't merge into one cross-type group. Cross-type groups would get a
+    // different combineGroupingResults key than the type-specific groups from
+    // other plans, causing the same record to appear in two groups on the
+    // type-specific tab.
+    const canonical = `${record.resourceType}:${normalizedGroupName(entry.patientFriendlyName)}`;
     const entryObservationBucket = entry.observationBucket ?? observationBucketFromKnownCategory(record);
     const existing = groupsByName.get(canonical);
     if (existing) {
       existing.resourceIds.push(record.id);
-      if (!existing.resourceTypes.includes(record.resourceType)) existing.resourceTypes.push(record.resourceType);
       existing.confidence = Math.min(existing.confidence, entry.confidence);
       existing.fallback = existing.fallback || entry.fallback;
       existing.observationBucket = mergeObservationBucket(existing.observationBucket, entryObservationBucket);
@@ -936,9 +965,11 @@ function cachedCompactGrouping(
       reason: "Restored from local grouping cache.",
       fallback: entry.fallback,
       canonicalCode:
-        entry.lookupSystem && entry.lookupCode
-          ? { system: entry.lookupSystem as CanonicalCode["system"], code: entry.lookupCode }
-          : undefined
+        entry.canonicalSystem && entry.canonicalCode
+          ? { system: entry.canonicalSystem as CanonicalCode["system"], code: entry.canonicalCode }
+          : entry.lookupSystem && entry.lookupCode
+            ? { system: entry.lookupSystem as CanonicalCode["system"], code: entry.lookupCode }
+            : undefined
     });
   }
 
@@ -1084,6 +1115,8 @@ function cacheEntriesFromPatientFriendlyLookup(
         model: PATIENT_FRIENDLY_LOOKUP_MODEL,
         lookupSystem: result.system,
         lookupCode: result.code,
+        canonicalSystem: result.canonicalSystem,
+        canonicalCode: result.canonicalCode,
         friendlySource: result.friendlySource,
         matchType: result.matchType,
         updatedAt: now
@@ -1908,7 +1941,7 @@ export function PatientExplorer() {
           if (code) {
             match = conditionChoices.find((choice) => {
               const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
-              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+              return conditionCodeMatches(cg?.canonicalCode?.code, code) || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
             });
           }
           if (!match && name) {
@@ -1965,7 +1998,7 @@ export function PatientExplorer() {
           if (code) {
             match = conditionChoices.find((choice) => {
               const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
-              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+              return conditionCodeMatches(cg?.canonicalCode?.code, code) || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
             });
           }
           if (!match && name) {
@@ -2037,7 +2070,7 @@ export function PatientExplorer() {
           if (code) {
             match = conditionChoices.find((choice) => {
               const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
-              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+              return conditionCodeMatches(cg?.canonicalCode?.code, code) || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
             });
           }
           if (!match && name) {
@@ -2141,7 +2174,7 @@ export function PatientExplorer() {
           if (code) {
             match = conditionChoices.find((choice) => {
               const cg = conditionGroups.find((g) => relationshipGroupKey(g) === choice.conditionGroupId);
-              return cg?.canonicalCode?.code === code || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
+              return conditionCodeMatches(cg?.canonicalCode?.code, code) || cg?.patientFriendlyName.toLowerCase() === code.toLowerCase();
             });
           }
           if (!match && name) {
@@ -2276,6 +2309,7 @@ export function PatientExplorer() {
         return counts;
       }, {})
     });
+    setModelBusy(true);
     try {
       const key = await getOrCreateSessionVaultKey();
       let cache = await loadGroupingCache(key);
@@ -2351,6 +2385,8 @@ export function PatientExplorer() {
               model: "bm25",
               lookupSystem: match.system,
               lookupCode: match.code,
+              canonicalSystem: match.canonicalCode?.system,
+              canonicalCode: match.canonicalCode?.code,
               updatedAt: now
             });
           }
@@ -2448,7 +2484,6 @@ export function PatientExplorer() {
           lookupEntryCount: lookupEntries.length,
           cacheEntryCount: cache.entries.length
         });
-        setStatus(lookupEntries.length ? "Records grouped from patient-friendly lookup and local cache" : "Records grouped from local cache");
         setGroupingProgress(null);
         await runPostGroupingClassification(nextRecords, key, {
           canRunLocalModel,
@@ -2461,6 +2496,7 @@ export function PatientExplorer() {
           selectedModelId,
           isCurrentRun
         });
+        setStatus(lookupEntries.length ? "Records grouped from patient-friendly lookup and local cache" : "Records grouped from local cache");
         return;
       }
 
@@ -2470,11 +2506,6 @@ export function PatientExplorer() {
           reason: "LLM disabled — using deterministic + source labels only",
           totalUncachedConcepts: totalUncachedClusters
         });
-        setStatus(
-          lookupEntries.length
-            ? "Patient-friendly lookup applied; LLM disabled for remaining records"
-            : "Cached groups restored; LLM disabled for new records"
-        );
         setGroupingProgress(null);
         await runPostGroupingClassification(nextRecords, key, {
           canRunLocalModel: false,
@@ -2482,12 +2513,16 @@ export function PatientExplorer() {
           isCurrentRun,
           nameByRecordId: cacheNameByRecordId
         });
+        setStatus(
+          lookupEntries.length
+            ? "Patient-friendly lookup applied; LLM disabled for remaining records"
+            : "Cached groups restored; LLM disabled for new records"
+        );
         // Deterministic relationships already ran in the upfront pass above.
         // LLM enrichment is skipped because the model is unavailable.
         return;
       }
 
-      setModelBusy(true);
       setStatus(llmLoadStatus === "ready" ? "Organizing medical records..." : "Loading app data...");
       setGroupingProgress({ completed: 0, total: totalUncachedClusters });
 
@@ -2940,7 +2975,7 @@ export function PatientExplorer() {
           for (const cond of conditions) {
             const condCode = cond.conditionCode;
             // Match by canonical code first
-            const byCode = conditionGroups.find((cg) => cg.canonicalCode?.code === condCode);
+            const byCode = conditionGroups.find((cg) => conditionCodeMatches(cg.canonicalCode?.code, condCode));
             if (byCode) {
               claims[mg.groupId] = byCode.groupId;
               break;
@@ -3444,7 +3479,7 @@ export function PatientExplorer() {
     if (modelBusy) {
       if (llmLoadStatus === "downloading") return "Downloading app data...";
       if (llmLoadStatus === "loading") return "Loading app data...";
-      if (status.startsWith("Classifying") || status.startsWith("Linking") || status.startsWith("Switching")) return status;
+      if (status.startsWith("Classifying") || status.startsWith("Linking") || status.startsWith("Enriching") || status.startsWith("Switching") || status.startsWith("Searching") || status.startsWith("Applying") || status.startsWith("Organizing")) return status;
       return groupingProgress && groupingProgress.total > 0
         ? `Organizing medical records... ${groupingProgress.completed}/${groupingProgress.total}`
         : "Organizing medical records...";

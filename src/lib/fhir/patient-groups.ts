@@ -1,7 +1,7 @@
 import type { PatientAuthoredRecord, PatientPatch } from "./patches";
 import type { GroupReferenceRange } from "./reference-ranges";
 
-export type CanonicalCodeSystem = "icd10" | "loinc" | "rxnorm" | "snomed" | "cvx" | "cpt";
+export type CanonicalCodeSystem = "icd10" | "loinc" | "rxnorm" | "snomed" | "cvx" | "cpt" | "hcpcs" | "icd10pcs";
 
 export interface CanonicalCode {
   system: CanonicalCodeSystem;

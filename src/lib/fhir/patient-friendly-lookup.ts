@@ -17,6 +17,9 @@ interface NewFormatEntry {
   friendly_source: string;
   match_type: string;
   cui?: string;
+  tty?: string;
+  canonical_code?: string;
+  canonical_system?: string;
 }
 
 export interface PatientFriendlyLookupEntry {
@@ -26,6 +29,9 @@ export interface PatientFriendlyLookupEntry {
   friendlySource: string;
   matchType: string;
   cui?: string;
+  tty?: string;
+  canonicalSystem?: string;
+  canonicalCode?: string;
 }
 
 export interface PatientFriendlyLookupResult extends PatientFriendlyLookupEntry {
@@ -101,7 +107,70 @@ const MATCH_CONFIDENCE: Record<string, number> = {
   original: 0.5
 };
 
+/**
+ * RxNorm TTY (term type) priority — lower number wins.
+ * Picks the most specific code when a medication has multiple RxNorm codes.
+ *
+ *   1. GPCK/BPCK          — packs (specific drugs + doses bundled)
+ *   2. SCD/SBD + variants — specific drug (ingredient + strength + form)
+ *   3. SCDG/SBDG + dose form/component levels
+ *   4. MIN/BN             — multi-ingredient / brand name
+ *   5. IN/PIN             — ingredient
+ *   6. DF/TMSY/ET         — generic dose form, synonyms, entry terms
+ */
+const RXNORM_TTY_PRIORITY: Record<string, number> = {
+  GPCK: 1, BPCK: 1,
+  SCD: 2, SBD: 2, SCDGP: 2, SBDGP: 2, SCDFP: 2, SBDFP: 2,
+  SCDG: 3, SBDG: 3, SCDF: 3, SBDF: 3, SCDC: 3, SBDC: 3, DFG: 3,
+  MIN: 4, BN: 4,
+  PIN: 5, IN: 5,
+  DF: 6, TMSY: 6, ET: 6
+};
+
+/**
+ * ICD-10-CM specificity rank — higher = more specific.
+ * Derived from code structure: more characters after the dot = more specific.
+ *
+ *   E11        → rank 3   (category)
+ *   E11.9      → rank 4   (subcategory)
+ *   E11.22     → rank 5   (clinical concept)
+ *   S72.001A   → rank 7   (most specific, includes extension char)
+ */
+function icd10SpecificityRank(code: string): number {
+  return code.replace(".", "").length;
+}
+
+/**
+ * Specificity rank for a lookup entry within its system.
+ * Returns a number where lower = more specific/preferred.
+ * Used to sort candidates before match_type confidence.
+ */
+function codeSpecificityRank(entry: PatientFriendlyLookupEntry): number {
+  if (entry.system === "rxnorm" && entry.tty) {
+    return RXNORM_TTY_PRIORITY[entry.tty] ?? 99;
+  }
+  if (entry.system === "icd10cm") {
+    // Invert: higher char count = more specific = lower rank number
+    return 99 - icd10SpecificityRank(entry.code);
+  }
+  return 50; // default — no specificity signal
+}
+
 const shardPromises = new Map<PatientFriendlyLookupSystem, Promise<Map<string, PatientFriendlyLookupEntry>>>();
+
+/**
+ * Normalize canonical_system values from the data files to the app's
+ * CanonicalCodeSystem type. The data uses "lnc" for LOINC and
+ * "snomedct_us" for SNOMED — we normalize to "loinc" and "snomed".
+ */
+function normalizeCanonicalSystem(value: string): string {
+  const lower = value.toLowerCase();
+  if (lower === "lnc" || lower === "loinc") return "loinc";
+  if (lower === "snomedct_us" || lower === "snomedct" || lower === "snomed") return "snomed";
+  if (lower === "icd10cm" || lower === "icd-10" || lower === "icd10") return "icd10";
+  if (lower === "rxnormn" || lower === "rxnorm") return "rxnorm";
+  return lower;
+}
 
 function terminologyBaseUrl(): string {
   const base = import.meta.env.BASE_URL || "/";
@@ -126,7 +195,7 @@ function parseCodingKey(key: string): { system: PatientFriendlyLookupSystem; cod
   return { system, code };
 }
 
-async function loadShard(system: PatientFriendlyLookupSystem): Promise<Map<string, PatientFriendlyLookupEntry>> {
+export async function loadShard(system: PatientFriendlyLookupSystem): Promise<Map<string, PatientFriendlyLookupEntry>> {
   const existing = shardPromises.get(system);
   if (existing) return existing;
 
@@ -146,7 +215,10 @@ async function loadShard(system: PatientFriendlyLookupSystem): Promise<Map<strin
           name: entry.name,
           friendlySource: entry.friendly_source ?? "",
           matchType: entry.match_type ?? "",
-          cui: entry.cui
+          cui: entry.cui,
+          tty: entry.tty,
+          canonicalCode: entry.canonical_code,
+          canonicalSystem: entry.canonical_system ? normalizeCanonicalSystem(entry.canonical_system) : undefined
         });
       }
       return entries;
@@ -239,6 +311,10 @@ export function lookupPatientFriendlyName(
   const sortedCandidates = candidates.sort((left, right) => {
     const rank = resourceSystemRank(record.resourceType, left.system) - resourceSystemRank(record.resourceType, right.system);
     if (rank !== 0) return rank;
+    // Within the same system, prefer more specific codes (TTY for RxNorm,
+    // character count for ICD-10) before falling back to match_type confidence.
+    const specificity = codeSpecificityRank(left) - codeSpecificityRank(right);
+    if (specificity !== 0) return specificity;
     return confidenceForMatchType(right.matchType) - confidenceForMatchType(left.matchType);
   });
   const best = sortedCandidates.find((entry) => medicationLookupEntryMatchesSource(record, entry));

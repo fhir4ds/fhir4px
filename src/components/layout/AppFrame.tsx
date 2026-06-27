@@ -8,8 +8,8 @@ import {
   type SmartAuthPopupMessage
 } from "../../lib/smart/popup";
 import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
-import { preloadNamingModel } from "../../lib/llm/naming";
-import { LLM_ENABLED } from "../../lib/llm/config";
+import { preloadEmbedder } from "../../lib/embeddings/embedder";
+import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 
 const navItems = [
   { to: "/providers", label: "Providers", icon: <Search size={18} /> },
@@ -24,11 +24,32 @@ export function AppFrame({ children }: PropsWithChildren) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // LLM preload disabled while fine-tuned model is in development.
-  // Re-enable by uncommenting the preload call below.
+  // Preload embedding model eagerly (needed for classification) and patient-
+  // friendly lookup tables lazily (needed for deterministic naming). The model
+  // loads immediately so it's ready when classification runs. JSON shards load
+  // one at a time via requestIdleCallback to avoid CPU contention with WebGPU
+  // inference during classification.
   useEffect(() => {
-    if (!LLM_ENABLED) return;
-    const timer = window.setTimeout(() => void preloadNamingModel(), 250);
+    const timer = window.setTimeout(() => {
+      void preloadEmbedder().catch(() => {});
+    }, 250);
+
+    const shardSystems = ["snomed", "loinc", "icd10cm", "rxnorm", "cvx", "cpt", "hcpcs", "icd10pcs"] as const;
+    const scheduleNext = (index: number) => {
+      if (index >= shardSystems.length) return;
+      const run = () => {
+        void loadShard(shardSystems[index]).catch(() => {});
+        scheduleNext(index + 1);
+      };
+      const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
+      if (typeof idle === "function") {
+        idle(run);
+      } else {
+        window.setTimeout(run, 10000 + index * 3000);
+      }
+    };
+    scheduleNext(0);
+
     return () => window.clearTimeout(timer);
   }, []);
 
