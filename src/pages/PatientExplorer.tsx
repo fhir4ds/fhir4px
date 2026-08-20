@@ -48,6 +48,7 @@ import {
   Info,
   Layers,
   LayoutDashboard,
+  Link2,
   List,
   ListCollapse,
   Pill,
@@ -63,7 +64,8 @@ import { flushSync } from "react-dom";
 import {
   dedupeGroupedRecords,
   recordQualityScore,
-  type DedupedRecordCluster
+  type DedupedRecordCluster,
+  type GroupableResourceType,
 } from "../lib/fhir/dedupe";
 import {
   buildGroupableRecords,
@@ -124,6 +126,9 @@ import {
   type ClassificationTransform
 } from "../lib/fhir/classification-cache";
 import { classifyBatch } from "../lib/embeddings";
+import { preloadAssociations } from "../lib/associations/bundle";
+import { resolveGroupConcept, type GroupConceptResolution } from "../lib/associations/resolve";
+import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
 import {
   emptyRelationshipCache,
   RELATIONSHIP_CACHE_ID,
@@ -1293,6 +1298,10 @@ export function PatientExplorer() {
   const [selectedMatchingRecordKeys, setSelectedMatchingRecordKeys] = useState<string[]>([]);
   const [selectedMatchReason, setSelectedMatchReason] = useState<string | null>(null);
   const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
+  const [groupConceptResolutions, setGroupConceptResolutions] = useState<Record<string, GroupConceptResolution>>({});
+  const [relatedFocus, setRelatedFocus] = useState<{ groupId: string; groupName: string } | null>(null);
+  const [relatedMatches, setRelatedMatches] = useState<RelatedMatch[]>([]);
+  const conceptResolutionSignatureRef = useRef("");
   const [addRecordDialogOpen, setAddRecordDialogOpen] = useState(false);
   const [newRecordType, setNewRecordType] = useState<PatientAuthoredResourceType>("MedicationRequest");
   const [newRecordText, setNewRecordText] = useState("");
@@ -3060,6 +3069,66 @@ export function PatientExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups, patientProfiles, summary, observationById]);
 
+  // Resolve every group to its association concept key (or lab part CIDs)
+  // once grouping settles. Enables deterministic click-to-relate matching.
+  useEffect(() => {
+    if (groups.length === 0) {
+      if (Object.keys(groupConceptResolutions).length > 0) setGroupConceptResolutions({});
+      conceptResolutionSignatureRef.current = "";
+      return;
+    }
+    const signature = groups.map((group) => `${group.groupId}:${group.patientFriendlyName}`).join("|");
+    if (signature === conceptResolutionSignatureRef.current) return;
+    conceptResolutionSignatureRef.current = signature;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await preloadAssociations();
+        const resolutions: Record<string, GroupConceptResolution> = {};
+        for (const group of groups) {
+          resolutions[group.groupId] = await resolveGroupConcept(group, recordsForGroup(group));
+        }
+        if (!cancelled) setGroupConceptResolutions(resolutions);
+      } catch {
+        // Association data unavailable — click-to-relate stays disabled.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, records]);
+
+  useEffect(() => {
+    if (!relatedFocus) {
+      setRelatedMatches([]);
+      return;
+    }
+    const focusResolution = groupConceptResolutions[relatedFocus.groupId];
+    if (!focusResolution || (!focusResolution.conceptKey && !(focusResolution.labPartCids?.length))) {
+      setRelatedMatches([]);
+      return;
+    }
+    let cancelled = false;
+    const candidates = groups.map((group) => ({
+      groupId: group.groupId,
+      groupName: group.patientFriendlyName,
+      resourceTypes: group.resourceTypes,
+      resolution: groupConceptResolutions[group.groupId] ?? {}
+    }));
+    void findRelatedGroups({ groupId: relatedFocus.groupId, resolution: focusResolution }, candidates)
+      .then((matches) => {
+        if (!cancelled) setRelatedMatches(matches);
+      })
+      .catch(() => {
+        if (!cancelled) setRelatedMatches([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relatedFocus, groupConceptResolutions, groups]);
+
   useEffect(() => {
     const onSmartAuthComplete = (event: Event) => {
       const detail = (event as CustomEvent<unknown>).detail;
@@ -4606,6 +4675,34 @@ export function PatientExplorer() {
     );
   }
 
+  const relatedMatchByGroupId = useMemo(
+    () => new Map(relatedMatches.map((match) => [match.groupId, match])),
+    [relatedMatches]
+  );
+  const relatedFocusIsCondition = useMemo(
+    () =>
+      Boolean(
+        relatedFocus && groups.find((g) => g.groupId === relatedFocus.groupId)?.resourceTypes.includes("Condition")
+      ),
+    [relatedFocus, groups]
+  );
+
+  function toggleRelatedFocus(group: PatientFriendlyGroup) {
+    setRelatedFocus((prev) =>
+      prev?.groupId === group.groupId ? null : { groupId: group.groupId, groupName: group.patientFriendlyName }
+    );
+  }
+
+  function navigateToRelatedGroup(groupId: string) {
+    const group = groups.find((g) => g.groupId === groupId);
+    if (!group) return;
+    const tab = (Object.keys(RESOURCE_LABELS) as ExplorerTab[]).find(
+      (t) => t !== "PatientSummary" && group.resourceTypes.includes(t as GroupableResourceType)
+    );
+    if (tab) setActiveTab(tab);
+    setExpandedGroupKeys((prev) => new Set([...prev, groupExpansionKey(group, tab ?? activeTab)]));
+  }
+
   function renderGroup(group: PatientFriendlyGroup) {
     const groupRecords = sortedRecordsForGroup(group);
     if (groupRecords.length === 0) return null;
@@ -4651,16 +4748,34 @@ export function PatientExplorer() {
     const latestRecord = [...canonicalRecords].sort((left, right) => compareRecordsByDate(left, right, "newest"))[0];
     const latestLabel = latestRecord ? recordDateLabel(latestRecord) : undefined;
 
+    const isRelatedFocus = relatedFocus?.groupId === group.groupId;
+    const relatedMatch = relatedMatchByGroupId.get(group.groupId);
+    const groupResolution = groupConceptResolutions[group.groupId];
+    const relateAvailable = Boolean(groupResolution?.conceptKey || groupResolution?.labPartCids?.length);
+
     return (
       <Box
         key={expansionKey}
-        sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: density === "compact" ? 1.25 : 2 }}
+        sx={{
+          border: 1,
+          borderColor: isRelatedFocus ? "primary.main" : relatedMatch ? "secondary.main" : "divider",
+          borderRadius: 1,
+          p: density === "compact" ? 1.25 : 2
+        }}
       >
         <Stack spacing={density === "compact" ? 1 : 1.5}>
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
             <Typography variant={density === "compact" ? "subtitle1" : "h3"} fontWeight={700}>
               {group.patientFriendlyName}
             </Typography>
+            {relatedMatch && (
+              <Chip
+                size="small"
+                color="secondary"
+                variant="outlined"
+                label={relationshipLabel(relatedMatch.relationship, relatedFocusIsCondition)}
+              />
+            )}
             {groupStatus && <Chip size="small" color={groupStatus.color} label={groupStatus.label} />}
             {encounterVisitClass && encounterVisitClass !== "unknown" && (
               <Chip size="small" color="primary" variant="outlined" label={visitClassLabel(encounterVisitClass)} />
@@ -4700,6 +4815,16 @@ export function PatientExplorer() {
                 label={`↓ Trending down${trend.percentChange !== undefined ? ` ${trend.percentChange >= 0 ? "+" : ""}${trend.percentChange}%` : ""}`}
               />
             )}
+            <IconButton
+              size="small"
+              aria-label={isRelatedFocus ? "Hide related items" : "Show related items"}
+              disabled={!relateAvailable && !isRelatedFocus}
+              color={isRelatedFocus ? "primary" : "default"}
+              onClick={() => toggleRelatedFocus(group)}
+              sx={{ marginLeft: "auto", flex: "0 0 auto" }}
+            >
+              <Link2 size={16} />
+            </IconButton>
           </Stack>
           {groupReferenceRanges[group.groupId] && (
             <Typography variant="caption" color="text.secondary">
@@ -5600,6 +5725,49 @@ export function PatientExplorer() {
                 <Box sx={{ display: { xs: "block", md: "none" } }}>{renderResourceNavigation("horizontal")}</Box>
 
                 {renderRecordViewToolbar()}
+
+                {relatedFocus && (
+                  <Alert
+                    severity="info"
+                    icon={<Link2 size={18} />}
+                    sx={{ alignItems: "flex-start" }}
+                  >
+                    <Stack spacing={1} minWidth={0}>
+                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                        <Typography variant="subtitle2">
+                          Related to {relatedFocus.groupName}
+                        </Typography>
+                        <Button
+                          size="small"
+                          startIcon={<X size={14} />}
+                          onClick={() => setRelatedFocus(null)}
+                          sx={{ ml: "auto" }}
+                        >
+                          Clear
+                        </Button>
+                      </Stack>
+                      {relatedMatches.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No linked items found. Items without resolved codes can&apos;t be matched
+                          deterministically.
+                        </Typography>
+                      ) : (
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          {relatedMatches.map((match) => (
+                            <Chip
+                              key={`${match.groupId}:${match.relationship}`}
+                              size="small"
+                              color="secondary"
+                              variant="outlined"
+                              label={`${match.groupName} · ${relationshipLabel(match.relationship, relatedFocusIsCondition)}`}
+                              onClick={() => navigateToRelatedGroup(match.groupId)}
+                            />
+                          ))}
+                        </Stack>
+                      )}
+                    </Stack>
+                  </Alert>
+                )}
 
             {visibleTabRecords.length === 0 ? (
               <Alert severity="info">

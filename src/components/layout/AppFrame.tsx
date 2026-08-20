@@ -10,6 +10,7 @@ import {
 import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
 import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
+import { preloadAssociations } from "../../lib/associations/bundle";
 
 const navItems = [
   { to: "/providers", label: "Providers", icon: <Search size={18} /> },
@@ -49,6 +50,14 @@ export function AppFrame({ children }: PropsWithChildren) {
       }
     };
     scheduleNext(0);
+
+    const assocIdle = (window as unknown as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback;
+    const preloadAssoc = () => void preloadAssociations().catch(() => {});
+    if (typeof assocIdle === "function") {
+      assocIdle(preloadAssoc);
+    } else {
+      window.setTimeout(preloadAssoc, 12000);
+    }
 
     return () => window.clearTimeout(timer);
   }, []);

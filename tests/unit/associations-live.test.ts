@@ -1,0 +1,177 @@
+/**
+ * Live end-to-end validation of the association pipeline against the real
+ * HuggingFace bundle and the Jordan fixture. Skipped unless LIVE_ASSOCIATIONS=1.
+ *
+ *   LIVE_ASSOCIATIONS=1 npx vitest run tests/unit/associations-live.test.ts
+ */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import { loadAssociationBundle, loadIcd10Crosswalk, loadLabPartCrosswalk } from "../../src/lib/associations/bundle";
+import { resolveGroupConcept } from "../../src/lib/associations/resolve";
+import { findRelatedGroups } from "../../src/lib/associations/matcher";
+import type { GroupableRecord, PatientFriendlyGroup } from "../../src/lib/fhir/patient-groups";
+
+const live = process.env.LIVE_ASSOCIATIONS === "1";
+
+describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
+  it("fetches and decompresses the real bundle", async () => {
+    const bundle = await loadAssociationBundle();
+    expect(bundle.format).toBe("fhir4px_associations_v1");
+    expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
+    expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
+    const labParts = await loadLabPartCrosswalk();
+    expect(labParts["VAL-LAB-LOINC-4548-4"]).toContain("VAL-LAB-LOINC-LP16413-4");
+    const icd10 = await loadIcd10Crosswalk();
+    expect(icd10["VAL-COND-ICD10CM-E11"]).toBe("VAL-COND-SNOMED-44054006");
+  });
+
+  it("click metformin -> highlights Jordan's labs + conditions", async () => {
+    type JordanResource = {
+      resourceType: string;
+      id: string;
+      code?: { coding?: Array<{ system?: string; code?: string; display?: string }> };
+      medicationCodeableConcept?: { coding?: Array<{ system?: string; code?: string; display?: string }> };
+    };
+    const fixture = JSON.parse(
+      readFileSync(resolve(__dirname, "../fixtures/fhir/large-cardiorenal-patient-r4.json"), "utf8")
+    ) as { entry: Array<{ resource: JordanResource }> };
+    const resources = fixture.entry.map((e) => e.resource);
+
+    function recordsFor(type: string, codePath: (r: JordanResource) => Array<{ system?: string; code?: string; display?: string }>) {
+      const byCode = new Map<string, GroupableRecord>();
+      for (const r of resources) {
+        if (r.resourceType !== type) continue;
+        for (const coding of codePath(r)) {
+          const system = (coding.system ?? "").toLowerCase();
+          if (system.includes("rxnorm")) {
+            byCode.set(`rxnorm:${coding.code}`, {
+              id: coding.code ?? "",
+              resourceType: type as GroupableRecord["resourceType"],
+              sourceLabel: coding.display ?? "",
+              source: "provider",
+              codingKeys: [`rxnorm:${coding.code}`]
+            });
+          } else if (system.includes("loinc") || system.includes("6.1")) {
+            byCode.set(`loinc:${coding.code}`, {
+              id: coding.code ?? "",
+              resourceType: type as GroupableRecord["resourceType"],
+              sourceLabel: coding.display ?? "",
+              source: "provider",
+              codingKeys: [`loinc:${coding.code}`]
+            });
+          } else if (system.includes("snomed")) {
+            byCode.set(`snomed:${coding.code}`, {
+              id: coding.code ?? "",
+              resourceType: type as GroupableRecord["resourceType"],
+              sourceLabel: coding.display ?? "",
+              source: "provider",
+              codingKeys: [`snomed:${coding.code}`]
+            });
+          } else if (system.includes("icd-10")) {
+            byCode.set(`icd10cm:${coding.code}`, {
+              id: coding.code ?? "",
+              resourceType: type as GroupableRecord["resourceType"],
+              sourceLabel: coding.display ?? "",
+              source: "provider",
+              codingKeys: [`icd10cm:${coding.code}`]
+            });
+          }
+        }
+      }
+      return [...byCode.values()];
+    }
+
+    const labs = recordsFor("Observation", (r) => r.code?.coding ?? []);
+    const conditions = recordsFor("Condition", (r) => r.code?.coding ?? []);
+
+    // Jordan's MedicationRequests use medicationReference → standalone
+    // Medication resources carrying the RxNorm code.
+    const rxnormByMedicationId = new Map<string, { code?: string; display?: string }>();
+    for (const r of resources) {
+      if (r.resourceType !== "Medication" || typeof r.id !== "string") continue;
+      const coding = r.code?.coding?.find((c) => (c.system ?? "").includes("rxnorm") || (c.system ?? "").includes("6.88"));
+      if (coding?.code) rxnormByMedicationId.set(r.id, coding);
+    }
+    type MedicationRequestResource = JordanResource & { medicationReference?: { reference?: string } };
+    const meds: GroupableRecord[] = [];
+    for (const r of resources) {
+      if (r.resourceType !== "MedicationRequest") continue;
+      const ref = (r as MedicationRequestResource).medicationReference?.reference ?? "";
+      const medId = ref.split("/")[1];
+      const coding = medId ? rxnormByMedicationId.get(medId) : undefined;
+      if (!coding?.code) continue;
+      meds.push({
+        id: coding.code,
+        resourceType: "MedicationRequest",
+        sourceLabel: coding.display ?? "",
+        source: "provider",
+        codingKeys: [`rxnorm:${coding.code}`]
+      });
+    }
+
+    function pseudoGroup(id: string, name: string, types: PatientFriendlyGroup["resourceTypes"]): PatientFriendlyGroup {
+      return { groupId: id, patientFriendlyName: name, resourceIds: [], resourceTypes: types, confidence: 1, reason: "", fallback: false };
+    }
+
+    const medCandidates = meds.map((r, i) => ({ group: pseudoGroup(`med-${i}`, r.sourceLabel, ["MedicationRequest"]), records: [r] }));
+    const condCandidates = conditions.map((r, i) => ({ group: pseudoGroup(`cond-${i}`, r.sourceLabel, ["Condition"]), records: [r] }));
+    const labCandidates = labs.map((r, i) => ({ group: pseudoGroup(`lab-${i}`, r.sourceLabel, ["Observation"]), records: [r] }));
+
+    const all = [...medCandidates, ...condCandidates, ...labCandidates];
+    const candidates = [] as Awaited<ReturnType<typeof findRelatedGroups>> extends never ? never[] : Array<{ groupId: string; groupName: string; resourceTypes: string[]; resolution: Awaited<ReturnType<typeof resolveGroupConcept>> }>;
+    for (const { group, records } of all) {
+      candidates.push({
+        groupId: group.groupId,
+        groupName: group.patientFriendlyName,
+        resourceTypes: group.resourceTypes,
+        resolution: await resolveGroupConcept(group, records)
+      });
+    }
+
+    const metformin = candidates.find((c) => /metformin/i.test(c.groupName));
+    expect(metformin?.resolution.conceptKey).toBe("metformin");
+
+    const matches = await findRelatedGroups(
+      { groupId: metformin!.groupId, resolution: metformin!.resolution },
+      candidates.filter((c) => c.groupId !== metformin!.groupId)
+    );
+
+    const matchedNames = matches.map((m) => m.groupName.toLowerCase());
+    expect(matchedNames.some((n) => n.includes("a1c") || n.includes("hemoglobin a1c"))).toBe(true);
+    expect(matchedNames.some((n) => n.includes("creatinine"))).toBe(true);
+    expect(matches.some((m) => m.relationship === "treats" && /diabetes/i.test(m.groupName))).toBe(true);
+
+    const lisinopril = candidates.find((c) => /lisinopril/i.test(c.groupName));
+    if (lisinopril?.resolution.conceptKey) {
+      const lisiMatches = await findRelatedGroups(
+        { groupId: lisinopril.groupId, resolution: lisinopril.resolution },
+        candidates.filter((c) => c.groupId !== lisinopril.groupId)
+      );
+      expect(lisiMatches.some((m) => /potassium/i.test(m.groupName))).toBe(true);
+    }
+
+    // v1.5 fixes: atorvastatin -> hyperlipidemia (concept fragmentation resolved),
+    // furosemide -> heart failure (direct_indication added), warfarin -> INR
+    // (identity CID bridges the direct-test-code member).
+    const byConcept = async (pattern: RegExp) => {
+      const focus = candidates.find((c) => pattern.test(c.groupName) && c.resolution.conceptKey);
+      if (!focus) return [];
+      return findRelatedGroups(
+        { groupId: focus.groupId, resolution: focus.resolution },
+        candidates.filter((c) => c.groupId !== focus.groupId)
+      );
+    };
+
+    const atorvastatin = await byConcept(/atorvastatin/i);
+    expect(atorvastatin.some((m) => /hyperlipid/i.test(m.groupName) && m.relationship === "treats")).toBe(true);
+    expect(atorvastatin.some((m) => /hypertension/i.test(m.groupName))).toBe(false);
+
+    const furosemide = await byConcept(/furosemide/i);
+    expect(furosemide.some((m) => /heart failure/i.test(m.groupName) && m.relationship === "treats")).toBe(true);
+
+    const warfarin = await byConcept(/warfarin/i);
+    expect(warfarin.some((m) => /international normalized ratio|\binr\b/i.test(m.groupName))).toBe(true);
+    expect(warfarin.some((m) => /atrial fibrillation/i.test(m.groupName))).toBe(true);
+  });
+});
