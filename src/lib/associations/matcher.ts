@@ -8,7 +8,7 @@
  * the bucket carries.
  */
 
-import type { AssociationBucket, AssociationBundle } from "./types";
+import type { AssociationBucket, AssociationBundle, MemberProvenance } from "./types";
 import type { GroupConceptResolution } from "./resolve";
 
 export interface AssociationCandidate {
@@ -24,11 +24,18 @@ export interface RelatedMatch {
   relationship: AssociationBucket;
   /** Patient-friendly name of the bucket member that produced the match. */
   matchedMemberName: string;
+  /** Provenance of the matched member, when the bundle tags it. */
+  provenance?: MemberProvenance;
+}
+
+interface IndexedMember {
+  name: string;
+  provenance?: MemberProvenance;
 }
 
 interface ConceptBucketIndex {
-  /** bucket → member cid → member name */
-  membersByBucket: Map<AssociationBucket, Map<string, string>>;
+  /** bucket → member cid → member */
+  membersByBucket: Map<AssociationBucket, Map<string, IndexedMember>>;
   /** bucket → concept keys of resolvable members (cond/med anchors) */
   memberConceptsByBucket: Map<AssociationBucket, Set<string>>;
 }
@@ -36,13 +43,13 @@ interface ConceptBucketIndex {
 const BUCKETS: AssociationBucket[] = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "treats"];
 
 /**
- * Provenance tiers excluded from default matching: disease_context is
- * comorbidity co-occurrence (a statin listed under a condition it doesn't
- * treat), panel_cooccurrence is lab co-draw noise (creatinine on a statin
+ * Provenance tiers excluded from default matching: population_context is
+ * "indicated for use in this population without treating it" (a statin under
+ * T2DM), panel_cooccurrence is lab co-draw noise (creatinine on a statin
  * because it rides the same metabolic panel). Both surface only in loose /
  * discovery mode.
  */
-const LOOSE_PROVENANCE: ReadonlySet<string> = new Set(["disease_context", "panel_cooccurrence"]);
+const LOOSE_PROVENANCE: ReadonlySet<string> = new Set(["population_context", "panel_cooccurrence"]);
 
 function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoose = false): ConceptBucketIndex | null {
   const concept = bundle.concepts[conceptKey];
@@ -54,15 +61,15 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
   for (const bucket of BUCKETS) {
     const members = concept.buckets[bucket];
     if (!members?.length) continue;
-    const cidToName = new Map<string, string>();
+    const cidToMember = new Map<string, IndexedMember>();
     const conceptKeys = new Set<string>();
     for (const member of members) {
       if (!includeLoose && member.provenance && LOOSE_PROVENANCE.has(member.provenance)) continue;
-      cidToName.set(member.cid, member.name);
+      cidToMember.set(member.cid, { name: member.name, provenance: member.provenance });
       const memberConcept = bundle.by_cid[member.cid];
       if (memberConcept) conceptKeys.add(memberConcept);
     }
-    index.membersByBucket.set(bucket, cidToName);
+    index.membersByBucket.set(bucket, cidToMember);
     index.memberConceptsByBucket.set(bucket, conceptKeys);
   }
   return index;
@@ -85,22 +92,25 @@ function matchAgainstConcept(
     if (!members) continue;
 
     if (candidateConcept && memberConcepts?.has(candidateConcept)) {
-      const memberName = findMemberNameForConcept(bundle, members, candidateConcept) ?? candidate.groupName;
+      const member = findMemberForConcept(bundle, members, candidateConcept);
       return {
         groupId: candidate.groupId,
         groupName: candidate.groupName,
         relationship: bucket,
-        matchedMemberName: memberName
+        matchedMemberName: member?.name ?? candidate.groupName,
+        provenance: member?.provenance
       };
     }
     if (candidateParts?.length && (bucket === "lab" || bucket === "vital")) {
       for (const part of candidateParts) {
-        if (members.has(part)) {
+        const member = members.get(part);
+        if (member) {
           return {
             groupId: candidate.groupId,
             groupName: candidate.groupName,
             relationship: bucket,
-            matchedMemberName: members.get(part) ?? candidate.groupName
+            matchedMemberName: member.name,
+            provenance: member.provenance
           };
         }
       }
@@ -109,13 +119,13 @@ function matchAgainstConcept(
   return null;
 }
 
-function findMemberNameForConcept(
+function findMemberForConcept(
   bundle: AssociationBundle,
-  members: Map<string, string>,
+  members: Map<string, IndexedMember>,
   conceptKey: string
-): string | undefined {
-  for (const [cid, name] of members) {
-    if (bundle.by_cid[cid] === conceptKey) return name;
+): IndexedMember | undefined {
+  for (const [cid, member] of members) {
+    if (bundle.by_cid[cid] === conceptKey) return member;
   }
   return undefined;
 }
@@ -157,12 +167,14 @@ export async function findRelatedGroups(
       const members = index?.membersByBucket.get(bucket);
       if (!members) continue;
       for (const part of focusParts) {
-        if (members.has(part)) {
+        const member = members.get(part);
+        if (member) {
           matches.push({
             groupId: candidate.groupId,
             groupName: candidate.groupName,
             relationship: bucket,
-            matchedMemberName: members.get(part) ?? candidate.groupName
+            matchedMemberName: member.name,
+            provenance: member.provenance
           });
           break;
         }
@@ -175,12 +187,18 @@ export async function findRelatedGroups(
 
 export function relationshipLabel(
   relationship: AssociationBucket,
-  focusIsCondition: boolean
+  focusIsCondition: boolean,
+  provenance?: MemberProvenance
 ): string {
   if (relationship === "lab") return "Lab to monitor";
   if (relationship === "vital") return "Vital to monitor";
-  if (relationship === "treats") return "Treats";
-  if (relationship === "medication") return "Treats this";
+  if (relationship === "treats" || relationship === "medication") {
+    // v1.7 provenance tiers render honestly: event_prevention members are
+    // prescribed to prevent complications, not to treat the condition.
+    if (provenance === "event_prevention") return "Helps prevent";
+    if (provenance === "population_context") return "Used for";
+    return focusIsCondition ? "Treats this" : "Treats";
+  }
   if (relationship === "condition") return focusIsCondition ? "Related condition" : "Adverse event";
   if (relationship === "procedure") return "Related procedure";
   if (relationship === "vaccine") return "Related vaccine";

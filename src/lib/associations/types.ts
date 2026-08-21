@@ -2,8 +2,8 @@ export type AssociationBucket = "lab" | "vital" | "procedure" | "medication" | "
 
 export type MemberProvenance =
   | "direct_indication"
-  | "preventive_indication"
-  | "disease_context"
+  | "event_prevention"
+  | "population_context"
   | "monitoring_recommendation"
   | "panel_cooccurrence";
 

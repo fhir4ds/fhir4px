@@ -22,6 +22,7 @@ const BUNDLE: AssociationBundle = {
     "VAL-COND-ICD10CM-E11.65": "type 2 diabetes",
     "VAL-COND-ICD10CM-E11": "type 2 diabetes",
     "VAL-COND-SNOMED-38341003": "hypertension",
+    "VAL-COND-SNOMED-49436004": "atrial fibrillation",
     "VAL-COND-SNOMED-999999": "osteoarthritis"
   },
   by_name: {
@@ -41,7 +42,8 @@ const BUNDLE: AssociationBundle = {
         vital: [{ cid: "VAL-VIT-LOINC-8480-6", name: "Systolic Blood Pressure" }],
         treats: [
           { cid: "VAL-COND-SNOMED-44054006", name: "Type 2 Diabetes", provenance: "direct_indication" },
-          { cid: "VAL-COND-SNOMED-999999", name: "Osteoarthritis", provenance: "disease_context" }
+          { cid: "VAL-COND-SNOMED-49436004", name: "Atrial Fibrillation", provenance: "event_prevention" },
+          { cid: "VAL-COND-SNOMED-999999", name: "Osteoarthritis", provenance: "population_context" }
         ]
       }
     },
@@ -294,16 +296,23 @@ describe("association resolution + matching", () => {
     expect(matches.map((m) => m.groupId)).toEqual(["med-lisi"]);
   });
 
-  it("excludes disease_context members from matching", async () => {
+  it("excludes population_context members from matching but keeps event_prevention", async () => {
     setAssociationsForTest({ bundle: BUNDLE, labParts: LAB_PARTS, icd10: ICD10_XWALK });
+    const candidates = [
+      { groupId: "cond-t2dm", groupName: "Type 2 Diabetes", resourceTypes: ["Condition"], resolution: { conceptKey: "type 2 diabetes" } },
+      { groupId: "cond-af", groupName: "Atrial Fibrillation", resourceTypes: ["Condition"], resolution: { conceptKey: "atrial fibrillation" } },
+      { groupId: "cond-oa", groupName: "Osteoarthritis", resourceTypes: ["Condition"], resolution: { conceptKey: "osteoarthritis" } }
+    ];
     const matches = await findRelatedGroups(
       { groupId: "med", resolution: { conceptKey: "metformin" } },
-      [
-        { groupId: "cond-t2dm", groupName: "Type 2 Diabetes", resourceTypes: ["Condition"], resolution: { conceptKey: "type 2 diabetes" } },
-        { groupId: "cond-oa", groupName: "Osteoarthritis", resourceTypes: ["Condition"], resolution: { conceptKey: "osteoarthritis" } }
-      ]
+      candidates
     );
-    expect(matches.map((m) => m.groupId)).toEqual(["cond-t2dm"]);
+    expect(matches.map((m) => m.groupId).sort()).toEqual(["cond-af", "cond-t2dm"]);
+    expect(matches.find((m) => m.groupId === "cond-af")?.provenance).toBe("event_prevention");
+    const loose = await findRelatedGroups({ groupId: "med", resolution: { conceptKey: "metformin" } }, candidates, {
+      includeLooseProvenance: true
+    });
+    expect(loose.map((m) => m.groupId).sort()).toEqual(["cond-af", "cond-oa", "cond-t2dm"]);
   });
 
   it("excludes panel_cooccurrence labs by default and includes them in loose mode", async () => {
@@ -321,11 +330,13 @@ describe("association resolution + matching", () => {
     expect(looseMatches.map((m) => m.groupId).sort()).toEqual(["lab-a1c", "lab-glucose"]);
   });
 
-  it("labels relationships by focus type", () => {
+  it("labels relationships by focus type and provenance", () => {
     expect(relationshipLabel("lab", false)).toBe("Lab to monitor");
     expect(relationshipLabel("medication", true)).toBe("Treats this");
+    expect(relationshipLabel("medication", true, "event_prevention")).toBe("Helps prevent");
+    expect(relationshipLabel("treats", false, "direct_indication")).toBe("Treats");
+    expect(relationshipLabel("treats", false, "population_context")).toBe("Used for");
     expect(relationshipLabel("condition", false)).toBe("Adverse event");
     expect(relationshipLabel("condition", true)).toBe("Related condition");
-    expect(relationshipLabel("treats", false)).toBe("Treats");
   });
 });

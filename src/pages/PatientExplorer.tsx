@@ -4773,7 +4773,7 @@ export function PatientExplorer() {
                 size="small"
                 color="secondary"
                 variant="outlined"
-                label={relationshipLabel(relatedMatch.relationship, relatedFocusIsCondition)}
+                label={relationshipLabel(relatedMatch.relationship, relatedFocusIsCondition, relatedMatch.provenance)}
               />
             )}
             {groupStatus && <Chip size="small" color={groupStatus.color} label={groupStatus.label} />}
@@ -5759,7 +5759,7 @@ export function PatientExplorer() {
                               size="small"
                               color="secondary"
                               variant="outlined"
-                              label={`${match.groupName} · ${relationshipLabel(match.relationship, relatedFocusIsCondition)}`}
+                              label={`${match.groupName} · ${relationshipLabel(match.relationship, relatedFocusIsCondition, match.provenance)}`}
                               onClick={() => navigateToRelatedGroup(match.groupId)}
                             />
                           ))}

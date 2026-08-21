@@ -174,6 +174,20 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     const atorvastatinLoose = await byConcept(/atorvastatin/i, { includeLooseProvenance: true });
     expect(atorvastatinLoose.some((m) => /creatinine/i.test(m.groupName))).toBe(true);
 
+    // v1.7: T2DM under atorvastatin is population_context (loose tier), and
+    // metformin's LDL monitoring orphan artifact is purged from the corpus.
+    expect(atorvastatin.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(false);
+    expect(atorvastatinLoose.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(true);
+
+    const metforminFocus = candidates.find((c) => /metformin/i.test(c.groupName) && c.resolution.conceptKey);
+    if (metforminFocus) {
+      const metforminMatches = await findRelatedGroups(
+        { groupId: metforminFocus.groupId, resolution: metforminFocus.resolution },
+        candidates.filter((c) => c.groupId !== metforminFocus.groupId)
+      );
+      expect(metforminMatches.some((m) => /LDL|cholesterol in ldl/i.test(m.groupName))).toBe(false);
+    }
+
     const furosemide = await byConcept(/furosemide/i);
     expect(furosemide.some((m) => /heart failure/i.test(m.groupName) && m.relationship === "treats")).toBe(true);
 
