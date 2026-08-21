@@ -1,12 +1,17 @@
 export type AssociationBucket = "lab" | "vital" | "procedure" | "medication" | "vaccine" | "condition" | "treats";
 
-export type MemberProvenance = "direct_indication" | "preventive_indication" | "disease_context";
+export type MemberProvenance =
+  | "direct_indication"
+  | "preventive_indication"
+  | "disease_context"
+  | "monitoring_recommendation"
+  | "panel_cooccurrence";
 
 export interface AssociationMember {
   cid: string;
   name: string;
-  /** v1.5+: how the association was sourced. Untagged members are ATC
-   *  classes and guideline-sourced pairs. */
+  /** v1.5+: how the association was sourced. Untagged members come from
+   *  authoritative guideline sources (treated as recommendation-tier). */
   provenance?: MemberProvenance;
 }
 

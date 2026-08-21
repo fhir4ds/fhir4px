@@ -154,18 +154,25 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     // v1.5 fixes: atorvastatin -> hyperlipidemia (concept fragmentation resolved),
     // furosemide -> heart failure (direct_indication added), warfarin -> INR
     // (identity CID bridges the direct-test-code member).
-    const byConcept = async (pattern: RegExp) => {
+    const byConcept = async (pattern: RegExp, options?: { includeLooseProvenance?: boolean }) => {
       const focus = candidates.find((c) => pattern.test(c.groupName) && c.resolution.conceptKey);
       if (!focus) return [];
       return findRelatedGroups(
         { groupId: focus.groupId, resolution: focus.resolution },
-        candidates.filter((c) => c.groupId !== focus.groupId)
+        candidates.filter((c) => c.groupId !== focus.groupId),
+        options
       );
     };
 
     const atorvastatin = await byConcept(/atorvastatin/i);
     expect(atorvastatin.some((m) => /hyperlipid/i.test(m.groupName) && m.relationship === "treats")).toBe(true);
     expect(atorvastatin.some((m) => /hypertension/i.test(m.groupName))).toBe(false);
+
+    // v1.6 provenance: creatinine on a statin is panel co-occurrence — hidden
+    // by default, surfaced only in loose mode.
+    expect(atorvastatin.some((m) => /creatinine/i.test(m.groupName))).toBe(false);
+    const atorvastatinLoose = await byConcept(/atorvastatin/i, { includeLooseProvenance: true });
+    expect(atorvastatinLoose.some((m) => /creatinine/i.test(m.groupName))).toBe(true);
 
     const furosemide = await byConcept(/furosemide/i);
     expect(furosemide.some((m) => /heart failure/i.test(m.groupName) && m.relationship === "treats")).toBe(true);

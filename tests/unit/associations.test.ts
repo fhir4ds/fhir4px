@@ -33,9 +33,10 @@ const BUNDLE: AssociationBundle = {
       name: "metformin",
       buckets: {
         lab: [
-          { cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c" },
-          { cid: "VAL-LAB-LOINC-LP14355-9", name: "Creatinine" },
-          { cid: "VAL-LAB-LOINC-LP15098-4", name: "Potassium" }
+          { cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c", provenance: "monitoring_recommendation" },
+          { cid: "VAL-LAB-LOINC-LP14355-9", name: "Creatinine", provenance: "monitoring_recommendation" },
+          { cid: "VAL-LAB-LOINC-LP15098-4", name: "Potassium", provenance: "monitoring_recommendation" },
+          { cid: "VAL-LAB-LOINC-LP14635-4", name: "Glucose", provenance: "panel_cooccurrence" }
         ],
         vital: [{ cid: "VAL-VIT-LOINC-8480-6", name: "Systolic Blood Pressure" }],
         treats: [
@@ -303,6 +304,21 @@ describe("association resolution + matching", () => {
       ]
     );
     expect(matches.map((m) => m.groupId)).toEqual(["cond-t2dm"]);
+  });
+
+  it("excludes panel_cooccurrence labs by default and includes them in loose mode", async () => {
+    setAssociationsForTest({ bundle: BUNDLE, labParts: LAB_PARTS, icd10: ICD10_XWALK });
+    const candidates = [
+      { groupId: "lab-a1c", groupName: "Hemoglobin A1c", resourceTypes: ["Observation"], resolution: { labPartCids: ["VAL-LAB-LOINC-LP16413-4"] } },
+      { groupId: "lab-glucose", groupName: "Glucose", resourceTypes: ["Observation"], resolution: { labPartCids: ["VAL-LAB-LOINC-LP14635-4"] } }
+    ];
+    const focus = { groupId: "med", resolution: { conceptKey: "metformin" } };
+
+    const defaultMatches = await findRelatedGroups(focus, candidates);
+    expect(defaultMatches.map((m) => m.groupId)).toEqual(["lab-a1c"]);
+
+    const looseMatches = await findRelatedGroups(focus, candidates, { includeLooseProvenance: true });
+    expect(looseMatches.map((m) => m.groupId).sort()).toEqual(["lab-a1c", "lab-glucose"]);
   });
 
   it("labels relationships by focus type", () => {

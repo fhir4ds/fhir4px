@@ -35,7 +35,16 @@ interface ConceptBucketIndex {
 
 const BUCKETS: AssociationBucket[] = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "treats"];
 
-function indexConcept(bundle: AssociationBundle, conceptKey: string): ConceptBucketIndex | null {
+/**
+ * Provenance tiers excluded from default matching: disease_context is
+ * comorbidity co-occurrence (a statin listed under a condition it doesn't
+ * treat), panel_cooccurrence is lab co-draw noise (creatinine on a statin
+ * because it rides the same metabolic panel). Both surface only in loose /
+ * discovery mode.
+ */
+const LOOSE_PROVENANCE: ReadonlySet<string> = new Set(["disease_context", "panel_cooccurrence"]);
+
+function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoose = false): ConceptBucketIndex | null {
   const concept = bundle.concepts[conceptKey];
   if (!concept) return null;
   const index: ConceptBucketIndex = {
@@ -48,9 +57,7 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string): ConceptBuc
     const cidToName = new Map<string, string>();
     const conceptKeys = new Set<string>();
     for (const member of members) {
-      // disease_context = comorbity co-occurrence (e.g. a statin listed under
-      // a condition it doesn't treat) — excluded from patient-facing matching.
-      if (member.provenance === "disease_context") continue;
+      if (!includeLoose && member.provenance && LOOSE_PROVENANCE.has(member.provenance)) continue;
       cidToName.set(member.cid, member.name);
       const memberConcept = bundle.by_cid[member.cid];
       if (memberConcept) conceptKeys.add(memberConcept);
@@ -64,9 +71,10 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string): ConceptBuc
 function matchAgainstConcept(
   bundle: AssociationBundle,
   conceptKey: string,
-  candidate: AssociationCandidate
+  candidate: AssociationCandidate,
+  includeLoose = false
 ): RelatedMatch | null {
-  const index = indexConcept(bundle, conceptKey);
+  const index = indexConcept(bundle, conceptKey, includeLoose);
   if (!index) return null;
   const candidateConcept = candidate.resolution.conceptKey;
   const candidateParts = candidate.resolution.labPartCids;
@@ -121,16 +129,18 @@ function findMemberNameForConcept(
  */
 export async function findRelatedGroups(
   focus: { groupId: string; resolution: GroupConceptResolution },
-  candidates: AssociationCandidate[]
+  candidates: AssociationCandidate[],
+  options: { includeLooseProvenance?: boolean } = {}
 ): Promise<RelatedMatch[]> {
   const { loadAssociationBundle } = await import("./bundle");
   const bundle = await loadAssociationBundle();
+  const includeLoose = options.includeLooseProvenance === true;
 
   const matches: RelatedMatch[] = [];
   if (focus.resolution.conceptKey) {
     for (const candidate of candidates) {
       if (candidate.groupId === focus.groupId) continue;
-      const match = matchAgainstConcept(bundle, focus.resolution.conceptKey, candidate);
+      const match = matchAgainstConcept(bundle, focus.resolution.conceptKey, candidate, includeLoose);
       if (match) matches.push(match);
     }
     return matches;
@@ -142,7 +152,7 @@ export async function findRelatedGroups(
     if (candidate.groupId === focus.groupId) continue;
     const candidateConcept = candidate.resolution.conceptKey;
     if (!candidateConcept) continue;
-    const index = indexConcept(bundle, candidateConcept);
+    const index = indexConcept(bundle, candidateConcept, includeLoose);
     for (const bucket of ["lab", "vital"] as const) {
       const members = index?.membersByBucket.get(bucket);
       if (!members) continue;
