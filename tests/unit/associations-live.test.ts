@@ -199,5 +199,15 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     const warfarin = await byConcept(/warfarin/i);
     expect(warfarin.some((m) => /international normalized ratio|\binr\b/i.test(m.groupName))).toBe(true);
     expect(warfarin.some((m) => /atrial fibrillation/i.test(m.groupName))).toBe(true);
+
+    // Condition-focus direction: clicking T2DM must not badge atorvastatin
+    // as treating diabetes (population_context member — hidden by default,
+    // "Used for" in loose mode), while metformin shows as a direct treatment.
+    const t2dm = await byConcept(/type 2 diabetes/i);
+    expect(t2dm.some((m) => /metformin/i.test(m.groupName) && m.relationship === "medication")).toBe(true);
+    expect(t2dm.some((m) => /atorvastatin/i.test(m.groupName))).toBe(false);
+    const t2dmLoose = await byConcept(/type 2 diabetes/i, { includeLooseProvenance: true });
+    const atvInLoose = t2dmLoose.find((m) => /atorvastatin/i.test(m.groupName));
+    expect(atvInLoose?.provenance).toBe("population_context");
   });
 });
