@@ -43,13 +43,20 @@ interface ConceptBucketIndex {
 const BUCKETS: AssociationBucket[] = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "treats"];
 
 /**
- * Provenance tiers excluded from default matching: population_context is
- * "indicated for use in this population without treating it" (a statin under
- * T2DM), panel_cooccurrence is lab co-draw noise (creatinine on a statin
- * because it rides the same metabolic panel). Both surface only in loose /
- * discovery mode.
+ * Provenance tiers excluded from default matching, weakest rungs of the
+ * v1.8 ladder: population_context ("indicated for use in this population
+ * without treating it" — a statin under T2DM), comorbidity_section (pairs
+ * from another condition's guideline comorbidity chapter), and
+ * panel_cooccurrence (lab co-draw noise — creatinine on a statin because it
+ * rides the same metabolic panel). All surface only in loose / discovery
+ * mode. Untagged members are class-expansion ingredient CIDs inheriting
+ * their drug-class tier, so they follow the class.
  */
-const LOOSE_PROVENANCE: ReadonlySet<string> = new Set(["population_context", "panel_cooccurrence"]);
+const LOOSE_PROVENANCE: ReadonlySet<string> = new Set([
+  "population_context",
+  "comorbidity_section",
+  "panel_cooccurrence"
+]);
 
 function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoose = false): ConceptBucketIndex | null {
   const concept = bundle.concepts[conceptKey];
@@ -197,6 +204,7 @@ export function relationshipLabel(
     // prescribed to prevent complications, not to treat the condition.
     if (provenance === "event_prevention") return "Helps prevent";
     if (provenance === "population_context") return "Used for";
+    if (provenance === "comorbidity_section") return "Associated with";
     return focusIsCondition ? "Treats this" : "Treats";
   }
   if (relationship === "condition") return focusIsCondition ? "Related condition" : "Adverse event";

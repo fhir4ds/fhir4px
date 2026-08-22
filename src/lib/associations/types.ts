@@ -4,14 +4,16 @@ export type MemberProvenance =
   | "direct_indication"
   | "event_prevention"
   | "population_context"
+  | "comorbidity_section"
   | "monitoring_recommendation"
   | "panel_cooccurrence";
 
 export interface AssociationMember {
   cid: string;
   name: string;
-  /** v1.5+: how the association was sourced. Untagged members come from
-   *  authoritative guideline sources (treated as recommendation-tier). */
+  /** v1.5+: how the association was sourced. Untagged members are
+   *  class-expansion ingredient CIDs that inherit their drug-class member's
+   *  tier, so they match whenever the class would. */
   provenance?: MemberProvenance;
 }
 

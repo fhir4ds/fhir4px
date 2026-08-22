@@ -23,7 +23,8 @@ const BUNDLE: AssociationBundle = {
     "VAL-COND-ICD10CM-E11": "type 2 diabetes",
     "VAL-COND-SNOMED-38341003": "hypertension",
     "VAL-COND-SNOMED-49436004": "atrial fibrillation",
-    "VAL-COND-SNOMED-999999": "osteoarthritis"
+    "VAL-COND-SNOMED-999999": "osteoarthritis",
+    "VAL-COND-SNOMED-888888": "asthma"
   },
   by_name: {
     metformin: "VAL-MED-RXNORM-6809",
@@ -43,7 +44,8 @@ const BUNDLE: AssociationBundle = {
         treats: [
           { cid: "VAL-COND-SNOMED-44054006", name: "Type 2 Diabetes", provenance: "direct_indication" },
           { cid: "VAL-COND-SNOMED-49436004", name: "Atrial Fibrillation", provenance: "event_prevention" },
-          { cid: "VAL-COND-SNOMED-999999", name: "Osteoarthritis", provenance: "population_context" }
+          { cid: "VAL-COND-SNOMED-999999", name: "Osteoarthritis", provenance: "population_context" },
+          { cid: "VAL-COND-SNOMED-888888", name: "Asthma", provenance: "comorbidity_section" }
         ]
       }
     },
@@ -301,7 +303,8 @@ describe("association resolution + matching", () => {
     const candidates = [
       { groupId: "cond-t2dm", groupName: "Type 2 Diabetes", resourceTypes: ["Condition"], resolution: { conceptKey: "type 2 diabetes" } },
       { groupId: "cond-af", groupName: "Atrial Fibrillation", resourceTypes: ["Condition"], resolution: { conceptKey: "atrial fibrillation" } },
-      { groupId: "cond-oa", groupName: "Osteoarthritis", resourceTypes: ["Condition"], resolution: { conceptKey: "osteoarthritis" } }
+      { groupId: "cond-oa", groupName: "Osteoarthritis", resourceTypes: ["Condition"], resolution: { conceptKey: "osteoarthritis" } },
+      { groupId: "cond-asthma", groupName: "Asthma", resourceTypes: ["Condition"], resolution: { conceptKey: "asthma" } }
     ];
     const matches = await findRelatedGroups(
       { groupId: "med", resolution: { conceptKey: "metformin" } },
@@ -312,7 +315,7 @@ describe("association resolution + matching", () => {
     const loose = await findRelatedGroups({ groupId: "med", resolution: { conceptKey: "metformin" } }, candidates, {
       includeLooseProvenance: true
     });
-    expect(loose.map((m) => m.groupId).sort()).toEqual(["cond-af", "cond-oa", "cond-t2dm"]);
+    expect(loose.map((m) => m.groupId).sort()).toEqual(["cond-af", "cond-asthma", "cond-oa", "cond-t2dm"]);
   });
 
   it("excludes panel_cooccurrence labs by default and includes them in loose mode", async () => {

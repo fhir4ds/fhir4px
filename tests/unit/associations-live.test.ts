@@ -179,6 +179,11 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(atorvastatin.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(false);
     expect(atorvastatinLoose.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(true);
 
+    // v1.8: atorvastatin no longer claims any kidney condition even loose —
+    // the CKD-statin relationship moved to CKD's medication bucket (Statins
+    // as event_prevention with class-expanded ingredients).
+    expect(atorvastatinLoose.some((m) => /kidney/i.test(m.groupName))).toBe(false);
+
     const metforminFocus = candidates.find((c) => /metformin/i.test(c.groupName) && c.resolution.conceptKey);
     if (metforminFocus) {
       const metforminMatches = await findRelatedGroups(
