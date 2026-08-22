@@ -1448,20 +1448,6 @@ export function PatientExplorer() {
     return map;
   }, [displayGroups, recordByKey]);
 
-  const suggestedGroupRelationships = useMemo(
-    () =>
-      relationshipCache.entries.filter(
-        (entry) =>
-          entry.transform === "ObservationGroup.associateConditionGroup" &&
-          entry.transformVersion === RELATIONSHIP_TRANSFORM_VERSIONS["ObservationGroup.associateConditionGroup"] &&
-          (entry.model === selectedLocalModelId || entry.model.startsWith("deterministic:")) &&
-          entry.relationship !== "none" &&
-          groupByRelationshipKey.has(entry.sourceGroupId) &&
-          groupByRelationshipKey.has(entry.targetGroupId)
-      ),
-    [groupByRelationshipKey, relationshipCache, selectedLocalModelId]
-  );
-
   const selectedRecord = useMemo(
     () => (selectedRecordKey ? recordByKey.get(selectedRecordKey) ?? null : null),
     [recordByKey, selectedRecordKey]
@@ -3783,26 +3769,6 @@ export function PatientExplorer() {
     );
   }
 
-  function suggestedRelationshipLabel(entry: RelationshipCacheEntry): string {
-    if (entry.model === "fhir_reference") return "Linked in medical record";
-    const value = entry.relationship;
-    if (value === "monitoring_marker") return "Monitoring marker";
-    if (value === "treatment") return "Treatment";
-    if (value === "potentially_related") return "Potentially related";
-    return "No local suggestion";
-  }
-
-  function suggestedGroupLinks(group: PatientFriendlyGroup): Array<{ entry: RelationshipCacheEntry; relatedGroup: PatientFriendlyGroup }> {
-    const groupId = relationshipGroupKey(group);
-    return suggestedGroupRelationships.flatMap((entry) => {
-      const relatedGroupId =
-        entry.sourceGroupId === groupId ? entry.targetGroupId : entry.targetGroupId === groupId ? entry.sourceGroupId : null;
-      if (!relatedGroupId) return [];
-      const relatedGroup = groupByRelationshipKey.get(relatedGroupId);
-      return relatedGroup ? [{ entry, relatedGroup }] : [];
-    });
-  }
-
   function explicitRecordLinks(record: GroupableRecord): Array<{ relationship: RecordRelationship; relatedRecord: GroupableRecord }> {
     const currentKey = recordKey(record);
     const seen = new Set<string>();
@@ -3840,38 +3806,6 @@ export function PatientExplorer() {
     );
   }
 
-  function renderSuggestedGroupLinks(group: PatientFriendlyGroup) {
-    const links = suggestedGroupLinks(group);
-    if (links.length === 0) return null;
-    const heading = group.resourceTypes.includes("Condition")
-      ? "Related labs"
-      : group.resourceTypes.includes("Observation")
-        ? "Related conditions"
-        : "Suggested locally";
-
-    return (
-      <Stack spacing={0.75}>
-        <Typography variant="body2" color="text.secondary" fontWeight={700}>
-          {heading}
-        </Typography>
-        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-          {links.slice(0, 6).map(({ entry, relatedGroup }) => (
-            <Chip
-              key={`${entry.sourceGroupId}:${entry.targetGroupId}:${entry.relationship}`}
-              size="small"
-              color="secondary"
-              variant="outlined"
-              label={`${relatedGroup.patientFriendlyName} · ${suggestedRelationshipLabel(entry)} (${Math.round(
-                entry.confidence * 100
-              )}%)`}
-              onClick={() => navigateToGroup(relatedGroup)}
-            />
-          ))}
-        </Stack>
-      </Stack>
-    );
-  }
-
   function renderExplicitGroupLinks(group: PatientFriendlyGroup) {
     const links = explicitGroupLinks(group);
     if (links.length === 0) return null;
@@ -3899,9 +3833,7 @@ export function PatientExplorer() {
 
   function renderRelatedData(record: GroupableRecord) {
     const recordLinks = explicitRecordLinks(record);
-    const group = groupByRecordKey.get(recordKey(record));
-    const groupLinks = group ? suggestedGroupLinks(group) : [];
-    if (recordLinks.length === 0 && groupLinks.length === 0) return null;
+    if (recordLinks.length === 0) return null;
 
     return (
       <Stack spacing={1}>
@@ -3946,27 +3878,6 @@ export function PatientExplorer() {
                     <Chip size="small" variant="outlined" label={relationship.label} />
                   </Stack>
                 </Box>
-              ))}
-            </Stack>
-          </Stack>
-        )}
-        {groupLinks.length > 0 && (
-          <Stack spacing={0.75}>
-            <Typography variant="body2" color="text.secondary">
-              Related groups
-            </Typography>
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-              {groupLinks.slice(0, 8).map(({ entry, relatedGroup }) => (
-                <Chip
-                  key={`${entry.sourceGroupId}:${entry.targetGroupId}:${entry.relationship}:drawer`}
-                  size="small"
-                  color="secondary"
-                  variant="outlined"
-                  label={`${relatedGroup.patientFriendlyName} · ${suggestedRelationshipLabel(entry)} (${Math.round(
-                    entry.confidence * 100
-                  )}%)`}
-                  onClick={() => navigateToGroup(relatedGroup)}
-                />
               ))}
             </Stack>
           </Stack>
@@ -4686,21 +4597,27 @@ export function PatientExplorer() {
       ),
     [relatedFocus, groups]
   );
+  const relatedMatchGroupIds = useMemo(
+    () => new Set(relatedMatches.map((match) => match.groupId)),
+    [relatedMatches]
+  );
+  const relatedTabCounts = useMemo(() => {
+    const counts = new Map<ExplorerTab, number>();
+    for (const match of relatedMatches) {
+      const group = groups.find((g) => g.groupId === match.groupId);
+      if (!group) continue;
+      const tab = (Object.keys(RESOURCE_LABELS) as ExplorerTab[]).find(
+        (t) => t !== "PatientSummary" && group.resourceTypes.includes(t as GroupableResourceType)
+      );
+      if (tab) counts.set(tab, (counts.get(tab) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([tab, count]) => ({ tab, count }));
+  }, [relatedMatches, groups]);
 
   function toggleRelatedFocus(group: PatientFriendlyGroup) {
     setRelatedFocus((prev) =>
       prev?.groupId === group.groupId ? null : { groupId: group.groupId, groupName: group.patientFriendlyName }
     );
-  }
-
-  function navigateToRelatedGroup(groupId: string) {
-    const group = groups.find((g) => g.groupId === groupId);
-    if (!group) return;
-    const tab = (Object.keys(RESOURCE_LABELS) as ExplorerTab[]).find(
-      (t) => t !== "PatientSummary" && group.resourceTypes.includes(t as GroupableResourceType)
-    );
-    if (tab) setActiveTab(tab);
-    setExpandedGroupKeys((prev) => new Set([...prev, groupExpansionKey(group, tab ?? activeTab)]));
   }
 
   function renderGroup(group: PatientFriendlyGroup) {
@@ -4832,7 +4749,6 @@ export function PatientExplorer() {
             </Typography>
           )}
           {density !== "compact" && renderObservationTracking(group, clusters)}
-          {density !== "compact" && renderSuggestedGroupLinks(group)}
           {density !== "compact" && renderExplicitGroupLinks(group)}
           <Stack spacing={density === "compact" ? 0.75 : 1}>
             {displayedClusters.map((cluster) => renderRecord(cluster.canonical, cluster))}
@@ -5468,6 +5384,14 @@ export function PatientExplorer() {
       }
     : { active: 0, all: 0 };
   const sortedVisibleTabGroups = sortGroupsForDisplay(visibleTabGroups);
+  // Related mode filters the group list to the focused group plus its matches;
+  // view-mode decisions stay on the unfiltered set so switching tabs doesn't
+  // collapse the layout while matches resolve.
+  const relatedFilteredTabGroups = relatedFocus
+    ? sortedVisibleTabGroups.filter(
+        (group) => group.groupId === relatedFocus.groupId || relatedMatchGroupIds.has(group.groupId)
+      )
+    : sortedVisibleTabGroups;
   const canUseGroupedView = sortedVisibleTabGroups.length > 0;
   const isCrossDomainSummary = activeTab === "PatientSummary";
   const effectiveViewMode: ExplorerViewMode = isCrossDomainSummary
@@ -5727,46 +5651,32 @@ export function PatientExplorer() {
                 {renderRecordViewToolbar()}
 
                 {relatedFocus && (
-                  <Alert
-                    severity="info"
-                    icon={<Link2 size={18} />}
-                    sx={{ alignItems: "flex-start" }}
-                  >
-                    <Stack spacing={1} minWidth={0}>
-                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                        <Typography variant="subtitle2">
-                          Related to {relatedFocus.groupName}
-                        </Typography>
-                        <Button
+                  <Box sx={{ border: 1, borderColor: "divider", borderRadius: 1, px: 1.25, py: 0.75 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                      <Link2 size={16} />
+                      <Typography variant="body2" fontWeight={700}>
+                        Related to {relatedFocus.groupName}
+                      </Typography>
+                      {relatedTabCounts.map(({ tab, count }) => (
+                        <Chip
+                          key={tab}
                           size="small"
-                          startIcon={<X size={14} />}
-                          onClick={() => setRelatedFocus(null)}
-                          sx={{ ml: "auto" }}
-                        >
-                          Clear
-                        </Button>
-                      </Stack>
-                      {relatedMatches.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          No linked items found. Items without resolved codes can&apos;t be matched
-                          deterministically.
-                        </Typography>
-                      ) : (
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                          {relatedMatches.map((match) => (
-                            <Chip
-                              key={`${match.groupId}:${match.relationship}`}
-                              size="small"
-                              color="secondary"
-                              variant="outlined"
-                              label={`${match.groupName} · ${relationshipLabel(match.relationship, relatedFocusIsCondition, match.provenance)}`}
-                              onClick={() => navigateToRelatedGroup(match.groupId)}
-                            />
-                          ))}
-                        </Stack>
-                      )}
+                          color={tab === activeTab ? "primary" : "default"}
+                          variant={tab === activeTab ? "filled" : "outlined"}
+                          label={`${RESOURCE_LABELS[tab]} (${count})`}
+                          onClick={() => setActiveTab(tab)}
+                        />
+                      ))}
+                      <IconButton
+                        size="small"
+                        aria-label="Exit related mode"
+                        onClick={() => setRelatedFocus(null)}
+                        sx={{ marginLeft: "auto" }}
+                      >
+                        <X size={14} />
+                      </IconButton>
                     </Stack>
-                  </Alert>
+                  </Box>
                 )}
 
             {visibleTabRecords.length === 0 ? (
@@ -5780,8 +5690,12 @@ export function PatientExplorer() {
               renderSummaryView(sortedVisibleTabGroups)
             ) : effectiveViewMode === "date" ? (
               renderDateView(dateViewClusters, labelsByRecordId)
+            ) : relatedFocus && relatedFilteredTabGroups.length === 0 ? (
+              <Alert severity="info">
+                No related {RESOURCE_LABELS[activeTab].toLowerCase()} — switch tabs in the bar above.
+              </Alert>
             ) : (
-              <Stack spacing={density === "compact" ? 1 : 2}>{sortedVisibleTabGroups.map(renderGroup)}</Stack>
+              <Stack spacing={density === "compact" ? 1 : 2}>{relatedFilteredTabGroups.map(renderGroup)}</Stack>
             )}
               </Stack>
             </Box>
