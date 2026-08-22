@@ -110,7 +110,7 @@
         "resourceType": "MedicationRequest",
         "id": "rel-med-lisinopril",
         "status": "active",
-        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "197366", "display": "lisinopril 10 MG Oral Tablet" }] },
+        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "314076", "display": "lisinopril 10 MG Oral Tablet" }] },
         "subject": { "reference": "Patient/fhir4px-tier2-relations-patient" },
         "authoredOn": "2026-01-15"
       },
