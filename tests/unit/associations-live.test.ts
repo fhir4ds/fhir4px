@@ -168,11 +168,24 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(atorvastatin.some((m) => /hyperlipid/i.test(m.groupName) && m.relationship === "treats")).toBe(true);
     expect(atorvastatin.some((m) => /hypertension/i.test(m.groupName))).toBe(false);
 
-    // v1.6 provenance: creatinine on a statin is panel co-occurrence — hidden
-    // by default, surfaced only in loose mode.
-    expect(atorvastatin.some((m) => /creatinine/i.test(m.groupName))).toBe(false);
+    // v1.6 provenance: serum creatinine on a statin is panel co-occurrence —
+    // hidden by default, surfaced only in loose mode. (Regex anchors on the
+    // creatinine group itself; UACR is "Albumin/Creatinine" and is checked
+    // separately below.)
+    expect(atorvastatin.some((m) => /^creatinine \[/i.test(m.groupName))).toBe(false);
     const atorvastatinLoose = await byConcept(/atorvastatin/i, { includeLooseProvenance: true });
-    expect(atorvastatinLoose.some((m) => /creatinine/i.test(m.groupName))).toBe(true);
+    expect(atorvastatinLoose.some((m) => /^creatinine \[/i.test(m.groupName))).toBe(true);
+
+    // v2.0 decomposition: LDL on a statin is now monitoring-tier (fanned from
+    // the lipid panel) and badges by default.
+    expect(atorvastatin.some((m) => /cholesterol in LDL/i.test(m.groupName) && m.relationship === "lab")).toBe(true);
+
+    // KNOWN v2.0 DEFECT (flagged to model team, 2026-08-22): the fanned
+    // hepatic-panel Albumin member (serum, LP6118-6) part-collides with the
+    // urine Albumin/Creatinine Ratio's Albumin part, so UACR badges as a
+    // statin monitoring lab. Flip to .toBe(false) when the fan-out gains
+    // specimen/system awareness.
+    expect(atorvastatin.some((m) => /^albumin\/creatinine/i.test(m.groupName))).toBe(true);
 
     // v1.7: T2DM under atorvastatin is population_context (loose tier), and
     // metformin's LDL monitoring orphan artifact is purged from the corpus.
