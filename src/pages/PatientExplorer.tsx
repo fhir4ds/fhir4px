@@ -4621,7 +4621,9 @@ export function PatientExplorer() {
               size="small"
               color="secondary"
               variant="outlined"
-              label={`${match.groupName} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}`}
+              label={`${match.groupName} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${
+                match.viaHubName ? ` (via ${match.viaHubName})` : ""
+              }`}
               onClick={() => navigateToRelatedGroup(match.groupId)}
             />
           ))}

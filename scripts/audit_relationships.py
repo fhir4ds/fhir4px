@@ -213,12 +213,30 @@ class Patient:
                 prov = m.get("provenance")
                 if not include_loose and prov in LOOSE:
                     continue
-                indexed[m["cid"]] = (m["name"], prov)
+                indexed[m["cid"]] = (m["name"], prov, None)
                 member_concept = self.by_cid.get(m["cid"])
                 if member_concept:
                     concepts.add(member_concept)
             if indexed:
                 index[bucket] = (indexed, concepts)
+        # Parent (hub) union — monitor buckets only, per the IS_A allowlist.
+        for parent_cid in concept.get("parent_cids") or []:
+            parent_key = self.by_cid.get(parent_cid)
+            parent = self.concepts.get(parent_key) if parent_key else None
+            if not parent:
+                continue
+            for bucket in ("lab", "vital", "procedure"):
+                for m in parent.get("buckets", {}).get(bucket) or []:
+                    prov = m.get("provenance")
+                    if not include_loose and prov in LOOSE:
+                        continue
+                    entry = index.setdefault(bucket, ({}, set()))
+                    if m["cid"] in entry[0]:
+                        continue
+                    entry[0][m["cid"]] = (m["name"], prov, parent.get("name"))
+                    member_concept = self.by_cid.get(m["cid"])
+                    if member_concept:
+                        entry[1].add(member_concept)
         return index
 
     def match(self, focus_item, include_loose):
@@ -241,18 +259,18 @@ class Patient:
                         continue
                     members, concepts = entry
                     if cand_concept and cand_concept in concepts:
-                        name = prov = None
-                        for cid, (n, p) in members.items():
+                        name = prov = hub = None
+                        for cid, (n, p, h) in members.items():
                             if self.by_cid.get(cid) == cand_concept:
-                                name, prov = n, p
+                                name, prov, hub = n, p, h
                                 break
-                        results.append((cand, bucket, name or cand["display"], prov))
+                        results.append((cand, bucket, name or cand["display"], prov, hub))
                         break
                     if cand_parts and bucket in ("lab", "vital"):
                         for part in cand_parts:
                             if part in members:
-                                n, p = members[part]
-                                results.append((cand, bucket, n, p))
+                                n, p, h = members[part]
+                                results.append((cand, bucket, n, p, h))
                                 break
                         else:
                             continue
@@ -271,8 +289,8 @@ class Patient:
                     members, _ = entry
                     for part in res["labPartCids"]:
                         if part in members:
-                            n, p = members[part]
-                            results.append((cand, bucket, n, p))
+                            n, p, h = members[part]
+                            results.append((cand, bucket, n, p, h))
                             break
                     else:
                         continue
@@ -302,18 +320,18 @@ class Patient:
                     continue
                 default = self.match(item, include_loose=False)
                 loose = self.match(item, include_loose=True)
-                default_keys = {(c["id"], b) for c, b, _, _ in default}
+                default_keys = {(c["id"], b) for c, b, _, _, _ in default}
                 if default:
                     lines.append("  related (default tier):")
-                    for cand, bucket, name, prov in default:
-                        lines.append(f"    [{bucket}] {cand['display']} (via \"{name}\"{f', {prov}' if prov else ''})")
+                    for cand, bucket, name, prov, hub in default:
+                        lines.append(f"    [{bucket}] {cand['display']} (via \"{name}\"{f', {prov}' if prov else ''}{f', hub: {hub}' if hub else ''})")
                 else:
                     lines.append("  related (default tier): NONE")
-                extra = [(c, b, n, p) for c, b, n, p in loose if (c["id"], b) not in default_keys]
+                extra = [(c, b, n, p, h) for c, b, n, p, h in loose if (c["id"], b) not in default_keys]
                 if extra:
                     lines.append("  loose-only:")
-                    for cand, bucket, name, prov in extra:
-                        lines.append(f"    [{bucket}] {cand['display']} (via \"{name}\"{f', {prov}' if prov else ''})")
+                    for cand, bucket, name, prov, hub in extra:
+                        lines.append(f"    [{bucket}] {cand['display']} (via \"{name}\"{f', {prov}' if prov else ''}{f', hub: {hub}' if hub else ''})")
             lines.append("")
         return "\n".join(lines)
 

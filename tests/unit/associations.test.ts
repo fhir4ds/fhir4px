@@ -24,7 +24,9 @@ const BUNDLE: AssociationBundle = {
     "VAL-COND-SNOMED-38341003": "hypertension",
     "VAL-COND-SNOMED-49436004": "atrial fibrillation",
     "VAL-COND-SNOMED-999999": "osteoarthritis",
-    "VAL-COND-SNOMED-888888": "asthma"
+    "VAL-COND-SNOMED-888888": "asthma",
+    "VAL-COND-SNOMED-73211009": "diabetes mellitus",
+    "VAL-MED-RXNORM-99999": "insulin glargine"
   },
   by_name: {
     metformin: "VAL-MED-RXNORM-6809",
@@ -67,7 +69,19 @@ const BUNDLE: AssociationBundle = {
       buckets: {
         lab: [{ cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c" }],
         medication: [{ cid: "VAL-MED-RXNORM-6809", name: "metformin" }]
+      },
+      parent_cids: ["VAL-COND-SNOMED-73211009"]
+    },
+    "diabetes mellitus": {
+      name: "diabetes mellitus",
+      buckets: {
+        lab: [{ cid: "VAL-LAB-LOINC-LP9999-9", name: "C Peptide", provenance: "monitoring_recommendation" }],
+        medication: [{ cid: "VAL-MED-RXNORM-99999", name: "Insulin Glargine", provenance: "direct_indication" }]
       }
+    },
+    "insulin glargine": {
+      name: "insulin glargine",
+      buckets: {}
     },
     hypertension: {
       name: "hypertension",
@@ -331,6 +345,34 @@ describe("association resolution + matching", () => {
 
     const looseMatches = await findRelatedGroups(focus, candidates, { includeLooseProvenance: true });
     expect(looseMatches.map((m) => m.groupId).sort()).toEqual(["lab-a1c", "lab-glucose"]);
+  });
+
+  it("unions parent hub monitor buckets with attribution, excluding hub medications", async () => {
+    setAssociationsForTest({ bundle: BUNDLE, labParts: LAB_PARTS, icd10: ICD10_XWALK });
+    const matches = await findRelatedGroups(
+      { groupId: "cond-t2dm", resolution: { conceptKey: "type 2 diabetes" } },
+      [
+        { groupId: "lab-cpep", groupName: "C Peptide", resourceTypes: ["Observation"], resolution: { labPartCids: ["VAL-LAB-LOINC-LP9999-9"] } },
+        { groupId: "med-glargine", groupName: "Insulin Glargine", resourceTypes: ["MedicationRequest"], resolution: { conceptKey: "insulin glargine" } }
+      ]
+    );
+    // Hub lab members surface with "via hub" attribution…
+    const cpep = matches.find((m) => m.groupId === "lab-cpep");
+    expect(cpep).toMatchObject({ relationship: "lab", viaHubName: "diabetes mellitus" });
+    // …but hub treats/medication members never badge on a subtype click
+    // (IS_A default-deny allowlist — insulins are not a T2DM direct treatment).
+    expect(matches.find((m) => m.groupId === "med-glargine")).toBeUndefined();
+
+    // Reverse direction: a lab click also unions candidates' hubs.
+    const reverse = await findRelatedGroups(
+      { groupId: "lab-cpep", resolution: { labPartCids: ["VAL-LAB-LOINC-LP9999-9"] } },
+      [
+        { groupId: "cond-t2dm", groupName: "Type 2 Diabetes", resourceTypes: ["Condition"], resolution: { conceptKey: "type 2 diabetes" } }
+      ]
+    );
+    expect(reverse).toEqual([
+      expect.objectContaining({ groupId: "cond-t2dm", relationship: "lab", viaHubName: "diabetes mellitus" })
+    ]);
   });
 
   it("labels relationships by focus type and provenance", () => {

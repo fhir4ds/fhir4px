@@ -20,6 +20,10 @@ export interface AssociationMember {
 export interface AssociationConcept {
   name: string;
   buckets: Partial<Record<AssociationBucket, AssociationMember[]>>;
+  /** v2.3.1+: parent (hub) CIDs — condition hierarchy for click-time union.
+   *  Consumers union parent MONITOR-type buckets only (lab/vital/procedure)
+   *  per the IS_A default-deny allowlist; treats/medication stay on the hub. */
+  parent_cids?: string[];
 }
 
 export interface AssociationBundle {

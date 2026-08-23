@@ -26,11 +26,14 @@ export interface RelatedMatch {
   matchedMemberName: string;
   /** Provenance of the matched member, when the bundle tags it. */
   provenance?: MemberProvenance;
+  /** Hub concept the match came through, for "via …" attribution. */
+  viaHubName?: string;
 }
 
 interface IndexedMember {
   name: string;
   provenance?: MemberProvenance;
+  viaHub?: string;
 }
 
 interface ConceptBucketIndex {
@@ -58,6 +61,14 @@ const LOOSE_PROVENANCE: ReadonlySet<string> = new Set([
   "panel_cooccurrence"
 ]);
 
+/**
+ * Buckets unioned from parent (hub) concepts at click time. Monitor types
+ * only, per the IS_A default-deny allowlist — hub treats/medication members
+ * (e.g. the DM hub's insulins) must not badge on a subtype click because
+ * treats edges are not truth-preserving downward.
+ */
+const PARENT_UNION_BUCKETS: ReadonlySet<AssociationBucket> = new Set(["lab", "vital", "procedure"]);
+
 function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoose = false): ConceptBucketIndex | null {
   const concept = bundle.concepts[conceptKey];
   if (!concept) return null;
@@ -78,6 +89,33 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
     }
     index.membersByBucket.set(bucket, cidToMember);
     index.memberConceptsByBucket.set(bucket, conceptKeys);
+  }
+
+  for (const parentCid of concept.parent_cids ?? []) {
+    const parentKey = bundle.by_cid[parentCid];
+    const parent = parentKey ? bundle.concepts[parentKey] : undefined;
+    if (!parent) continue;
+    for (const bucket of PARENT_UNION_BUCKETS) {
+      const members = parent.buckets[bucket];
+      if (!members?.length) continue;
+      let cidToMember = index.membersByBucket.get(bucket);
+      let conceptKeys = index.memberConceptsByBucket.get(bucket);
+      if (!cidToMember || !conceptKeys) {
+        cidToMember = new Map();
+        conceptKeys = new Set();
+        index.membersByBucket.set(bucket, cidToMember);
+        index.memberConceptsByBucket.set(bucket, conceptKeys);
+      }
+      for (const member of members) {
+        if (!includeLoose && member.provenance && LOOSE_PROVENANCE.has(member.provenance)) continue;
+        // Direct evidence wins — never overwrite an own-bucket member with
+        // the hub's copy of the same concept.
+        if (cidToMember.has(member.cid)) continue;
+        cidToMember.set(member.cid, { name: member.name, provenance: member.provenance, viaHub: parent.name });
+        const memberConcept = bundle.by_cid[member.cid];
+        if (memberConcept) conceptKeys.add(memberConcept);
+      }
+    }
   }
   return index;
 }
@@ -105,7 +143,8 @@ function matchAgainstConcept(
         groupName: candidate.groupName,
         relationship: bucket,
         matchedMemberName: member?.name ?? candidate.groupName,
-        provenance: member?.provenance
+        provenance: member?.provenance,
+        viaHubName: member?.viaHub
       };
     }
     if (candidateParts?.length && (bucket === "lab" || bucket === "vital")) {
@@ -117,7 +156,8 @@ function matchAgainstConcept(
             groupName: candidate.groupName,
             relationship: bucket,
             matchedMemberName: member.name,
-            provenance: member.provenance
+            provenance: member.provenance,
+            viaHubName: member.viaHub
           };
         }
       }
@@ -181,7 +221,8 @@ export async function findRelatedGroups(
             groupName: candidate.groupName,
             relationship: bucket,
             matchedMemberName: member.name,
-            provenance: member.provenance
+            provenance: member.provenance,
+            viaHubName: member.viaHub
           });
           break;
         }
