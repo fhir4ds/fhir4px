@@ -180,12 +180,17 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     // the lipid panel) and badges by default.
     expect(atorvastatin.some((m) => /cholesterol in LDL/i.test(m.groupName) && m.relationship === "lab")).toBe(true);
 
-    // KNOWN v2.0 DEFECT (flagged to model team, 2026-08-22): the fanned
-    // hepatic-panel Albumin member (serum, LP6118-6) part-collides with the
-    // urine Albumin/Creatinine Ratio's Albumin part, so UACR badges as a
-    // statin monitoring lab. Flip to .toBe(false) when the fan-out gains
-    // specimen/system awareness.
-    expect(atorvastatin.some((m) => /^albumin\/creatinine/i.test(m.groupName))).toBe(true);
+    // v2.1 fix: UACR test codes now crosswalk to the ratio part
+    // (LP284902-6) instead of the plain serum Albumin part, so the fanned
+    // hepatic-panel Albumin member no longer badges UACR on a statin.
+    expect(atorvastatin.some((m) => /^albumin\/creatinine/i.test(m.groupName))).toBe(false);
+
+    // v2.1 salt-to-base aliasing: lithium carbonate products resolve to the
+    // base lithium concept, which carries TSH at monitoring tier.
+    const bundle = await loadAssociationBundle();
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
+    const lithiumTsh = (bundle.concepts["lithium"]?.buckets?.lab ?? []).find((m) => /thyrotropin/i.test(m.name));
+    expect(lithiumTsh?.provenance).toBe("monitoring_recommendation");
 
     // v1.7: T2DM under atorvastatin is population_context (loose tier), and
     // metformin's LDL monitoring orphan artifact is purged from the corpus.
