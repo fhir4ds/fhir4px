@@ -44,6 +44,8 @@ export interface AssociationMemberDerivation {
   path: "direct" | "fanned" | "fanned_hub";
   parent_cid?: string;
   child_cid?: string;
+  /** Tier carried by the specific derivation path. */
+  provenance?: MemberProvenance;
 }
 
 /** VAL-LAB-LOINC-{test code} → part CIDs (VAL-LAB-LOINC-LP…). */
