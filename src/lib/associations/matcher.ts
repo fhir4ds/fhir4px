@@ -120,6 +120,11 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
   return index;
 }
 
+function candidateConceptKeys(resolution: GroupConceptResolution): string[] {
+  if (resolution.conceptKeys?.length) return resolution.conceptKeys;
+  return resolution.conceptKey ? [resolution.conceptKey] : [];
+}
+
 function matchAgainstConcept(
   bundle: AssociationBundle,
   conceptKey: string,
@@ -128,7 +133,7 @@ function matchAgainstConcept(
 ): RelatedMatch | null {
   const index = indexConcept(bundle, conceptKey, includeLoose);
   if (!index) return null;
-  const candidateConcept = candidate.resolution.conceptKey;
+  const candKeys = candidateConceptKeys(candidate.resolution);
   const candidateParts = candidate.resolution.labPartCids;
 
   for (const bucket of BUCKETS) {
@@ -136,8 +141,9 @@ function matchAgainstConcept(
     const memberConcepts = index.memberConceptsByBucket.get(bucket);
     if (!members) continue;
 
-    if (candidateConcept && memberConcepts?.has(candidateConcept)) {
-      const member = findMemberForConcept(bundle, members, candidateConcept);
+    const matchedConcept = candKeys.find((key) => memberConcepts?.has(key));
+    if (matchedConcept) {
+      const member = findMemberForConcept(bundle, members, matchedConcept);
       return {
         groupId: candidate.groupId,
         groupName: candidate.groupName,
@@ -194,11 +200,19 @@ export async function findRelatedGroups(
   const includeLoose = options.includeLooseProvenance === true;
 
   const matches: RelatedMatch[] = [];
-  if (focus.resolution.conceptKey) {
+  const focusKeys = candidateConceptKeys(focus.resolution);
+  if (focusKeys.length > 0) {
     for (const candidate of candidates) {
       if (candidate.groupId === focus.groupId) continue;
-      const match = matchAgainstConcept(bundle, focus.resolution.conceptKey, candidate, includeLoose);
-      if (match) matches.push(match);
+      // Combos fan across every ingredient concept; the first ingredient
+      // that yields a match wins (one badge per related item).
+      for (const key of focusKeys) {
+        const match = matchAgainstConcept(bundle, key, candidate, includeLoose);
+        if (match) {
+          matches.push(match);
+          break;
+        }
+      }
     }
     return matches;
   }

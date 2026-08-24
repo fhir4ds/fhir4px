@@ -15,6 +15,10 @@ export interface AssociationMember {
    *  class-expansion ingredient CIDs that inherit their drug-class member's
    *  tier, so they match whenever the class would. */
   provenance?: MemberProvenance;
+  /** v1.1+ candidate: derivation paths (direct / fanned / fanned_hub).
+   *  Optional per member; absent = single direct path. Not consumed by
+   *  matching — reserved for richer attribution. */
+  derivations?: AssociationMemberDerivation[];
 }
 
 export interface AssociationConcept {
@@ -30,8 +34,16 @@ export interface AssociationBundle {
   format: string;
   version: string;
   by_cid: Record<string, string>;
+  /** v1.1+: combo products → all ingredient concept keys. */
+  by_cid_multi?: Record<string, string[]>;
   by_name: Record<string, string>;
   concepts: Record<string, AssociationConcept>;
+}
+
+export interface AssociationMemberDerivation {
+  path: "direct" | "fanned" | "fanned_hub";
+  parent_cid?: string;
+  child_cid?: string;
 }
 
 /** VAL-LAB-LOINC-{test code} → part CIDs (VAL-LAB-LOINC-LP…). */

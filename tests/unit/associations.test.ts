@@ -26,7 +26,12 @@ const BUNDLE: AssociationBundle = {
     "VAL-COND-SNOMED-999999": "osteoarthritis",
     "VAL-COND-SNOMED-888888": "asthma",
     "VAL-COND-SNOMED-73211009": "diabetes mellitus",
-    "VAL-MED-RXNORM-99999": "insulin glargine"
+    "VAL-MED-RXNORM-99999": "insulin glargine",
+    "VAL-MED-RXNORM-17767": "amlodipine",
+    "VAL-MED-RXNORM-83367": "atorvastatin"
+  },
+  by_cid_multi: {
+    "RXNORM:404011": ["amlodipine", "atorvastatin"]
   },
   by_name: {
     metformin: "VAL-MED-RXNORM-6809",
@@ -68,7 +73,10 @@ const BUNDLE: AssociationBundle = {
       name: "type 2 diabetes",
       buckets: {
         lab: [{ cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c" }],
-        medication: [{ cid: "VAL-MED-RXNORM-6809", name: "metformin" }]
+        medication: [
+          { cid: "VAL-MED-RXNORM-6809", name: "metformin" },
+          { cid: "VAL-MED-RXNORM-83367", name: "Atorvastatin" }
+        ]
       },
       parent_cids: ["VAL-COND-SNOMED-73211009"]
     },
@@ -82,6 +90,18 @@ const BUNDLE: AssociationBundle = {
     "insulin glargine": {
       name: "insulin glargine",
       buckets: {}
+    },
+    amlodipine: {
+      name: "amlodipine",
+      buckets: {
+        treats: [{ cid: "VAL-COND-SNOMED-38341003", name: "Hypertension", provenance: "direct_indication" }]
+      }
+    },
+    atorvastatin: {
+      name: "atorvastatin",
+      buckets: {
+        lab: [{ cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c", provenance: "monitoring_recommendation" }]
+      }
     },
     hypertension: {
       name: "hypertension",
@@ -372,6 +392,59 @@ describe("association resolution + matching", () => {
     );
     expect(reverse).toEqual([
       expect.objectContaining({ groupId: "cond-t2dm", relationship: "lab", viaHubName: "diabetes mellitus" })
+    ]);
+  });
+
+  it("resolves combo medications to all ingredient concepts via by_cid_multi", async () => {
+    setAssociationsForTest({ bundle: BUNDLE, labParts: LAB_PARTS, icd10: ICD10_XWALK });
+    const comboGroup = group({
+      groupId: "med-caduet",
+      patientFriendlyName: "amlodipine / atorvastatin",
+      resourceTypes: ["MedicationRequest"]
+    });
+    const comboRecord = record({ id: "caduet", resourceType: "MedicationRequest", codingKeys: ["rxnorm:404011"] });
+    const resolution = await resolveGroupConcept(comboGroup, [comboRecord]);
+    expect(resolution.conceptKeys).toEqual(["amlodipine", "atorvastatin"]);
+    expect(resolution.conceptKey).toBe("amlodipine");
+    expect(resolution.resolvedVia).toBe("by_cid_multi:RXNORM:404011");
+  });
+
+  it("fans combo focus across ingredient buckets and matches combo candidates", async () => {
+    setAssociationsForTest({ bundle: BUNDLE, labParts: LAB_PARTS, icd10: ICD10_XWALK });
+    const comboResolution = { conceptKey: "amlodipine", conceptKeys: ["amlodipine", "atorvastatin"] };
+
+    // Click the combo: matches from BOTH ingredients' buckets — hypertension
+    // via amlodipine's treats, lab candidates via atorvastatin's lab bucket.
+    const matches = await findRelatedGroups(
+      { groupId: "med-caduet", resolution: comboResolution },
+      [
+        { groupId: "cond-htn", groupName: "Hypertension", resourceTypes: ["Condition"], resolution: { conceptKey: "hypertension" } },
+        { groupId: "cond-t2dm", groupName: "Type 2 Diabetes", resourceTypes: ["Condition"], resolution: { conceptKey: "type 2 diabetes" } },
+        { groupId: "lab-a1c", groupName: "Hemoglobin A1c", resourceTypes: ["Observation"], resolution: { labPartCids: ["VAL-LAB-LOINC-LP16413-4"] } }
+      ]
+    );
+    expect(matches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ groupId: "cond-htn", relationship: "treats" }),
+        expect.objectContaining({ groupId: "lab-a1c", relationship: "lab" })
+      ])
+    );
+
+    // Click a condition: a combo candidate matches if ANY ingredient appears
+    // in the bucket (atorvastatin sits in T2DM's medication bucket).
+    const reverse = await findRelatedGroups(
+      { groupId: "cond-t2dm", resolution: { conceptKey: "type 2 diabetes" } },
+      [
+        {
+          groupId: "med-caduet",
+          groupName: "amlodipine / atorvastatin",
+          resourceTypes: ["MedicationRequest"],
+          resolution: comboResolution
+        }
+      ]
+    );
+    expect(reverse).toEqual([
+      expect.objectContaining({ groupId: "med-caduet", relationship: "medication", matchedMemberName: "Atorvastatin" })
     ]);
   });
 

@@ -19,12 +19,20 @@ import { loadAssociationBundle, loadIcd10Crosswalk, loadLabPartCrosswalk } from 
 export interface GroupConceptResolution {
   /** Concept key for clickable concepts (meds, conditions, procedures, vaccines). */
   conceptKey?: string;
+  /** All ingredient concept keys for combo medications (by_cid_multi / multi-
+   *  ingredient decomposition). conceptKey holds the first for single-key
+   *  consumers; the matcher fans across all of them. */
+  conceptKeys?: string[];
   /** Candidate CIDs for labs/vitals — LP parts from the crosswalk plus
    *  identity CIDs (VAL-LAB/VAL-VIT) — matched against concept lab and
    *  vital buckets. */
   labPartCids?: string[];
   /** Which CID produced the conceptKey, for diagnostics. */
   resolvedVia?: string;
+}
+
+function multiResolution(conceptKeys: string[], via: string): { conceptKey: string; conceptKeys: string[]; via: string } {
+  return { conceptKey: conceptKeys[0], conceptKeys, via };
 }
 
 function codingKeysOfSystem(records: GroupableRecord[], system: string): string[] {
@@ -101,7 +109,7 @@ async function resolveCondition(
 async function resolveMedication(
   records: GroupableRecord[],
   group: PatientFriendlyGroup
-): Promise<{ conceptKey: string; via: string } | undefined> {
+): Promise<{ conceptKey: string; conceptKeys?: string[]; via: string } | undefined> {
   const bundle = await loadAssociationBundle();
   const byCid = bundle.by_cid;
 
@@ -114,12 +122,25 @@ async function resolveMedication(
     if (conceptKey) return { conceptKey, via: `RXNORM:${code}` };
   }
 
+  // Combo products resolve to ALL ingredient concepts when the bundle
+  // carries the multi-anchor table.
+  const byCidMulti = bundle.by_cid_multi;
+  if (byCidMulti) {
+    for (const code of productCodes) {
+      const conceptKeys = byCidMulti[`RXNORM:${code}`]?.filter((key) => bundle.concepts[key]);
+      if (conceptKeys?.length) return multiResolution(conceptKeys, `by_cid_multi:RXNORM:${code}`);
+    }
+  }
+
   for (const code of productCodes) {
     const ingredients = await getIngredientsForRxnormCode(code);
+    const resolvedKeys: string[] = [];
     for (const ingredient of ingredients) {
       const conceptKey = conceptForCid(byCid, `VAL-MED-RXNORM-${ingredient.code}`);
-      if (conceptKey) return { conceptKey, via: `VAL-MED-RXNORM-${ingredient.code}` };
+      if (conceptKey && !resolvedKeys.includes(conceptKey)) resolvedKeys.push(conceptKey);
     }
+    if (resolvedKeys.length === 1) return { conceptKey: resolvedKeys[0], via: `VAL-MED-RXNORM` };
+    if (resolvedKeys.length > 1) return multiResolution(resolvedKeys, `ingredients:RXNORM:${code}`);
   }
 
   return byNameConcept(byCid, bundle.by_name, group.patientFriendlyName);
@@ -167,7 +188,9 @@ export async function resolveGroupConcept(
   try {
     if (group.resourceTypes.includes("MedicationRequest")) {
       const resolved = await resolveMedication(memberRecords, group);
-      return resolved ? { conceptKey: resolved.conceptKey, resolvedVia: resolved.via } : {};
+      return resolved
+        ? { conceptKey: resolved.conceptKey, conceptKeys: resolved.conceptKeys, resolvedVia: resolved.via }
+        : {};
     }
     if (group.resourceTypes.includes("Condition")) {
       const resolved = await resolveCondition(memberRecords, group);
