@@ -152,12 +152,22 @@ class Patient:
                 concept = self.by_cid.get(f"RXNORM:{code}")
                 if concept:
                     return {"conceptKey": concept, "via": f"RXNORM:{code}"}
+        # Multi-anchor combos (by_cid_multi) — mirrors the app matcher.
+        multi = self.bundle.get("by_cid_multi") or {}
         for system, code in codes:
             if system == "rxnorm":
+                keys = [k for k in multi.get(f"RXNORM:{code}", []) if k in self.concepts]
+                if keys:
+                    return {"conceptKey": keys[0], "conceptKeys": keys, "via": f"by_cid_multi:RXNORM:{code}"}
+        for system, code in codes:
+            if system == "rxnorm":
+                keys = []
                 for ing in self.ingredients.get(code, []):
                     concept = self.by_cid.get(f"VAL-MED-RXNORM-{ing.get('c')}")
-                    if concept:
-                        return {"conceptKey": concept, "via": f"VAL-MED-RXNORM-{ing.get('c')}"}
+                    if concept and concept not in keys:
+                        keys.append(concept)
+                if keys:
+                    return {"conceptKey": keys[0], "conceptKeys": keys, "via": f"VAL-MED-RXNORM"} if len(keys) == 1 else {"conceptKey": keys[0], "conceptKeys": keys, "via": f"ingredients:RXNORM:{code}"}
         return self.by_name_fallback(display)
 
     def resolve_cond(self, codes, display):
@@ -239,6 +249,33 @@ class Patient:
                         entry[1].add(member_concept)
         return index
 
+    def _match_focus_against(self, fk, cand, cres, cand_keys, include_loose):
+        """One best match for a single focus concept key against a candidate
+        (any-of ingredient keys for combo candidates)."""
+        index = self.index_concept(fk, include_loose)
+        if not index:
+            return None
+        cand_parts = cres.get("labPartCids")
+        for bucket in BUCKETS:
+            entry = index.get(bucket)
+            if not entry:
+                continue
+            members, concepts = entry
+            mk = next((k for k in cand_keys if k in concepts), None)
+            if mk:
+                name = prov = hub = None
+                for cid, (n, p, h) in members.items():
+                    if self.by_cid.get(cid) == mk:
+                        name, prov, hub = n, p, h
+                        break
+                return (cand, bucket, name or cand["display"], prov, hub)
+            if cand_parts and bucket in ("lab", "vital"):
+                for part in cand_parts:
+                    if part in members:
+                        n, p, h = members[part]
+                        return (cand, bucket, n, p, h)
+        return None
+
     def match(self, focus_item, include_loose):
         """Mirror matcher.ts: one best match per candidate item."""
         res = focus_item.get("resolution") or {}
@@ -247,6 +284,18 @@ class Patient:
             if cand is focus_item:
                 continue
             cres = cand.get("resolution") or {}
+            if res.get("conceptKey"):
+                # Combos fan across every ingredient concept; first hit wins.
+                focus_keys = res.get("conceptKeys") or [res["conceptKey"]]
+                cand_keys = cres.get("conceptKeys") or ([cres["conceptKey"]] if cres.get("conceptKey") else [])
+                matched = None
+                for fk in focus_keys:
+                    matched = self._match_focus_against(fk, cand, cres, cand_keys, include_loose)
+                    if matched:
+                        break
+                if matched:
+                    results.append(matched)
+                continue
             if res.get("conceptKey"):
                 index = self.index_concept(res["conceptKey"], include_loose)
                 if not index:
@@ -307,7 +356,9 @@ class Patient:
             lines.append(f"## {label} ({len(items)})")
             for item in items:
                 res = item.get("resolution") or {}
-                if res.get("conceptKey"):
+                if res.get("conceptKeys") and len(res["conceptKeys"]) > 1:
+                    via = f" -> {' + '.join(res['conceptKeys'])} [{res['via']}]"
+                elif res.get("conceptKey"):
                     via = f" -> {res['conceptKey']} [{res['via']}]"
                 elif res.get("labPartCids"):
                     via = f" -> {len(res['labPartCids'])} candidate CIDs"

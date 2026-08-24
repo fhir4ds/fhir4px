@@ -17,7 +17,7 @@ const live = process.env.LIVE_ASSOCIATIONS === "1";
 describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
-    expect(bundle.format).toBe("fhir4px_associations_v1");
+    expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
@@ -191,6 +191,15 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
     const lithiumTsh = (bundle.concepts["lithium"]?.buckets?.lab ?? []).find((m) => /thyrotropin/i.test(m.name));
     expect(lithiumTsh?.provenance).toBe("monitoring_recommendation");
+
+    // .1634 multi-anchor combos on the wire (Biktarvy -> all three
+    // ingredients). End-to-end combo fan-out is covered by the unit suite;
+    // this Jordan fixture carries no combo medications.
+    expect(bundle.by_cid_multi?.["RXNORM:1999673"]).toEqual([
+      "bictegravir",
+      "emtricitabine",
+      "tenofovir alafenamide"
+    ]);
 
     // v1.7: T2DM under atorvastatin is population_context (loose tier), and
     // metformin's LDL monitoring orphan artifact is purged from the corpus.
