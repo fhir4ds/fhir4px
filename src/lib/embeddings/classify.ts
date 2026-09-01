@@ -12,6 +12,32 @@
 
 import { embed, embedOne } from "./embedder";
 
+/**
+ * Per-task minimum confidence for trusting a centroid prediction.
+ *
+ * Calibrated against the chronic-cohort evaluation (scripts/
+ * test-embedding-accuracy-chronic.mjs), where correct/incorrect confidence
+ * distributions separate for these tasks:
+ *   - encounter_type:  correct avg 0.905 vs incorrect avg 0.683 -> 0.75
+ *   - encounter_class: correct avg 0.605 vs incorrect avg 0.477 -> 0.50
+ *   - allergy_type:    correct avg 0.495 (100% on cohort)       -> 0.40
+ *
+ * observation_category deliberately has NO threshold: correct and incorrect
+ * confidence distributions overlap almost exactly (0.351 vs 0.345), so a
+ * threshold would discard correct predictions without filtering wrong ones.
+ */
+export const TASK_CONFIDENCE_THRESHOLDS: Record<string, number> = {
+  allergy_type: 0.4,
+  encounter_class: 0.5,
+  encounter_type: 0.75
+};
+
+/** True when a centroid prediction meets its task's confidence threshold. */
+export function embeddingResultIsReliable(taskName: string, confidence: number): boolean {
+  const threshold = TASK_CONFIDENCE_THRESHOLDS[taskName];
+  return threshold === undefined || confidence >= threshold;
+}
+
 export interface ClassificationResult {
   className: string;
   confidence: number;

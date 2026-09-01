@@ -18,6 +18,9 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
+    // Pinned to the ghost-migration release announced by the model pipeline
+    // (handoff model-20260901143808: v2026-09-01.1349, pure re-keying, format v1.4).
+    expect(bundle.version).toBe("2026-09-01.1349");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();

@@ -72,7 +72,10 @@ const BUNDLE: AssociationBundle = {
     "type 2 diabetes": {
       name: "type 2 diabetes",
       buckets: {
-        lab: [{ cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c" }],
+        lab: [
+          { cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c" },
+          { cid: "VAL-LAB-LOINC-LP9999-9", name: "C Peptide", provenance: "monitoring_recommendation", derivations: [{ path: "ancestor", parent_cid: "VAL-COND-SNOMED-73211009", provenance: "monitoring_recommendation" }] }
+        ],
         medication: [
           { cid: "VAL-MED-RXNORM-6809", name: "metformin" },
           { cid: "VAL-MED-RXNORM-83367", name: "Atorvastatin" }

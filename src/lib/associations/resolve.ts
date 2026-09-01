@@ -122,6 +122,13 @@ async function resolveMedication(
     if (conceptKey) return { conceptKey, via: `RXNORM:${code}` };
   }
 
+  // SNOMED-coded medication products (common in non-US feeds) resolve via
+  // the corpus §7.2 VAL-MED-SNOMED anchor family.
+  for (const code of codingKeysOfSystem(records, "snomed")) {
+    const conceptKey = conceptForCid(byCid, `VAL-MED-SNOMED-${code}`);
+    if (conceptKey) return { conceptKey, via: `VAL-MED-SNOMED-${code}` };
+  }
+
   // Combo products resolve to ALL ingredient concepts when the bundle
   // carries the multi-anchor table.
   const byCidMulti = bundle.by_cid_multi;
@@ -168,14 +175,17 @@ async function resolveLabParts(records: GroupableRecord[], group: PatientFriendl
 async function resolveAnchorPrefixed(
   records: GroupableRecord[],
   group: PatientFriendlyGroup,
-  prefix: string,
-  system: string
+  prefixesAndSystems: Array<{ prefix: string; system: string }>
 ): Promise<{ conceptKey: string; via: string } | undefined> {
   const bundle = await loadAssociationBundle();
   const byCid = bundle.by_cid;
-  for (const code of codingKeysOfSystem(records, system)) {
-    const conceptKey = conceptForCid(byCid, `${prefix}${code}`);
-    if (conceptKey) return { conceptKey, via: `${prefix}${code}` };
+  // Anchor families are tried in order; later families (CPT/HCPCS/SNOMED-med,
+  // corpus §7.2 v2026-08-27.2246+) are no-ops until data carries those codes.
+  for (const { prefix, system } of prefixesAndSystems) {
+    for (const code of codingKeysOfSystem(records, system)) {
+      const conceptKey = conceptForCid(byCid, `${prefix}${code}`);
+      if (conceptKey) return { conceptKey, via: `${prefix}${code}` };
+    }
   }
   return byNameConcept(byCid, bundle.by_name, group.patientFriendlyName);
 }
@@ -200,11 +210,15 @@ export async function resolveGroupConcept(
       return { labPartCids: await resolveLabParts(memberRecords, group) };
     }
     if (group.resourceTypes.includes("Immunization")) {
-      const resolved = await resolveAnchorPrefixed(memberRecords, group, "VAL-VAX-CVX-", "cvx");
+      const resolved = await resolveAnchorPrefixed(memberRecords, group, [{ prefix: "VAL-VAX-CVX-", system: "cvx" }]);
       return resolved ? { conceptKey: resolved.conceptKey, resolvedVia: resolved.via } : {};
     }
     if (group.resourceTypes.includes("Procedure")) {
-      const resolved = await resolveAnchorPrefixed(memberRecords, group, "VAL-PROC-SNOMED-", "snomed");
+      const resolved = await resolveAnchorPrefixed(memberRecords, group, [
+        { prefix: "VAL-PROC-SNOMED-", system: "snomed" },
+        { prefix: "VAL-PROC-CPT-", system: "cpt" },
+        { prefix: "VAL-PROC-HCPCS-", system: "hcpcs" }
+      ]);
       return resolved ? { conceptKey: resolved.conceptKey, resolvedVia: resolved.via } : {};
     }
   } catch {

@@ -1,11 +1,32 @@
-export type AssociationBucket = "lab" | "vital" | "procedure" | "medication" | "vaccine" | "condition" | "treats";
+export type AssociationBucket =
+  | "lab"
+  | "vital"
+  | "procedure"
+  | "medication"
+  | "vaccine"
+  | "condition"
+  | "treats"
+  // v1.4+ safety-signal buckets — OPPOSITE polarity to treats; never pooled
+  | "adverse_effect"
+  | "contraindicated_in"
+  | "interferes_with_test";
 
 export type MemberProvenance =
   | "direct_indication"
   | "event_prevention"
   | "population_context"
   | "comorbidity_section"
+  | "panel_cooccurrence"
   | "monitoring_recommendation"
+  // v1.4+ safety-signal tiers
+  | "boxed_warning"
+  | "warning_section"
+  | "contraindication_section"
+  | "interference_section"
+  | "direct_indication"
+  | "event_prevention"
+  | "population_context"
+  | "comorbidity_section"
   | "panel_cooccurrence";
 
 export interface AssociationMember {
@@ -19,6 +40,12 @@ export interface AssociationMember {
    *  Optional per member; absent = single direct path. Not consumed by
    *  matching — reserved for richer attribution. */
   derivations?: AssociationMemberDerivation[];
+  /** v1.2+: inclusive patient-age bounds in years, snake_case on the wire
+   *  like parent_cids. Both absent = unrestricted. Class-expansion
+   *  ingredient CIDs inherit the class member's bounds, same rule as
+   *  provenance tiers. */
+  age_min?: number;
+  age_max?: number;
 }
 
 export interface AssociationConcept {
@@ -41,7 +68,7 @@ export interface AssociationBundle {
 }
 
 export interface AssociationMemberDerivation {
-  path: "direct" | "fanned" | "fanned_hub";
+  path: "direct" | "fanned" | "fanned_hub" | "ancestor";
   parent_cid?: string;
   child_cid?: string;
   /** Tier carried by the specific derivation path. */

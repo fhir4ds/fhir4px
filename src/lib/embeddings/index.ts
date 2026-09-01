@@ -22,5 +22,5 @@
  */
 
 export { embed, embedOne, preloadEmbedder, isEmbedderLoaded } from "./embedder";
-export { classify, classifyBatch, preloadTask } from "./classify";
+export { classify, classifyBatch, preloadTask, TASK_CONFIDENCE_THRESHOLDS, embeddingResultIsReliable } from "./classify";
 export type { ClassificationResult } from "./classify";

@@ -46,15 +46,56 @@ function normalizeName(name) {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-async function main() {
-  console.log(`Reading ${SOURCE_CSV}`);
-  await mkdir(OUTPUT_DIR, { recursive: true });
+// Interim canonical-choice heuristic (until the curated CSV lands): when a
+// friendly name maps to several codes, prefer the oldest-established one —
+// lowest numeric code for LOINC/RxNorm, shortest then lexicographic for
+// ICD-10. Deterministic and biased toward the long-standing primary code
+// (e.g. "Creatinine" -> 2160-0, not 101475-2).
+function preferredCode(system, a, b) {
+  if (system === "icd10") {
+    if (a.length !== b.length) return a.length < b.length ? a : b;
+    return a < b ? a : b;
+  }
+  const na = parseInt(a, 10);
+  const nb = parseInt(b, 10);
+  if (Number.isNaN(na) !== Number.isNaN(nb)) return Number.isNaN(na) ? b : a;
+  if (!Number.isNaN(na) && na !== nb) return na < nb ? a : b;
+  return a < b ? a : b;
+}
 
-  // Stream the CSV line by line to avoid loading 26MB into memory
-  const rl = createInterface({
-    input: createReadStream(SOURCE_CSV, { encoding: "utf8" }),
-    crlfDelay: Infinity
-  });
+const FRIENDLY_SOURCES = {
+  condition: { path: "public/terminology/patient_friendly_icd10cm.json", system: "icd10" },
+  lab: { path: "public/terminology/patient_friendly_lnc.json", system: "loinc" },
+  medication: { path: "public/terminology/patient_friendly_rxnorm.json", system: "rxnorm" }
+};
+
+async function sourceRows() {
+  const fs = await import("node:fs/promises");
+  try {
+    await fs.access(SOURCE_CSV);
+    return { kind: "csv" };
+  } catch {
+    // medterm4ds CSV not built yet: fall back to inverting the app's own
+    // patient-friendly terminology (code -> name becomes name -> code).
+    const rows = [];
+    for (const [category, src] of Object.entries(FRIENDLY_SOURCES)) {
+      const raw = JSON.parse(await fs.readFile(src.path, "utf8"));
+      for (const [code, entry] of Object.entries(raw)) {
+        rows.push([category, entry.name, src.system, code]);
+      }
+    }
+    return { kind: "friendly-inversion", rows };
+  }
+}
+
+async function main() {
+  const source = await sourceRows();
+  if (source.kind === "csv") {
+    console.log(`Reading ${SOURCE_CSV}`);
+  } else {
+    console.log(`CSV missing (${SOURCE_CSV}); inverting patient-friendly terminology instead (${source.rows.length} rows)`);
+  }
+  await mkdir(OUTPUT_DIR, { recursive: true });
 
   const maps = {
     condition: new Map(),
@@ -98,7 +139,11 @@ async function main() {
     return fields;
   }
 
-  for await (const line of rl) {
+  const rl = source.kind === "csv"
+    ? createInterface({ input: createReadStream(SOURCE_CSV, { encoding: "utf8" }), crlfDelay: Infinity })
+    : null;
+
+  if (rl) for await (const line of rl) {
     if (!line.trim()) continue;
     const fields = parseCsvLine(line);
     if (!headerSeen) {
@@ -132,6 +177,35 @@ async function main() {
     }
   }
 
+  if (source.kind === "friendly-inversion") {
+    // Interim (uncurated) source: keep ONLY names that map to exactly one
+    // code. Ambiguous names (e.g. "Creatinine" -> serum, urine, clearance
+    // variants) are dropped rather than guessed; the curated CSV from the
+    // medterm4ds pipeline is the real fix. Strict misses are safe — callers
+    // fall back gracefully when lookupCanonicalCode returns undefined.
+    const ambiguous = { condition: new Set(), lab: new Set(), medication: new Set() };
+    for (const [category, friendlyName, , canonicalCode] of source.rows) {
+      totalRows += 1;
+      if (!category || !friendlyName || !canonicalCode) {
+        skippedNoCode += 1;
+        continue;
+      }
+      const map = maps[category];
+      if (!map) {
+        skippedUnknownCat += 1;
+        continue;
+      }
+      const key = normalizeName(friendlyName);
+      if (ambiguous[category].has(key)) continue;
+      if (!map.has(key)) {
+        map.set(key, canonicalCode);
+      } else if (map.get(key) !== canonicalCode) {
+        map.delete(key);
+        ambiguous[category].add(key);
+      }
+    }
+  }
+
   console.log(`  ${totalRows} rows parsed; ${skippedNoCode} skipped (missing fields); ${skippedUnknownCat} skipped (unknown category)`);
 
   const generatedAt = new Date().toISOString();
@@ -140,7 +214,7 @@ async function main() {
     const output = {
       version: 1,
       generatedAt,
-      source: "medterm4ds/reports/fhir4px/canonical_codes.csv",
+      source: source.kind === "csv" ? "medterm4ds/reports/fhir4px/canonical_codes.csv" : "patient-friendly terminology inversion",
       system: CATEGORY_TO_SYSTEM[category],
       count: map.size,
       codes

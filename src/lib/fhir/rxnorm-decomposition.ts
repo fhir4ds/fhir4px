@@ -46,3 +46,15 @@ export async function getIngredientsForRxnormCode(
 export async function preloadRxnormDecomposition(): Promise<void> {
   await loadDecomposition();
 }
+
+/** Test-only: inject parsed data directly, bypassing fetch. */
+export function setRxnormDecompositionForTest(data: RxnormFile | null): void {
+  if (data) {
+    const { _meta, ...rest } = data;
+    void _meta;
+    loaded = rest as RxnormDecomposition;
+  } else {
+    loaded = null;
+  }
+  loadPromise = null;
+}

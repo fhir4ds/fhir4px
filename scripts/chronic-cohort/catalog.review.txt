@@ -1,0 +1,431 @@
+NEEDS REVIEW: 348 entries, 81 flags
+======================================================================
+EXPECT cond.obesity: expected 414915002, picked 414916001 'Obesity'
+LOWSIM med.fluticasone_110: search='fluticasone propionate 110 MCG/ACTUAT inhalation aerosol' -> 895999 '120 ACTUAT fluticasone propionate 0.11 MG/ACTUAT Metered Dose Inhaler' sim=0.22 [896004 120 ACTUAT fluticasone propionate 0.22 MG/ACTUAT Metered Dose Inhaler | 895994 120 ACTUAT fluticasone propionate 0.044 MG/ACTUAT Metered Dose Inhaler | 895999 120 ACTUAT fluticasone propionate 0.11 MG/ACTUAT Metered Dose Inhaler]
+LOWSIM med.umeclidinium_vilanterol: search='umeclidinium 62.5 MCG / vilanterol 25 MCG inhalation powder' -> 1487521 'umeclidinium 0.0625 MG/ACTUAT / vilanterol 0.025 MG/ACTUAT [Anoro]' sim=0.33 [1487519 7 ACTUAT umeclidinium 0.0625 MG/ACTUAT / vilanterol 0.025 MG/ACTUAT Dry Powder Inhaler | 1487527 30 ACTUAT umeclidinium 0.0625 MG/ACTUAT / vilanterol 0.025 MG/ACTUAT Dry Powder Inhaler | 1487524 7 ACTUAT umeclidinium 0.0625 MG/ACTUAT / vilanterol 0.025 MG/ACTUAT Dry Powder Inhaler [Anoro]]
+LOWSIM med.adalimumab_40: search='adalimumab 40 MG/0.4ML injection solution' -> 727703 '0.8 ML adalimumab 50 MG/ML Prefilled Syringe' sim=0.17 [727703 0.8 ML adalimumab 50 MG/ML Prefilled Syringe | 1921009 0.1 ML adalimumab 100 MG/ML Prefilled Syringe | 1921016 0.2 ML adalimumab 100 MG/ML Prefilled Syringe]
+EXPECT med.lithium_300: expected 197528, picked 197889 'lithium carbonate 300 MG Oral Capsule'
+EXPECT med.biktarvy: expected 1999673, picked 1999667 'bictegravir 50 MG / emtricitabine 200 MG / tenofovir alafenamide 25 MG Oral Tablet'
+EXPECT vital.sbp: expected 8480-6, picked 55284-4 'Blood pressure systolic & diastolic:-:Pt:Arterial system:-'
+LOWSIM vital.dbp: search='Diastolic blood pressure' -> 8462-4 'Intravascular diastolic:Pres:Pt:Arterial system:Qn' sim=0.00 [8462-4 Intravascular diastolic:Pres:Pt:Arterial system:Qn | 60982-6 Intravascular diastolic:Pres:Pt:Aorta:Qn | 60994-1 Intravascular diastolic:Pres:Pt:Pulmonary artery.wedge:Qn]
+EXPECT vital.hr: expected 8867-4, picked 8874-0 'Heart rate:NRat:1H:XXX:Qn'
+LOWSIM vital.rr: search='Respiratory rate' -> 103218-4 'Minimum respiratory rate:NRat:XXX^min:^Patient:Qn' sim=0.33 [103217-6 Mean respiratory rate:NRat:XXX:Respiratory system:- | 103218-4 Minimum respiratory rate:NRat:XXX^min:^Patient:Qn | 103219-2 Maximum respiratory rate:NRat:XXX^min:^Patient:Qn]
+EXPECT vital.rr: expected 9279-1, picked 103218-4 'Minimum respiratory rate:NRat:XXX^min:^Patient:Qn'
+LOWSIM vital.spo2: search='Oxygen saturation in Arterial blood by Pulse oximetry' -> 59408-5 'Oxygen saturation:MFr:Pt:BldA:Qn:Pulse oximetry' sim=0.33 [59408-5 Oxygen saturation:MFr:Pt:BldA:Qn:Pulse oximetry | 59407-7 Oxygen saturation:MFr:Pt:Bld.preductal:Qn:Pulse oximetry | 59418-4 Oxygen saturation:MFr:Pt:Bld.postductal:Qn:Pulse oximetry]
+EXPECT vital.weight: expected 29463-7, picked 3141-9 'Body weight:Mass:Pt:^Patient:Qn:Measured'
+EXPECT vital.height: expected 8302-2, picked 8303-0 'Body height:Prctl:Pt:^Patient:Qn'
+EXPECT vital.bmi: expected 39156-5, picked 107102-6 'Body mass index formula:Find:Pt:^Patient:Nar'
+EXPECT vital.peak_flow: expected 33452-4, picked 64099-5 'Peak expiratory flow attempt:Find:Pt:^Patient:Nom'
+EXPECT lab.a1c: expected 4548-4, picked 86910-7 'Hemoglobin A1c/Hemoglobin.total goal:MFr:Pt:Bld:Qn'
+LOWSIM lab.glucose: search='Glucose [Mass/volume] in Blood' -> 2339-0 'Glucose:MCnc:Pt:Bld:Qn' sim=0.00 [2339-0 Glucose:MCnc:Pt:Bld:Qn | 32016-8 Glucose:MCnc:Pt:BldC:Qn | 41651-1 Glucose:MCnc:Pt:BldA:Qn]
+LOWSIM lab.creatinine: search='Creatinine [Mass/volume] in Serum or Plasma' -> 2160-0 'Creatinine:MCnc:Pt:Ser/Plas:Qn' sim=0.00 [2160-0 Creatinine:MCnc:Pt:Ser/Plas:Qn | 35203-9 Creatinine:MSCnc:Pt:Ser/Plas:Qn | 44784-7 Creatinine:MCnc:Stdy^max:Ser/Plas:Qn]
+EXPECT lab.egfr: expected 33914-3, picked 69405-9 'Glomerular filtration rate:ArVRat:Pt:Ser/Plas/Bld:Qn:based on 1.73 sq M'
+LOWSIM lab.potassium: search='Potassium [Moles/volume] in Serum or Plasma' -> 2823-3 'Potassium:SCnc:Pt:Ser/Plas:Qn' sim=0.00 [2823-3 Potassium:SCnc:Pt:Ser/Plas:Qn | 42569-4 Potassium:MSCnc:Pt:Ser/Plas:Qn | 77142-8 Potassium:SCnc:Pt:Ser/Plas/Bld:Qn]
+LOWSIM lab.sodium: search='Sodium [Moles/volume] in Serum or Plasma' -> 51419-0 'Sodium^^corrected for glucose:SCnc:Pt:Ser/Plas:Qn' sim=0.00 [51419-0 Sodium^^corrected for glucose:SCnc:Pt:Ser/Plas:Qn | 2951-2 Sodium:SCnc:Pt:Ser/Plas:Qn | 42570-2 Sodium:MSCnc:Pt:Ser/Plas:Qn]
+EXPECT lab.sodium: expected 2951-2, picked 51419-0 'Sodium^^corrected for glucose:SCnc:Pt:Ser/Plas:Qn'
+LOWSIM lab.hgb: search='Hemoglobin [Mass/volume] in Blood' -> 718-7 'Hemoglobin:MCnc:Pt:Bld:Qn' sim=0.00 [718-7 Hemoglobin:MCnc:Pt:Bld:Qn | 40719-7 Hemoglobin:MCnc:Pt:BldCo:Qn | 30313-1 Hemoglobin:MCnc:Pt:BldA:Qn]
+LOWSIM lab.hct: search='Hematocrit [Volume Fraction] of Blood by Automated count' -> 111539-3 'Hematocrit^^adjusted to ideal blood volume:VFr:Pt:^Patient:Qn:Calculated' sim=0.17 [111539-3 Hematocrit^^adjusted to ideal blood volume:VFr:Pt:^Patient:Qn:Calculated | 16931-8 Hematocrit/Hemoglobin:Ratio:Pt:Bld:Qn:Automated count | 24360-0 Hemoglobin & Hematocrit panel:-:Pt:Bld:Qn]
+LOWSIM lab.platelets: search='Platelets [#/volume] in Blood by Automated count' -> 777-3 'Platelets:NCnc:Pt:Bld:Qn:Automated count' sim=0.20 [777-3 Platelets:NCnc:Pt:Bld:Qn:Automated count | 778-1 Platelets:NCnc:Pt:Bld:Qn:Manual count | 74464-9 Platelets:NCnc:Pt:BldC:Qn:Manual count]
+LOWSIM lab.ldl: search='Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay' -> 18262-6 'Cholesterol.in LDL:MCnc:Pt:Ser/Plas:Qn:Direct assay' sim=0.14 [16615-7 Cholesterol.total/Cholesterol.in LDL:MRto:Pt:Ser/Plas:Qn | 13459-3 Cholesterol.in LDL/Cholesterol.total:MRto:Pt:Ser/Plas:Qn | 18262-6 Cholesterol.in LDL:MCnc:Pt:Ser/Plas:Qn:Direct assay]
+LOWSIM lab.hdl: search='Cholesterol in HDL [Mass/volume] in Serum or Plasma' -> 47221-7 'Cholesterol.in HDL 1+2:MCnc:Pt:Ser/Plas:Qn' sim=0.20 [2085-9 Cholesterol.in HDL:MCnc:Pt:Ser/Plas:Qn | 35197-3 Cholesterol.in HDL:MSCnc:Pt:Ser/Plas:Qn | 18263-4 Cholesterol.in HDL:MCnc:Pt:Ser/Plas.ultracentrifugate:Qn]
+EXPECT lab.hdl: expected 2085-9, picked 47221-7 'Cholesterol.in HDL 1+2:MCnc:Pt:Ser/Plas:Qn'
+LOWSIM lab.trig: search='Triglyceride [Mass/volume] in Serum or Plasma' -> 70269-6 'Triglyceride.plr fld/Triglyceride.serum:RelRto:Pt:Ser/Plas+Plr fld:Qn' sim=0.00 [70269-6 Triglyceride.plr fld/Triglyceride.serum:RelRto:Pt:Ser/Plas+Plr fld:Qn | 70260-5 Triglyceride.periton fld/Triglyceride.serum:RelRto:Pt:Periton fld+Ser/Plas:Qn | 2571-8 Triglyceride:MCnc:Pt:Ser/Plas:Qn]
+EXPECT lab.trig: expected 2571-8, picked 70269-6 'Triglyceride.plr fld/Triglyceride.serum:RelRto:Pt:Ser/Plas+Plr fld:Qn'
+LOWSIM lab.total_chol: search='Cholesterol [Mass/volume] in Serum or Plasma' -> 34467-1 'Cholesterol.in chylomicrons:MCnc:Pt:Ser/Plas:Qn' sim=0.00 [34467-1 Cholesterol.in chylomicrons:MCnc:Pt:Ser/Plas:Qn | 2093-3 Cholesterol:MCnc:Pt:Ser/Plas:Qn | 35200-5 Cholesterol:MSCnc:Pt:Ser/Plas:Qn]
+LOWSIM lab.alt: search='Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma' -> 48134-1 'Alanine aminotransferase.macromolecular:CCnc:Pt:Ser/Plas:Qn' sim=0.17 [48134-1 Alanine aminotransferase.macromolecular:CCnc:Pt:Ser/Plas:Qn | 100738-4 Alanine aminotransferase.macromolecular:PrThr:Pt:Ser/Plas:Ord | 1742-6 Alanine aminotransferase:CCnc:Pt:Ser/Plas:Qn]
+LOWSIM lab.ast: search='Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma' -> 48136-6 'Aspartate aminotransferase.macromolecular:CCnc:Pt:Ser/Plas:Qn' sim=0.17 [48136-6 Aspartate aminotransferase.macromolecular:CCnc:Pt:Ser/Plas:Qn | 100739-2 Aspartate aminotransferase.macromolecular:PrThr:Pt:Ser/Plas:Ord | 30239-8 Aspartate aminotransferase:CCnc:Pt:Ser/Plas:Qn:With P-5'-P]
+LOWSIM lab.tsh: search='Thyrotropin [Units/volume] in Serum or Plasma' -> 5384-3 'Thyrotropin Ab:ACnc:Pt:Ser:Qn' sim=0.25 [3016-3 Thyrotropin:ACnc:Pt:Ser/Plas:Qn | 11579-0 Thyrotropin:ACnc:Pt:Ser/Plas:Qn:Detection limit <= 0.05 mIU/L | 11580-8 Thyrotropin:ACnc:Pt:Ser/Plas:Qn:Detection limit <= 0.005 mIU/L]
+EXPECT lab.tsh: expected 3016-3, picked 5384-3 'Thyrotropin Ab:ACnc:Pt:Ser:Qn'
+LOWSIM lab.free_t4: search='Thyroxine (T4) free [Mass/volume] in Serum or Plasma' -> 3024-7 'Thyroxine.free:MCnc:Pt:Ser/Plas:Qn' sim=0.00 [3024-7 Thyroxine.free:MCnc:Pt:Ser/Plas:Qn | 83122-2 Thyroxine.free:MCnc:Pt:Ser/Plas:Qn:IA | 35228-6 Thyroxine.free:MSCnc:Pt:Ser/Plas:Qn]
+LOWSIM lab.ferritin: search='Ferritin [Mass/volume] in Serum or Plasma' -> 74807-9 'Transferrin receptor.soluble/log Ferritin index:MRto:Pt:Ser/Plas:Qn' sim=0.25 [2276-4 Ferritin:MCnc:Pt:Ser/Plas:Qn | 20567-4 Ferritin:MCnc:Pt:Ser/Plas:Qn:IA | 35209-6 Ferritin:MSCnc:Pt:Ser/Plas:Qn]
+EXPECT lab.ferritin: expected 2276-4, picked 74807-9 'Transferrin receptor.soluble/log Ferritin index:MRto:Pt:Ser/Plas:Qn'
+LOWSIM lab.crp: search='C reactive protein [Mass/volume] in Serum or Plasma' -> 1988-5 'C reactive protein:MCnc:Pt:Ser/Plas:Qn' sim=0.33 [1988-5 C reactive protein:MCnc:Pt:Ser/Plas:Qn | 105126-7 C reactive protein:MCnc:Pt:Ser/Plas/Bld:Qn | 30522-7 C reactive protein:MCnc:Pt:Ser/Plas:Qn:High sensitivity]
+LOWSIM lab.esr: search='Erythrocyte sedimentation rate' -> 86285-4 'Erythrocyte deformability:Imp:Pt:RBC:Nar' sim=0.33 [86285-4 Erythrocyte deformability:Imp:Pt:RBC:Nar | 30341-2 Erythrocyte:Sedimentation Rate:Pt:Bld:Qn | 4539-3 Erythrocyte:Sedimentation Rate:Pt:Bld:Qn:Zeta]
+LOWSIM lab.uacr: search='Albumin/Creatinine [Mass Ratio] in Urine' -> 13705-9 'Albumin/Creatinine:MRto:24H:Urine:Qn' sim=0.00 [13705-9 Albumin/Creatinine:MRto:24H:Urine:Qn | 9318-7 Albumin/Creatinine:MRto:Pt:Urine:Qn | 14958-3 Albumin/Creatinine:MRto:24H:Urine:Qn:Detection limit <= 20 mg/L]
+EXPECT lab.uacr: expected 9318-7, picked 13705-9 'Albumin/Creatinine:MRto:24H:Urine:Qn'
+LOWSIM lab.vitamin_d: search='25-hydroxyvitamin D [Mass/volume] in Serum or Plasma' -> 1989-3 'Calcidiol:MCnc:Pt:Ser/Plas:Qn' sim=0.00 [1989-3 Calcidiol:MCnc:Pt:Ser/Plas:Qn | 35196-5 Calcidiol:MSCnc:Pt:Ser/Plas:Qn | 14635-7 Calcidiol:SCnc:Pt:Ser/Plas:Qn]
+EXPECT lab.vitamin_d: expected 62292-8, picked 1989-3 'Calcidiol:MCnc:Pt:Ser/Plas:Qn'
+LOWSIM lab.inr: search='INR in Platelet poor plasma by Coagulation assay' -> 92891-1 'Coagulation.INR goal:RelTime:Pt:PPP:Qn:Coag.tissue factor induced' sim=0.00 [92891-1 Coagulation.INR goal:RelTime:Pt:PPP:Qn:Coag.tissue factor induced | 40100-0 Coagulation^baseline:Time:Pt:PPP:Qn:Coag.surface induced | 38875-1 Coagulation:RelTime:Pt:PPP/Bld:Qn:Coag.tissue factor induced.INR]
+EXPECT lab.inr: expected 6301-6, picked 92891-1 'Coagulation.INR goal:RelTime:Pt:PPP:Qn:Coag.tissue factor induced'
+LOWSIM lab.phq9: search='PHQ-9 total score' -> 58152-0 'Prior assessment resident mood interview (PHQ-9) total severity score:Score:Pt:^Patient:Qn:MDSv3' sim=0.22 [44261-6 Patient health questionnaire 9 item total score:Score:Pt:^Patient:Qn:Reported.PHQ | 70271-2 Patient health questionnaire-somatic, anxiety, and depressive symptoms total score:Score:Pt:^Patient:Qn:Reported.PHQ | 58152-0 Prior assessment resident mood interview (PHQ-9) total severity score:Score:Pt:^Patient:Qn:MDSv3]
+LOWSIM lab.cd4: search='CD3+CD4+ (T4 helper) cells [#/volume] in Blood' -> 8122-4 'Cells.CD3:NCnc:Pt:Bld:Qn' sim=0.00 [8122-4 Cells.CD3:NCnc:Pt:Bld:Qn | 89312-3 Cells.CD3+CD45+:NCnc:Pt:Bld:Qn | 89313-1 Cells.CD3-CD45+:NCnc:Pt:Bld:Qn]
+LOWSIM lab.hiv_vl: search='HIV 1 RNA [#/volume] (viral load) in Serum or Plasma by NAA with probe detection' -> 48511-0 'HIV 1 RNA:NCnc:Pt:Ser/Plas:Qn:Probe.amp.tar detection limit = 50 copies/mL' sim=0.27 [62469-2 HIV 1 RNA:ACnc:Pt:Ser/Plas:Qn:Probe.amp.tar | 20447-9 HIV 1 RNA:NCnc:Pt:Ser/Plas:Qn:Probe.amp.tar | 29541-0 HIV 1 RNA:LnCnc:Pt:Ser/Plas:Qn:Probe.amp.tar]
+EXPECT lab.hiv_vl: expected 20447-9, picked 48511-0 'HIV 1 RNA:NCnc:Pt:Ser/Plas:Qn:Probe.amp.tar detection limit = 50 copies/mL'
+LOWSIM lab.lithium_level: search='Lithium [Moles/volume] in Serum or Plasma' -> 15369-2 'Lithium.saliva/Lithium.serum:RelRto:Pt:Ser+Saliva:Qn' sim=0.00 [15369-2 Lithium.saliva/Lithium.serum:RelRto:Pt:Ser+Saliva:Qn | 13455-1 Lithium.plasma/Lithium.RBC:MRto:Pt:Bld:Qn | 74806-1 Lithium^trough:SCnc:Pt:Ser/Plas:Qn]
+EXPECT lab.lithium_level: expected 14334-7, picked 15369-2 'Lithium.saliva/Lithium.serum:RelRto:Pt:Ser+Saliva:Qn'
+LOWSIM lab.calprotectin: search='Calprotectin [Mass/volume] in Stool' -> 82874-9 'Calprotectin:MCnc:Pt:Stool:Qn' sim=0.00 [82874-9 Calprotectin:MCnc:Pt:Stool:Qn | 38445-3 Calprotectin:MCnt:Pt:Stool:Qn | 101154-3 Calprotectin:MCnc:Pt:Ser/Plas:Qn]
+LOWSIM lab.eosinophils: search='Eosinophils/100 leukocytes in Blood by Automated count' -> 713-8 'Eosinophils/Leukocytes:NFr:Pt:Bld:Qn:Automated count' sim=0.20 [713-8 Eosinophils/Leukocytes:NFr:Pt:Bld:Qn:Automated count | 714-6 Eosinophils/Leukocytes:NFr:Pt:Bld:Qn:Manual count | 71679-5 Eosinophils/Leukocytes:NFr.DF:Pt:Bld:Qn:Automated count]
+LOWSIM lab.troponin_i: search='Troponin I [Mass/volume] in Serum or Plasma' -> 10839-9 'Troponin I.cardiac:MCnc:Pt:Ser/Plas:Qn' sim=0.20 [10839-9 Troponin I.cardiac:MCnc:Pt:Ser/Plas:Qn | 49563-0 Troponin I.cardiac:MCnc:Pt:Ser/Plas:Qn:Detection limit <= 0.01 ng/mL | 89579-7 Troponin I.cardiac:MCnc:Pt:Ser/Plas:Qn:High sensitivity]
+LOWSIM lab.ntprobnp: search='Natriuretic peptide B [Mass/volume] in Serum or Plasma' -> 107231-3 'Natriuretic peptide.B^^adjusted for eGFR:MCnc:Pt:Ser/Plas:Qn' sim=0.17 [107231-3 Natriuretic peptide.B^^adjusted for eGFR:MCnc:Pt:Ser/Plas:Qn | 33762-6 Natriuretic peptide.B prohormone N-Terminal:MCnc:Pt:Ser/Plas:Qn | 83107-3 Natriuretic peptide.B prohormone N-Terminal:MCnc:Pt:Ser/Plas:Qn:IA]
+EXPECT lab.ntprobnp: expected 30934-4, picked 107231-3 'Natriuretic peptide.B^^adjusted for eGFR:MCnc:Pt:Ser/Plas:Qn'
+LOWSIM lab.ef_echo: search='Ejection fraction' -> 59132-1 'Fractional shortening:LenFr:Pt:Heart.XXX:Qn:US' sim=0.00 [59132-1 Fractional shortening:LenFr:Pt:Heart.XXX:Qn:US | 80997-0 Fractional flow reserve performed:Find:Pt:^Patient:Ord | 78175-7 Fractional area change:AreaRto:Pt:Heart.ventricle.right:Qn:US.2D]
+LOWSIM lab.anti_tpo: search='Thyroid peroxidase antibody [Units/volume] in Serum' -> 17797-2 'Thyroid colloidal Ab:ACnc:Pt:Ser:Qn' sim=0.20 [17797-2 Thyroid colloidal Ab:ACnc:Pt:Ser:Qn | 109053-9 Thyroid colloidal Ab:{Measurement}:-:Ser:- | 63407-1 Thyroid colloidal Ab:PrThr:Pt:Ser:Ord:IF]
+LOWSIM lab.rf: search='Rheumatoid factor [Mass/volume] in Serum' -> 6928-6 'Rheumatoid factor:ACnc:Pt:Ser:Qn:IA' sim=0.25 [6928-6 Rheumatoid factor:ACnc:Pt:Ser:Qn:IA | 11572-5 Rheumatoid factor:ACnc:Pt:Ser/Plas:Qn | 15205-8 Rheumatoid factor:ACnc:Pt:Ser:Qn:Nephelometry]
+LOWSIM lab.tacrolimus_level: search='Tacrolimus [Mass/volume] in Blood' -> 77348-1 'Tacrolimus^trough:MCnc:Pt:Bld:Qn' sim=0.00 [77348-1 Tacrolimus^trough:MCnc:Pt:Bld:Qn | 33929-1 Tacrolimus^trough:MCnc:Pt:Ser/Plas:Qn | 92728-5 Tacrolimus^4H post dose:MCnc:Pt:Bld:Qn]
+LOWSIM lab.afp: search='Alpha-fetoprotein [Mass/volume] in Serum or Plasma' -> 43997-6 'Alpha-1-Fetoprotein^^adjusted for weight:MoM:Pt:Ser/Plas:Qn' sim=0.00 [43997-6 Alpha-1-Fetoprotein^^adjusted for weight:MoM:Pt:Ser/Plas:Qn | 23812-1 Alpha-1-Fetoprotein^^unadjusted:MoM:Pt:Ser/Plas:Qn | 23811-3 Alpha-1-Fetoprotein^^adjusted:MoM:Pt:Ser/Plas:Qn]
+LOWSIM lab.bilirubin_total: search='Bilirubin.total [Mass/volume] in Serum or Plasma' -> 1975-2 'Bilirubin:MCnc:Pt:Ser/Plas:Qn' sim=0.00 [1975-2 Bilirubin:MCnc:Pt:Ser/Plas:Qn | 35194-0 Bilirubin:MSCnc:Pt:Ser/Plas:Qn | 14631-6 Bilirubin:SCnc:Pt:Ser/Plas:Qn]
+LOWSIM lab.albumin: search='Albumin [Mass/volume] in Serum or Plasma' -> 1751-7 'Albumin:MCnc:Pt:Ser/Plas:Qn' sim=0.00 [1751-7 Albumin:MCnc:Pt:Ser/Plas:Qn | 61195-4 Albumin:MCnc:Pt:Ser/Plas^Fetus:Qn | 2862-1 Albumin:MCnc:Pt:Ser/Plas:Qn:Electrophoresis]
+LOWSIM lab.alk_phos: search='Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma' -> 1781-4 'Alkaline phosphatase.regan:CCnc:Pt:Ser/Plas:Qn' sim=0.17 [1781-4 Alkaline phosphatase.regan:CCnc:Pt:Ser/Plas:Qn | 6768-6 Alkaline phosphatase:CCnc:Pt:Ser/Plas:Qn | 77141-0 Alkaline phosphatase:CCnc:Pt:Ser/Plas/Bld:Qn]
+LOWSIM lab.phosphorus: search='Phosphorus [Mass/volume] in Serum or Plasma' -> 81132-3 'Phosphorus intake:MRat:24H:^Patient:Qn:Estimated' sim=0.25 [104883-4 Phosphorus.reabsorbed by renal tubules/Phosphorus.total filtered:RelRto:Pt:Urine+Ser/Plas:Ord | 81132-3 Phosphorus intake:MRat:24H:^Patient:Qn:Estimated | 81946-6 Phosphorus intake:MRat:24H:^Patient:Qn:Measured]
+LOWSIM lab.calcium: search='Calcium [Moles/volume] in Serum or Plasma' -> 1995-0 'Calcium.ionized:SCnc:Pt:Ser/Plas:Qn' sim=0.00 [1995-0 Calcium.ionized:SCnc:Pt:Ser/Plas:Qn | 42567-8 Calcium.ionized:MSCnc:Pt:Ser/Plas:Qn | 13959-2 Calcium.ionized:SCnc:Pt:Ser/Plas:Qn:Calculated]
+LOWSIM lab.pth: search='Parathyroid hormone [Mass/volume] in Serum or Plasma' -> 21555-8 'Testosterone^^adjusted for sex hormone binding globulin:MCnc:Pt:Ser/Plas:Qn' sim=0.20 [1380-5 Calcium/Phosphate parathyroid-challenge test:MRto:Pt:Ser:Qn | 3018-9 Thyrotropin releasing hormone:MCnc:Pt:Plas:Qn | 11213-6 Corticotropin releasing hormone:MCnc:Pt:Ser/Plas:Qn]
+LOWSIM lab.psa: search='Prostate specific antigen [Mass/volume] in Serum or Plasma' -> 2857-1 'Prostate specific Ag:MCnc:Pt:Ser/Plas:Qn' sim=0.33 [2857-1 Prostate specific Ag:MCnc:Pt:Ser/Plas:Qn | 83112-3 Prostate specific Ag:MCnc:Pt:Ser/Plas:Qn:IA | 35741-8 Prostate specific Ag:MCnc:Pt:Ser/Plas:Qn:Detection limit <= 0.01 ng/mL]
+LOWSIM lab.reticulocytes: search='Reticulocytes [#/volume] and Reticulocyte fraction' -> 17848-3 'Reticulocytes/1000 erythrocytes:NFr:Pt:Bld:Qn:Manual' sim=0.00 [17848-3 Reticulocytes/1000 erythrocytes:NFr:Pt:Bld:Qn:Manual | 4679-7 Reticulocytes/Erythrocytes:NFr:Pt:Bld:Qn | 31112-6 Reticulocytes/Erythrocytes:NFr:Pt:Bld:Qn:Manual]
+LOWSIM lab.hbf: search='Hemoglobin F [Fraction] of total Hemoglobin' -> 4576-5 'Hemoglobin F/Hemoglobin.total:MFr:Pt:Bld:Qn' sim=0.25 [4576-5 Hemoglobin F/Hemoglobin.total:MFr:Pt:Bld:Qn | 4580-7 Hemoglobin F1/Hemoglobin.total:MFr:Pt:Bld:Qn | 53223-4 Hemoglobin G/Hemoglobin.total:MFr:Pt:Bld:Qn]
+LOWSIM lab.ketones: search='Ketones [Mass/volume] in Blood' -> 12448-7 'Ketones^post CFst:MCnc:Pt:Urine:SemiQn:Test strip' sim=0.00 [12448-7 Ketones^post CFst:MCnc:Pt:Urine:SemiQn:Test strip | 49779-2 Ketones:MCnc:Pt:Urine:Qn | 33058-9 Ketones:MCnc:Pt:Ser/Plas:Qn]
+LOWSIM lab.anion_gap: search='Anion gap in Serum or Plasma' -> 33037-3 'Anion gap:SCnc:Pt:Ser/Plas:Qn:Calculated' sim=0.25 [33037-3 Anion gap:SCnc:Pt:Ser/Plas:Qn:Calculated | 1863-0 Anion gap:SCnc:Pt:Ser/Plas:Qn:Calculated.4Ions | 10466-1 Anion gap:SCnc:Pt:Ser/Plas:Qn:Calculated.3Ions]
+LOWSIM lab.bicarbonate: search='Bicarbonate [Moles/volume] in Serum or Plasma' -> 69964-5 'Bicarbonate^^standard:SCnc:Pt:Plas:Qn' sim=0.00 [69964-5 Bicarbonate^^standard:SCnc:Pt:Plas:Qn | 97544-1 Bicarbonate^^standard:SCnc:Pt:BldCV:Qn | 39459-3 Bicarbonate^^standard:SCnc:Pt:BldCoV:Qn]
+LOWSIM lab.fvc: search='FVC [Volume] Respiratory system by Spirometry' -> 64592-9 'FVC quality attribute:Find:Pt:Respiratory system:Nom:PhenX' sim=0.20 [19872-1 Forced vital capacity/Forced vital capacity.predicted:RelVol:Pt:Respiratory system:Qn | 64592-9 FVC quality attribute:Find:Pt:Respiratory system:Nom:PhenX | 19868-9 Forced vital capacity:Vol:Pt:Respiratory system:Qn:Spirometry]
+LOWSIM lab.fev1_fvc: search='FEV1/FVC Respiratory system by Spirometry' -> 19926-5 'Volume expired during 1.0 s of forced expiration/Forced vital capacity:VRto:Pt:Respiratory system:Qn' sim=0.00 [19926-5 Volume expired during 1.0 s of forced expiration/Forced vital capacity:VRto:Pt:Respiratory system:Qn | 19925-7 Volume expired during 1.0 s of forced expiration/Forced vital capacity:VRto:Pt:Respiratory system:Qn:Predicted | 19872-1 Forced vital capacity/Forced vital capacity.predicted:RelVol:Pt:Respiratory system:Qn]
+LOWSIM lab.paco2: search='Carbon dioxide [Partial pressure] in Arterial blood' -> 11557-6 'Carbon dioxide:PPres:Pt:Bld:Qn' sim=0.17 [11557-6 Carbon dioxide:PPres:Pt:Bld:Qn | 14003-8 Carbon dioxide:PPres:Pt:BldCo:Qn | 2019-8 Carbon dioxide:PPres:Pt:BldA:Qn]
+LOWSIM lab.urine_protein: search='Protein [Mass/volume] in Urine' -> 60678-0 'Protein/Creatinine:MRto:12H:Urine:Qn' sim=0.00 [60678-0 Protein/Creatinine:MRto:12H:Urine:Qn | 13801-6 Protein/Creatinine:MRto:24H:Urine:Qn | 35560-2 Protein.monoclonal:MCnc:Pt:Urine:Qn]
+EXPECT proc.colonoscopy: expected 73761001, picked 235150006 'Total colonoscopy'
+LOWSIM proc.eye_exam: search='Funduscopy' -> 53524009 'Ophthalmoscopy' sim=0.00 [53524009 Ophthalmoscopy]
+cond.gout                                  SNOMEDCT_US 90560007             Gout
+cond.schizophrenia                         SNOMEDCT_US 58214004             Schizophrenia
+icd.gout                                   ICD10CM    M10.9                Gout, unspecified
+icd.schizophrenia                          ICD10CM    F20.9                Schizophrenia, unspecified
+med.allopurinol_300                        RXNORM     197320               allopurinol 300 MG Oral Tablet
+med.allopurinol_100                        RXNORM     197319               allopurinol 100 MG Oral Tablet
+med.colchicine_06                          RXNORM     197541               colchicine 0.6 MG Oral Tablet
+med.clozapine_100                          RXNORM     476177               clozapine 100 MG Disintegrating Oral Tablet
+lab.urate                                  LNC        3084-1               Urate:MCnc:Pt:Ser/Plas:Qn
+lab.anc                                    LNC        26499-4              Neutrophils:NCnc:Pt:Bld:Qn
+lab.clozapine_level                        LNC        29370-4              cloZAPine^trough:MCnc:Pt:Ser/Plas:Qn
+cond.asthma                                SNOMEDCT_US 195967001            Asthma
+cond.severe_persistent_asthma              SNOMEDCT_US 426656000            Severe persistent asthma
+cond.moderate_persistent_asthma            SNOMEDCT_US 427295004            Moderate persistent asthma
+cond.asthma_copd_overlap                   SNOMEDCT_US 10692761000119107    Asthma-chronic obstructive pulmonary disease overlap syndrome
+cond.allergic_rhinitis                     SNOMEDCT_US 61582004             Allergic rhinitis
+cond.atopic_dermatitis                     SNOMEDCT_US 24079001             Atopic dermatitis
+cond.chronic_sinusitis                     SNOMEDCT_US 40055000             Chronic sinusitis
+cond.copd                                  SNOMEDCT_US 13645005             Chronic obstructive pulmonary disease
+cond.copd_severe                           SNOMEDCT_US 313299006            Severe chronic obstructive pulmonary disease
+cond.gerd                                  SNOMEDCT_US 235595009            Gastroesophageal reflux disease
+cond.osa                                   SNOMEDCT_US 78275009             Obstructive sleep apnea syndrome
+cond.bronchiectasis                        SNOMEDCT_US 12295008             Bronchiectasis
+cond.mi_history                            SNOMEDCT_US 22298006             Myocardial infarction
+cond.STEMI                                 SNOMEDCT_US 57054005             Acute myocardial infarction
+cond.hf                                    SNOMEDCT_US 84114007             Heart failure
+cond.hfref_systolic                        SNOMEDCT_US 417996009            Systolic heart failure
+cond.afib                                  SNOMEDCT_US 49436004             Atrial fibrillation
+cond.htn                                   SNOMEDCT_US 59621000             Essential hypertension
+cond.hyperlipidemia                        SNOMEDCT_US 55822004             Hyperlipidemia
+cond.stroke_ischemic                       SNOMEDCT_US 432504007            Cerebral infarction
+cond.hemiparesis                           ICD10CM    I69.359              Hemiplegia and hemiparesis following cerebral infarction affecting unspecified side
+cond.carotid_stenosis                      SNOMEDCT_US 64586002             Stenosis of carotid artery
+cond.pad                                   SNOMEDCT_US 400047006            Peripheral vascular disease
+cond.dvt_history                           SNOMEDCT_US 128053003            Deep venous thrombosis
+cond.t1dm                                  SNOMEDCT_US 46635009             Type 1 diabetes mellitus
+cond.t2dm                                  SNOMEDCT_US 44054006             Type 2 diabetes mellitus
+cond.diabetic_nephropathy                  SNOMEDCT_US 127013003            Disorder of kidney due to diabetes mellitus
+cond.diabetic_retinopathy                  SNOMEDCT_US 4855003              Retinopathy due to diabetes mellitus
+cond.obesity                               SNOMEDCT_US 414916001            Obesity
+cond.hypothyroidism                        SNOMEDCT_US 40930008             Hypothyroidism
+cond.hashimoto                             SNOMEDCT_US 21983002             Hashimoto thyroiditis
+cond.vitamin_d_deficiency                  SNOMEDCT_US 34713006             Vitamin D deficiency
+cond.b12_deficiency                        SNOMEDCT_US 190631007            Vitamin B-complex deficiency
+cond.ckd                                   SNOMEDCT_US 709044004            Chronic kidney disease
+cond.ckd3                                  SNOMEDCT_US 433144002            Chronic kidney disease stage 3
+cond.ckd4                                  SNOMEDCT_US 431857002            Chronic kidney disease stage 4
+cond.ckd5                                  SNOMEDCT_US 433146000            Chronic kidney disease stage 5
+cond.esrd                                  SNOMEDCT_US 46177005             End-stage renal disease
+cond.pkd                                   SNOMEDCT_US 765330003            Autosomal dominant polycystic kidney disease
+cond.anemia                                SNOMEDCT_US 271737000            Anemia
+cond.iron_def_anemia                       SNOMEDCT_US 87522002             Iron deficiency anemia
+cond.anemia_ckd                            SNOMEDCT_US 707323002            Anemia in chronic kidney disease
+cond.secondary_hyperparathyroidism         SNOMEDCT_US 91478007             Secondary hyperparathyroidism
+cond.ra                                    SNOMEDCT_US 69896004             Rheumatoid arthritis
+cond.sjogren                               SNOMEDCT_US 83901003             Sjögren's syndrome
+cond.sle                                   SNOMEDCT_US 55464009             Systemic lupus erythematosus
+cond.lupus_nephritis                       SNOMEDCT_US 68815009             SLE glomerulonephritis syndrome
+cond.antiphospholipid_syndrome             SNOMEDCT_US 239892009            Primary antiphospholipid syndrome
+cond.crohn                                 SNOMEDCT_US 34000006             Crohn's disease
+cond.anal_fistula                          ICD10CM    K60.3                Anal fistula
+cond.celiac                                SNOMEDCT_US 396331005            Celiac disease
+cond.psoriasis                             SNOMEDCT_US 9014002              Psoriasis
+cond.psoriatic_arthritis                   SNOMEDCT_US 156370009            Psoriatic arthritis
+cond.bipolar                               SNOMEDCT_US 13746004             Bipolar disorder
+cond.mdd                                   SNOMEDCT_US 370143000            Major depressive disorder
+cond.gad                                   SNOMEDCT_US 21897009             Generalized anxiety disorder
+cond.insomnia                              SNOMEDCT_US 193462001            Insomnia
+cond.epilepsy                              SNOMEDCT_US 84757009             Epilepsy
+cond.jme                                   SNOMEDCT_US 6204001              Juvenile myoclonic epilepsy
+cond.adhd                                  SNOMEDCT_US 406506008            Attention deficit hyperactivity disorder
+cond.osteoporosis                          SNOMEDCT_US 64859006             Osteoporosis
+cond.compression_fx                        SNOMEDCT_US 445734009            Fracture of body of vertebra
+cond.hcv                                   SNOMEDCT_US 128302006            Chronic hepatitis C
+cond.cirrhosis                             SNOMEDCT_US 19943007             Cirrhosis of liver
+cond.thrombocytopenia                      ICD10CM    D69.6                Thrombocytopenia, unspecified
+cond.esophageal_varices                    SNOMEDCT_US 28670008             Esophageal varices
+cond.hiv                                   SNOMEDCT_US 86406008             Human immunodeficiency virus infection
+cond.breast_cancer                         SNOMEDCT_US 254837009            Malignant neoplasm of breast
+cond.lymphedema                            ICD10CM    I89.0                Lymphedema, not elsewhere classified
+cond.sickle_cell                           SNOMEDCT_US 127040003            Sickle cell-hemoglobin SS disease
+cond.sickle_crisis                         SNOMEDCT_US 417425009            Hemoglobin SS disease with crisis
+cond.bph                                   SNOMEDCT_US 266569009            Benign prostatic hyperplasia
+cond.oa                                    SNOMEDCT_US 396275006            Osteoarthritis
+cond.oa_knee                               SNOMEDCT_US 239873007            Osteoarthritis of knee
+cond.long_term_anticoag                    SNOMEDCT_US 182764009            Anticoagulant therapy
+icd.asthma                                 ICD10CM    J45.909              Unspecified asthma, uncomplicated
+icd.asthma_severe                          ICD10CM    J45.52               Severe persistent asthma with status asthmaticus
+icd.copd                                   ICD10CM    J44.9                Chronic obstructive pulmonary disease, unspecified
+icd.copd_severe                            ICD10CM    J44.1                Chronic obstructive pulmonary disease with (acute) exacerbation
+icd.t2dm                                   ICD10CM    E11.9                Type 2 diabetes mellitus without complications
+icd.t2dm_ckd                               ICD10CM    E11.22               Type 2 diabetes mellitus with diabetic chronic kidney disease
+icd.t1dm                                   ICD10CM    E10.9                Type 1 diabetes mellitus without complications
+icd.ckd4                                   ICD10CM    N18.4                Chronic kidney disease, stage 4 (severe)
+icd.esrd                                   ICD10CM    N18.6                End stage renal disease
+icd.mi_old                                 ICD10CM    I25.2                Old myocardial infarction
+icd.STEMI                                  ICD10CM    I21.0                ST elevation (STEMI) myocardial infarction of anterior wall
+icd.afib                                   ICD10CM    I48.91               Unspecified atrial fibrillation
+icd.hfref                                  ICD10CM    I50.21               Acute systolic (congestive) heart failure
+icd.hfpef                                  ICD10CM    I50.33               Acute on chronic diastolic (congestive) heart failure
+icd.htn                                    ICD10CM    I10                  Essential (primary) hypertension
+icd.hyperlipidemia                         ICD10CM    E78.5                Hyperlipidemia, unspecified
+icd.stroke                                 ICD10CM    I63.9                Cerebral infarction, unspecified
+icd.hypothyroidism                         ICD10CM    E03.9                Hypothyroidism, unspecified
+icd.bipolar                                ICD10CM    F31.9                Bipolar disorder, unspecified
+icd.mdd                                    ICD10CM    F33.1                Major depressive disorder, recurrent, moderate
+icd.gad                                    ICD10CM    F41.1                Generalized anxiety disorder
+icd.epilepsy                               ICD10CM    G40.909              Epilepsy, unspecified, not intractable, without status epilepticus
+icd.ra                                     ICD10CM    M06.9                Rheumatoid arthritis, unspecified
+icd.sle                                    ICD10CM    M32.9                Systemic lupus erythematosus, unspecified
+icd.crohn                                  ICD10CM    K50.90               Crohn's disease, unspecified, without complications
+icd.cirrhosis                              ICD10CM    K74.60               Unspecified cirrhosis of liver
+icd.hcv                                    ICD10CM    B18.2                Chronic viral hepatitis C
+icd.hiv                                    ICD10CM    B20                  Human immunodeficiency virus [HIV] disease
+icd.sickle                                 ICD10CM    D57.00               Hb-SS disease with crisis, unspecified
+icd.osteo                                  ICD10CM    M81.0                Age-related osteoporosis without current pathological fracture
+icd.breast_ca                              ICD10CM    C50.911              Malignant neoplasm of unspecified site of right female breast
+icd.adhd                                   ICD10CM    F90.0                Attention-deficit hyperactivity disorder, predominantly inattentive type
+icd.obesity                                ICD10CM    E66.9                Obesity, unspecified
+icd.osa                                    ICD10CM    G47.33               Obstructive sleep apnea (adult) (pediatric)
+icd.psoriasis                              ICD10CM    L40.0                Psoriasis vulgaris
+icd.tobacco                                ICD10CM    F17.210              Nicotine dependence, cigarettes, uncomplicated
+icd.ckd3                                   ICD10CM    N18.32               Chronic kidney disease, stage 3b
+med.albuterol_hfa                          RXNORM     801093               albuterol 0.09 MG/ACTUAT [Ventolin]
+med.fluticasone_110                        RXNORM     895999               120 ACTUAT fluticasone propionate 0.11 MG/ACTUAT Metered Dose Inhaler
+med.fluticasone_salmeterol                 RXNORM     896188               fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT [Advair]
+med.budesonide_formoterol                  RXNORM     1246305              budesonide 0.16 MG/ACTUAT / formoterol fumarate 0.0045 MG/ACTUAT [Symbicort]
+med.montelukast                            RXNORM     200224               montelukast 10 MG Oral Tablet
+med.prednisone_10                          RXNORM     198145               prednisone 10 MG Oral Tablet
+med.prednisone_20                          RXNORM     312615               prednisone 20 MG Oral Tablet
+med.omalizumab                             RXNORM     2663920              2 ML omalizumab 150 MG/ML Auto-Injector
+med.mepolizumab                            RXNORM     1720601              mepolizumab 100 MG Injection
+med.fluticasone_nasal                      RXNORM     1797907              fluticasone propionate 0.05 MG/ACTUAT Metered Dose Nasal Spray
+med.tiotropium                             RXNORM     485032               tiotropium 0.018 MG Inhalation Powder
+med.umeclidinium_vilanterol                RXNORM     1487521              umeclidinium 0.0625 MG/ACTUAT / vilanterol 0.025 MG/ACTUAT [Anoro]
+med.ipratropium_albuterol                  RXNORM     1437702              albuterol 0.833 MG/ML / ipratropium bromide 0.167 MG/ML Inhalation Solution
+med.azithromycin_250                       RXNORM     308460               azithromycin 250 MG Oral Tablet
+med.varenicline                            RXNORM     636676               varenicline 1 MG Oral Tablet
+med.hydrocortisone_cream                   RXNORM     310891               hydrocortisone 25 MG/ML Topical Cream
+med.cetirizine                             RXNORM     1014678              cetirizine hydrochloride 10 MG Oral Tablet
+med.aspirin_81                             RXNORM     243670               aspirin 81 MG Oral Tablet
+med.ticagrelor_90                          RXNORM     1116635              ticagrelor 90 MG Oral Tablet
+med.atorvastatin_80                        RXNORM     259255               atorvastatin 80 MG Oral Tablet
+med.atorvastatin_20                        RXNORM     617310               atorvastatin 20 MG Oral Tablet
+med.metoprolol_succinate_25                RXNORM     866427               24 HR metoprolol succinate 25 MG Extended Release Oral Tablet
+med.metoprolol_succinate_100               RXNORM     866412               24 HR metoprolol succinate 100 MG Extended Release Oral Tablet
+med.lisinopril_10                          RXNORM     314076               lisinopril 10 MG Oral Tablet
+med.lisinopril_20                          RXNORM     314077               lisinopril 20 MG Oral Tablet
+med.nitroglycerin_sl                       RXNORM     705129               nitroglycerin 0.4 MG/ACTUAT Mucosal Spray
+med.amlodipine_5                           RXNORM     197361               amlodipine 5 MG Oral Tablet
+med.metoprolol_tartrate_25                 RXNORM     866924               metoprolol tartrate 25 MG Oral Tablet
+med.isosorbide_mono30                      RXNORM     317110               24 HR isosorbide mononitrate 30 MG Extended Release Oral Tablet
+med.sacubitril_valsartan_24_26             RXNORM     1656340              sacubitril 24 MG / valsartan 26 MG Oral Tablet
+med.sacubitril_valsartan_49_51             RXNORM     1656349              sacubitril 49 MG / valsartan 51 MG Oral Tablet
+med.sacubitril_valsartan_97_103            RXNORM     1656354              sacubitril 97 MG / valsartan 103 MG Oral Tablet
+med.dapagliflozin_10                       RXNORM     1488569              dapagliflozin 10 MG Oral Tablet
+med.spironolactone_25                      RXNORM     313096               spironolactone 25 MG Oral Tablet
+med.furosemide_40                          RXNORM     313988               furosemide 40 MG Oral Tablet
+med.furosemide_80                          RXNORM     197732               furosemide 80 MG Oral Tablet
+med.apixaban_5                             RXNORM     1364445              apixaban 5 MG Oral Tablet
+med.warfarin_5                             RXNORM     855332               warfarin sodium 5 MG Oral Tablet
+med.carvedilol_125                         RXNORM     200032               carvedilol 12.5 MG Oral Tablet
+med.rosuvastatin_20                        RXNORM     859751               rosuvastatin calcium 20 MG Oral Tablet
+med.metformin_500                          RXNORM     861007               metformin hydrochloride 500 MG Oral Tablet
+med.metformin_er1000                       RXNORM     1807888              Modified 24 HR metformin hydrochloride 1000 MG Extended Release Oral Tablet
+med.semaglutide_pen                        RXNORM     1991306              0.25 MG, 0.5 MG Dose 1.5 ML semaglutide 1.34 MG/ML Pen Injector
+med.insulin_lispro                         RXNORM     1652644              3 ML insulin lispro 100 UNT/ML Cartridge
+med.insulin_glargine                       RXNORM     311041               insulin glargine 100 UNT/ML Injectable Solution
+med.levothyroxine_50                       RXNORM     966221               levothyroxine sodium 0.05 MG Oral Tablet
+med.levothyroxine_75                       RXNORM     966222               levothyroxine sodium 0.075 MG Oral Tablet
+med.levothyroxine_88                       RXNORM     966253               levothyroxine sodium 0.088 MG Oral Tablet
+med.epoetin_alfa                           RXNORM     1721684              1 ML epoetin alfa 10000 UNT/ML Injection
+med.sevelamer_800                          RXNORM     749206               sevelamer carbonate 800 MG Oral Tablet
+med.calcitriol_025                         RXNORM     308867               calcitriol 0.00025 MG Oral Capsule
+med.cholecalciferol_2000                   RXNORM     801663               cholecalciferol 0.05 MG Oral Tablet
+med.tacrolimus_1                           RXNORM     198377               tacrolimus 1 MG Oral Capsule
+med.mycophenolate_500                      RXNORM     200060               mycophenolate mofetil 500 MG Oral Tablet
+med.prednisone_5                           RXNORM     312617               prednisone 5 MG Oral Tablet
+med.valganciclovir_450                     RXNORM     313566               valganciclovir 450 MG Oral Tablet
+med.bactrim_ds                             RXNORM     198335               sulfamethoxazole 800 MG / trimethoprim 160 MG Oral Tablet
+med.methotrexate_25                        RXNORM     1655967              4 ML methotrexate 25 MG/ML Injection
+med.methotrexate_25mg                      RXNORM     105585               methotrexate 2.5 MG Oral Tablet
+med.folic_acid_1                           RXNORM     310410               folic acid 1 MG Oral Tablet
+med.hydroxychloroquine_200                 RXNORM     979092               hydroxychloroquine sulfate 200 MG Oral Tablet
+med.ibuprofen_600                          RXNORM     197806               ibuprofen 600 MG Oral Tablet
+med.adalimumab_40                          RXNORM     727703               0.8 ML adalimumab 50 MG/ML Prefilled Syringe
+med.infliximab_100                         RXNORM     310994               infliximab 100 MG Injection
+med.azathioprine_50                        RXNORM     197388               azathioprine 50 MG Oral Tablet
+med.ferrous_sulfate_325                    RXNORM     310325               ferrous sulfate 325 MG Oral Tablet
+med.lactulose                              RXNORM     336731               lactulose 667 MG/ML
+med.propranolol_20                         RXNORM     856457               propranolol hydrochloride 20 MG Oral Tablet
+med.sofosbuvir_400                         RXNORM     1484916              sofosbuvir 400 MG Oral Tablet
+med.lithium_300                            RXNORM     197889               lithium carbonate 300 MG Oral Capsule
+med.lithium_er450                          RXNORM     197892               lithium carbonate 450 MG Extended Release Oral Tablet
+med.lamotrigine_100                        RXNORM     198427               lamotrigine 100 MG Oral Tablet
+med.sertraline_50                          RXNORM     312941               sertraline 50 MG Oral Tablet
+med.sertraline_100                         RXNORM     312938               sertraline 100 MG Oral Tablet
+med.trazodone_50                           RXNORM     856377               trazodone hydrochloride 50 MG Oral Tablet
+med.levetiracetam_500                      RXNORM     311289               levetiracetam 500 MG Oral Tablet
+med.methylphenidate_er20                   RXNORM     1091225              8 HR methylphenidate hydrochloride 20 MG Extended Release Oral Tablet
+med.alendronate_70                         RXNORM     904431               alendronic acid 70 MG Oral Tablet
+med.zoledronic_5                           RXNORM     705824               100 ML zoledronic acid 0.05 MG/ML Injection
+med.anastrozole_1                          RXNORM     199224               anastrozole 1 MG Oral Tablet
+med.hydroxyurea_500                        RXNORM     197797               hydroxyurea 500 MG Oral Capsule
+med.biktarvy                               RXNORM     1999667              bictegravir 50 MG / emtricitabine 200 MG / tenofovir alafenamide 25 MG Oral Tablet
+med.tamsulosin_04                          RXNORM     863669               tamsulosin hydrochloride 0.4 MG Oral Capsule
+med.finasteride_5                          RXNORM     310346               finasteride 5 MG Oral Tablet
+vital.sbp                                  LNC        8480-6               Systolic blood pressure
+vital.dbp                                  LNC        8462-4               Diastolic blood pressure
+vital.hr                                   LNC        8867-4               Heart rate
+vital.rr                                   LNC        9279-1               Respiratory rate
+vital.temp                                 LNC        8310-5               Body temperature
+vital.spo2                                 LNC        2708-6               Oxygen saturation in Arterial blood
+vital.weight                               LNC        29463-7              Body weight
+vital.height                               LNC        8302-2               Body height
+vital.bmi                                  LNC        39156-5              Body mass index
+vital.peak_flow                            LNC        33452-4              Peak expiratory flow (PEF)
+vital.bp_panel                             LNC        85354-9              Blood pressure panel with all children optional
+lab.a1c                                    LNC        4548-4               Hemoglobin A1c/Hemoglobin.total in Blood
+lab.glucose                                LNC        2339-0               Glucose [Mass/volume] in Blood
+lab.creatinine                             LNC        2160-0               Creatinine [Mass/volume] in Serum or Plasma
+lab.egfr                                   LNC        33914-3              Glomerular filtration rate/1.73 sq M.predicted
+lab.potassium                              LNC        2823-3               Potassium [Moles/volume] in Serum or Plasma
+lab.sodium                                 LNC        2951-2               Sodium [Moles/volume] in Serum or Plasma
+lab.hgb                                    LNC        718-7                Hemoglobin [Mass/volume] in Blood
+lab.hct                                    LNC        4544-3               Hematocrit [Volume Fraction] of Blood by Automated count
+lab.wbc                                    LNC        6690-2               Leukocytes [#/volume] in Blood by Automated count
+lab.platelets                              LNC        777-3                Platelets [#/volume] in Blood by Automated count
+lab.ldl                                    LNC        18262-6              Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay
+lab.hdl                                    LNC        2085-9               Cholesterol in HDL [Mass/volume] in Serum or Plasma
+lab.trig                                   LNC        2571-8               Triglyceride [Mass/volume] in Serum or Plasma
+lab.total_chol                             LNC        2093-3               Cholesterol [Mass/volume] in Serum or Plasma
+lab.alt                                    LNC        1742-6               Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma
+lab.ast                                    LNC        1920-8               Aspartate aminotransferase [Enzymatic activity/volume] in Serum or Plasma
+lab.tsh                                    LNC        3016-3               Thyrotropin [Units/volume] in Serum or Plasma
+lab.free_t4                                LNC        3024-7               Thyroxine (T4) free [Mass/volume] in Serum or Plasma
+lab.ferritin                               LNC        2276-4               Ferritin [Mass/volume] in Serum or Plasma
+lab.crp                                    LNC        1988-5               C reactive protein:MCnc:Pt:Ser/Plas:Qn
+lab.esr                                    LNC        4537-7               Erythrocyte sedimentation rate Westergren
+lab.uacr                                   LNC        9318-7               Albumin/Creatinine [Mass Ratio] in Urine
+lab.vitamin_d                              LNC        62292-8              25-hydroxyvitamin D [Mass/volume] in Serum or Plasma
+lab.inr                                    LNC        6301-6               INR in Platelet poor plasma by Coagulation assay
+lab.phq9                                   LNC        44249-1              PHQ-9 total score
+lab.gad7                                   LNC        70274-6              GAD7 total score
+lab.cd4                                    LNC        24467-3              CD3+CD4+ (T4 helper) cells [#/volume] in Blood
+lab.hiv_vl                                 LNC        48511-0              HIV 1 RNA:NCnc:Pt:Ser/Plas:Qn:Probe.amp.tar detection limit = 50 copies/mL
+lab.lithium_level                          LNC        14334-7              Lithium [Moles/volume] in Serum or Plasma
+lab.calprotectin                           LNC        82874-9              Calprotectin [Mass/volume] in Stool
+lab.feno                                   LNC        96269-6              Nitric oxide [Volume fraction] in Exhaled gas
+lab.eosinophils                            LNC        713-8                Eosinophils/100 leukocytes in Blood by Automated count
+lab.troponin_i                             LNC        10839-9              Troponin I [Mass/volume] in Serum or Plasma
+lab.ntprobnp                               LNC        30934-4              Natriuretic peptide B [Mass/volume] in Serum or Plasma
+lab.ef_echo                                LNC        10230-1              Ejection fraction
+lab.ttg_iga                                LNC        31017-7              Tissue transglutaminase IgA [Units/volume] in Serum
+lab.anti_tpo                               LNC        17797-2              Thyroid colloidal Ab:ACnc:Pt:Ser:Qn
+lab.rf                                     LNC        6928-6               Rheumatoid factor:ACnc:Pt:Ser:Qn:IA
+lab.anti_ccp                               LNC        32218-0              Cyclic citrullinated peptide antibody
+lab.dsdna                                  LNC        5130-0               Double stranded DNA antibody
+lab.tacrolimus_level                       LNC        11253-2              Tacrolimus [Mass/volume] in Blood
+lab.afp                                    LNC        19176-7              Alpha-1-Fetoprotein [Mass/volume] in Serum or Plasma
+lab.hcv_rna                                LNC        104714-1             Hepatitis C virus RNA [#/volume] in Serum or Plasma by NAA with probe detection
+lab.bilirubin_total                        LNC        1975-2               Bilirubin.total [Mass/volume] in Serum or Plasma
+lab.albumin                                LNC        1751-7               Albumin [Mass/volume] in Serum or Plasma
+lab.alk_phos                               LNC        6768-6               Alkaline phosphatase [Enzymatic activity/volume] in Serum or Plasma
+lab.phosphorus                             LNC        2777-1               Phosphate [Mass/volume] in Serum or Plasma
+lab.calcium                                LNC        17861-6              Calcium [Moles/volume] in Serum or Plasma
+lab.pth                                    LNC        21555-8              Testosterone^^adjusted for sex hormone binding globulin:MCnc:Pt:Ser/Plas:Qn
+lab.psa                                    LNC        2857-1               Prostate specific Ag [Mass/volume] in Serum or Plasma
+lab.reticulocytes                          LNC        4679-7               Reticulocytes/Erythrocytes [Fraction] in Blood
+lab.hbf                                    LNC        32682-7              Hemoglobin F/Hemoglobin.total in Blood by Electrophoresis
+lab.hbelectro                              LNC        94538-6              Hemoglobin HPLC and electrophoresis panel in Blood
+lab.ketones                                LNC        53061-8              Ketones [Moles/volume] in Blood
+lab.anion_gap                              LNC        33037-3              Anion gap in Serum or Plasma
+lab.bicarbonate                            LNC        1963-8               Bicarbonate [Moles/volume] in Serum or Plasma
+lab.fev1                                   LNC        20150-9              FEV1
+lab.fvc                                    LNC        64592-9              FVC quality attribute:Find:Pt:Respiratory system:Nom:PhenX
+lab.fev1_fvc                               LNC        19926-5              FEV1/FVC
+lab.paco2                                  LNC        2019-8               Carbon dioxide [Partial pressure] in arterial blood
+lab.pao2                                   LNC        2703-7               Oxygen [Partial pressure] in arterial blood
+lab.urine_protein                          LNC        27298-9              Protein [Mass/volume] in Urine
+lab.blood_culture                          LNC        600-7                Microorganism identified in Blood by Culture
+lab.nat_k                                  LNC        70182-1              NIH stroke scale
+social.smoking_status                      LNC        72166-2              Tobacco smoking status:Find:Pt:^Patient:Nom
+social.alcohol                             LNC        106629-9             Alcohol consumption environment:Find:Pt:^Patient:Nom
+social.exercise                            LNC        55411-3              Exercise duration:Time:Pt:^Patient:Qn
+social.sdoh                                LNC        96952-7              Social determinants of health score:Score:Pt:^Patient:Qn:R-Outcomes
+social.employment                          LNC        67875-5              Employment status - current:Type:Pt:^Patient:Nom
+social.education                           LNC        80391-6              Level of care:Type:Pt:^Patient:Nom
+social.housing                             LNC        108271-8             Housing condition:Find:Pt:^Patient:Nom
+proc.pci_stent                             SNOMEDCT_US 415070008            Percutaneous coronary intervention
+proc.cardiac_cath                          SNOMEDCT_US 41976001             Cardiac catheterization
+proc.echo                                  SNOMEDCT_US 433236007            Transthoracic echocardiography
+proc.ecg                                   SNOMEDCT_US 447113005            12 lead electrocardiogram at rest
+proc.cardiac_rehab                         SNOMEDCT_US 313395003            Cardiac rehabilitation
+proc.stress_test                           SNOMEDCT_US 165079009            Exercise tolerance test
+proc.carotid_endarterectomy                SNOMEDCT_US 233296007            Endarterectomy of internal carotid artery
+proc.mri_brain                             SNOMEDCT_US 816077007            MRI of brain
+proc.ct_head                               SNOMEDCT_US 429858000            CT of head and neck
+proc.pt                                    SNOMEDCT_US 91251008             Physical therapy procedure
+proc.hemodialysis                          SNOMEDCT_US 302497006            Hemodialysis
+proc.av_fistula                            SNOMEDCT_US 312213004            Surgical arteriovenous fistula
+proc.kidney_transplant                     SNOMEDCT_US 70536003             Transplant of kidney
+proc.colonoscopy                           SNOMEDCT_US 235150006            Total colonoscopy
+proc.egd                                   SNOMEDCT_US 60139001             Operative esophagogastroduodenoscopy
+proc.mri_abdomen                           SNOMEDCT_US 699582003            Magnetic resonance imaging of abdomen and pelvis with contrast
+proc.spirometry                            SNOMEDCT_US 127783003            Spirometry
+proc.sixmin_walk                           SNOMEDCT_US 252478000            6-minute walk test
+proc.oxygen_therapy                        SNOMEDCT_US 57485005             Oxygen therapy
+proc.smoking_cessation                     SNOMEDCT_US 710081004            Smoking cessation therapy
+proc.eeg                                   SNOMEDCT_US 54550000             Electroencephalogram
+proc.dexa                                  SNOMEDCT_US 241686001            Dual energy X-ray absorptiometry
+proc.kyphoplasty                           SNOMEDCT_US 401226007            Vertebroplasty
+proc.lumpectomy                            SNOMEDCT_US 392021009            Lumpectomy of breast
+proc.sentinel_node                         SNOMEDCT_US 396487001            Sentinel lymph node biopsy
+proc.radiotherapy_breast                   SNOMEDCT_US 428923005            Radiotherapy to breast
+proc.mammogram                             SNOMEDCT_US 71651007             Mammography
+proc.blood_transfusion                     SNOMEDCT_US 116859006            Transfusion of blood product
+proc.ultrasound_kidney                     SNOMEDCT_US 1334074007           Ultrasonography of bilateral kidneys and bladder
+proc.ultrasound_liver                      SNOMEDCT_US 443631006            Ultrasonography with contrast
+proc.eye_exam                              SNOMEDCT_US 53524009             Ophthalmoscopy
+proc.laser_photo                           SNOMEDCT_US 64879003             Photocoagulation
+proc.fistula_incision                      SNOMEDCT_US 79567008             Incision of anal fistula
+proc.synovial_injection                    SNOMEDCT_US 300024006            Injection of knee joint
+proc.cpap                                  SNOMEDCT_US 47545007             Continuous positive airway pressure ventilation treatment
+proc.sleep_study                           SNOMEDCT_US 60554003             Polysomnography
+proc.ed_visit                              SNOMEDCT_US 50849002             Emergency room admission
+vac.influenza                              CVX        140                  Influenza, split virus, trivalent, injectable, preservative free
+vac.covid19                                CVX        312                  SARS-COV-2 (COVID-19) vaccine, mRNA, spike protein, LNP, preservative free, 50 mcg/0.5 mL dose
+vac.pneumococcal                           CVX        152                  Pneumococcal Conjugate, unspecified formulation
+vac.pneumococcal23                         CVX        33                   pneumococcal polysaccharide vaccine, 23 valent
+vac.tdap                                   CVX        115                  tetanus toxoid, reduced diphtheria toxoid, and acellular pertussis vaccine, adsorbed
+vac.zoster_recomb                          CVX        187                  zoster vaccine recombinant
+vac.hepb                                   CVX        43                   hepatitis B vaccine, adult dosage
+vac.hpv                                    CVX        137                  HPV, unspecified formulation
+vac.mmr                                    CVX        03                   measles, mumps and rubella virus vaccine
+vac.hib                                    CVX        17                   Haemophilus influenzae type b vaccine, conjugate unspecified formulation
+alg.penicillin                             SNOMEDCT_US 91936005             Allergy to penicillin
+alg.sulfa                                  SNOMEDCT_US 91939003             Allergy to sulfonamide
+alg.aspirin                                SNOMEDCT_US 293586001            Allergy to aspirin
+alg.latex                                  SNOMEDCT_US 1003755004           Allergy to latex
+alg.pollens                                SNOMEDCT_US 418689008            Allergy to grass pollen
+alg.cat_dander                             SNOMEDCT_US 1208807009           Allergy to domestic cat protein
+alg.dust_mite                              SNOMEDCT_US 232350006            Allergy to dust mite protein
+alg.peanut                                 SNOMEDCT_US 91935009             Allergy to peanut
+alg.contrast                               SNOMEDCT_US 293637006            Allergy to contrast media
+alg.codeine                                SNOMEDCT_US 293597001            Allergy to codeine
+alg.egg                                    SNOMEDCT_US 213020009            Allergy to egg protein
+alg.shellfish                              SNOMEDCT_US 300913006            Allergy to shellfish

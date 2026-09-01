@@ -30,12 +30,13 @@ BUCKETS = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "t
 
 def ensure_file(name):
     path = os.path.join(BUNDLE_DIR, name)
-    if not os.path.exists(path):
-        os.makedirs(os.path.dirname(path) or BUNDLE_DIR, exist_ok=True)
-        gz_path = path + ".gz"
-        urllib.request.urlretrieve(f"{BASE}/{name}.gz", gz_path)
-        with gzip.open(gz_path, "rb") as f_in, open(path, "wb") as f_out:
-            f_out.write(f_in.read())
+    os.makedirs(os.path.dirname(path) or BUNDLE_DIR, exist_ok=True)
+    # Always re-fetch: the corpus updates in place (same URL, new version
+    # field) and a cached copy silently audits the wrong release.
+    gz_path = path + ".gz"
+    urllib.request.urlretrieve(f"{BASE}/{name}.gz", gz_path)
+    with gzip.open(gz_path, "rb") as f_in, open(path, "wb") as f_out:
+        f_out.write(f_in.read())
     return path
 
 

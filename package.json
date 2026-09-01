@@ -17,6 +17,7 @@
     "sandbox:load-fixtures": "node scripts/load-smart-dev-sandbox.mjs",
     "sandbox:generate-large-fixture": "node scripts/generate-large-fhir-fixture.mjs",
     "sandbox:load-large-fixture": "FHIR_FIXTURE=tests/fixtures/fhir/large-patient-r4.json node scripts/load-smart-dev-sandbox.mjs",
+    "sandbox:load-chronic-cohort": "FHIR_FIXTURES=tests/fixtures/fhir/chronic node scripts/load-smart-dev-sandbox.mjs",
     "webllm:eval": "node scripts/webllm-eval-daemon.mjs",
     "webllm:eval:win": "node scripts/webllm-eval-daemon.mjs --windows",
     "prompts:fetch": "curl -sL https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/prompts.json -o src/lib/llm/prompts.json"

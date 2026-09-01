@@ -76,7 +76,7 @@
         "resourceType": "MedicationRequest",
         "id": "tier2-med-metformin",
         "status": "active",
-        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "860975", "display": "metformin 500 MG Oral Tablet" }] },
+        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "861007", "display": "metformin hydrochloride 500 MG Oral Tablet" }] },
         "subject": { "reference": "Patient/fhir4px-tier2-codes-patient" },
         "authoredOn": "2026-01-10"
       },

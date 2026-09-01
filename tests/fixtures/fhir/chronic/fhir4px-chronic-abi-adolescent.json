@@ -1,0 +1,7194 @@
+{
+ "resourceType": "Bundle",
+ "type": "transaction",
+ "entry": [
+  {
+   "fullUrl": "https://fhir4px.local/r4/Patient/fhir4px-chronic-abi-adolescent",
+   "resource": {
+    "resourceType": "Patient",
+    "id": "fhir4px-chronic-abi-adolescent",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+     ]
+    },
+    "extension": [
+     {
+      "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
+      "extension": [
+       {
+        "url": "ombCategory",
+        "valueCoding": {
+         "system": "urn:oid:2.16.840.1.113883.6.238",
+         "code": "2054-5",
+         "display": "Black or African American"
+        }
+       },
+       {
+        "url": "text",
+        "valueString": "Black or African American"
+       }
+      ]
+     },
+     {
+      "url": "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
+      "extension": [
+       {
+        "url": "ombCategory",
+        "valueCoding": {
+         "system": "urn:oid:2.16.840.1.113883.6.238",
+         "code": "2186-5",
+         "display": "Not Hispanic or Latino"
+        }
+       },
+       {
+        "url": "text",
+        "valueString": "Not Hispanic or Latino"
+       }
+      ]
+     }
+    ],
+    "identifier": [
+     {
+      "system": "https://fhir4px.local/chronic-cohort/M",
+      "value": "MRN-C1024"
+     }
+    ],
+    "name": [
+     {
+      "use": "official",
+      "family": "Turner",
+      "given": [
+       "Abi"
+      ]
+     }
+    ],
+    "gender": "female",
+    "birthDate": "2010-08-15"
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Patient/fhir4px-chronic-abi-adolescent"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Practitioner/fhir4px-chronic-abi-adolescent-pract-primrose",
+   "resource": {
+    "resourceType": "Practitioner",
+    "id": "fhir4px-chronic-abi-adolescent-pract-primrose",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-practitioner"
+     ]
+    },
+    "identifier": [
+     {
+      "system": "http://hl7.org/fhir/sid/us-npi",
+      "value": "1000000124"
+     }
+    ],
+    "name": [
+     {
+      "family": "Primrose",
+      "given": [
+       "Quinn"
+      ]
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Practitioner/fhir4px-chronic-abi-adolescent-pract-primrose"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Condition/fhir4px-chronic-abi-adolescent-cond-0001",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "fhir4px-chronic-abi-adolescent-cond-0001",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
+     ]
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+        "code": "problem-list-item",
+        "display": "Problem List Item"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "406506008",
+       "display": "Attention deficit hyperactivity disorder"
+      }
+     ],
+     "text": "ADHD, combined presentation"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "onsetDateTime": "2022-09-13"
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Condition/fhir4px-chronic-abi-adolescent-cond-0001"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Condition/fhir4px-chronic-abi-adolescent-cond-0002",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "fhir4px-chronic-abi-adolescent-cond-0002",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
+     ]
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+        "code": "problem-list-item",
+        "display": "Problem List Item"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "414916001",
+       "display": "Obesity"
+      }
+     ],
+     "text": "Obesity"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "onsetDateTime": "2023-06-07"
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Condition/fhir4px-chronic-abi-adolescent-cond-0002"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Condition/fhir4px-chronic-abi-adolescent-cond-0003",
+   "resource": {
+    "resourceType": "Condition",
+    "id": "fhir4px-chronic-abi-adolescent-cond-0003",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
+     ]
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+        "code": "problem-list-item",
+        "display": "Problem List Item"
+       }
+      ]
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "61582004",
+       "display": "Allergic rhinitis"
+      }
+     ],
+     "text": "Allergic rhinitis"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "onsetDateTime": "2020-04-02"
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Condition/fhir4px-chronic-abi-adolescent-cond-0003"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/AllergyIntolerance/fhir4px-chronic-abi-adolescent-alg-0004",
+   "resource": {
+    "resourceType": "AllergyIntolerance",
+    "id": "fhir4px-chronic-abi-adolescent-alg-0004",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-allergyintolerance"
+     ]
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+       "code": "confirmed"
+      }
+     ]
+    },
+    "category": [
+     "food"
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "91935009",
+       "display": "Allergy to peanut"
+      }
+     ],
+     "text": "Allergy to peanut"
+    },
+    "patient": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "recordedDate": "2024-02-06"
+   },
+   "request": {
+    "method": "PUT",
+    "url": "AllergyIntolerance/fhir4px-chronic-abi-adolescent-alg-0004"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Medication/fhir4px-chronic-abi-adolescent-med-methylphenidate-er20",
+   "resource": {
+    "resourceType": "Medication",
+    "id": "fhir4px-chronic-abi-adolescent-med-methylphenidate-er20",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medication"
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+       "code": "1091225",
+       "display": "8 HR methylphenidate hydrochloride 20 MG Extended Release Oral Tablet"
+      }
+     ],
+     "text": "8 HR methylphenidate hydrochloride 20 MG Extended Release Oral Tablet"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Medication/fhir4px-chronic-abi-adolescent-med-methylphenidate-er20"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/MedicationRequest/fhir4px-chronic-abi-adolescent-medreq-0005",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "fhir4px-chronic-abi-adolescent-medreq-0005",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medicationrequest"
+     ]
+    },
+    "status": "active",
+    "intent": "order",
+    "medicationReference": {
+     "reference": "Medication/fhir4px-chronic-abi-adolescent-med-methylphenidate-er20"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "authoredOn": "2024-02-06",
+    "requester": {
+     "reference": "Practitioner/fhir4px-chronic-abi-adolescent-pract-primrose"
+    },
+    "dosageInstruction": [
+     {
+      "text": "1 capsule by mouth every morning"
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "MedicationRequest/fhir4px-chronic-abi-adolescent-medreq-0005"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Medication/fhir4px-chronic-abi-adolescent-med-cetirizine",
+   "resource": {
+    "resourceType": "Medication",
+    "id": "fhir4px-chronic-abi-adolescent-med-cetirizine",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medication"
+     ]
+    },
+    "code": {
+     "coding": [
+      {
+       "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+       "code": "1014678",
+       "display": "cetirizine hydrochloride 10 MG Oral Tablet"
+      }
+     ],
+     "text": "cetirizine hydrochloride 10 MG Oral Tablet"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Medication/fhir4px-chronic-abi-adolescent-med-cetirizine"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/MedicationRequest/fhir4px-chronic-abi-adolescent-medreq-0006",
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "fhir4px-chronic-abi-adolescent-medreq-0006",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medicationrequest"
+     ]
+    },
+    "status": "active",
+    "intent": "order",
+    "medicationReference": {
+     "reference": "Medication/fhir4px-chronic-abi-adolescent-med-cetirizine"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "authoredOn": "2024-02-06",
+    "requester": {
+     "reference": "Practitioner/fhir4px-chronic-abi-adolescent-pract-primrose"
+    },
+    "dosageInstruction": [
+     {
+      "text": "1 teaspoon by mouth nightly"
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "MedicationRequest/fhir4px-chronic-abi-adolescent-medreq-0006"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Encounter/fhir4px-chronic-abi-adolescent-enc-0007",
+   "resource": {
+    "resourceType": "Encounter",
+    "id": "fhir4px-chronic-abi-adolescent-enc-0007",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+     ]
+    },
+    "identifier": [
+     {
+      "system": "https://fhir4px.local/encounter",
+      "value": "ENC-C1024-7"
+     }
+    ],
+    "status": "finished",
+    "class": {
+     "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+     "code": "AMB",
+     "display": "ambulatory"
+    },
+    "type": [
+     {
+      "text": "Consultation"
+     }
+    ],
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "period": {
+     "start": "2024-02-06",
+     "end": "2024-02-06"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Encounter/fhir4px-chronic-abi-adolescent-enc-0007"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Encounter/fhir4px-chronic-abi-adolescent-enc-0008",
+   "resource": {
+    "resourceType": "Encounter",
+    "id": "fhir4px-chronic-abi-adolescent-enc-0008",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+     ]
+    },
+    "identifier": [
+     {
+      "system": "https://fhir4px.local/encounter",
+      "value": "ENC-C1024-8"
+     }
+    ],
+    "status": "finished",
+    "class": {
+     "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+     "code": "AMB",
+     "display": "ambulatory"
+    },
+    "type": [
+     {
+      "text": "Encounter for Check Up"
+     }
+    ],
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "period": {
+     "start": "2025-01-06",
+     "end": "2025-01-06"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Encounter/fhir4px-chronic-abi-adolescent-enc-0008"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Procedure/fhir4px-chronic-abi-adolescent-proc-0009",
+   "resource": {
+    "resourceType": "Procedure",
+    "id": "fhir4px-chronic-abi-adolescent-proc-0009",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-procedure"
+     ]
+    },
+    "status": "completed",
+    "code": {
+     "coding": [
+      {
+       "system": "http://snomed.info/sct",
+       "code": "53524009",
+       "display": "Ophthalmoscopy"
+      }
+     ],
+     "text": "Vision screening normal"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "performedDateTime": "2025-01-06",
+    "encounter": {
+     "reference": "Encounter/fhir4px-chronic-abi-adolescent-enc-0008"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Procedure/fhir4px-chronic-abi-adolescent-proc-0009"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Encounter/fhir4px-chronic-abi-adolescent-enc-0010",
+   "resource": {
+    "resourceType": "Encounter",
+    "id": "fhir4px-chronic-abi-adolescent-enc-0010",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+     ]
+    },
+    "identifier": [
+     {
+      "system": "https://fhir4px.local/encounter",
+      "value": "ENC-C1024-10"
+     }
+    ],
+    "status": "finished",
+    "class": {
+     "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+     "code": "AMB",
+     "display": "ambulatory"
+    },
+    "type": [
+     {
+      "text": "Encounter for Check Up"
+     }
+    ],
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "period": {
+     "start": "2025-12-06",
+     "end": "2025-12-06"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Encounter/fhir4px-chronic-abi-adolescent-enc-0010"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Immunization/fhir4px-chronic-abi-adolescent-imm-0011",
+   "resource": {
+    "resourceType": "Immunization",
+    "id": "fhir4px-chronic-abi-adolescent-imm-0011",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
+     ]
+    },
+    "status": "completed",
+    "vaccineCode": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/cvx",
+       "code": "137",
+       "display": "HPV, unspecified formulation"
+      }
+     ],
+     "text": "HPV, unspecified formulation"
+    },
+    "patient": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "occurrenceDateTime": "2024-03-10",
+    "primarySource": true
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Immunization/fhir4px-chronic-abi-adolescent-imm-0011"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Immunization/fhir4px-chronic-abi-adolescent-imm-0012",
+   "resource": {
+    "resourceType": "Immunization",
+    "id": "fhir4px-chronic-abi-adolescent-imm-0012",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
+     ]
+    },
+    "status": "completed",
+    "vaccineCode": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/cvx",
+       "code": "137",
+       "display": "HPV, unspecified formulation"
+      }
+     ],
+     "text": "HPV, unspecified formulation"
+    },
+    "patient": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "occurrenceDateTime": "2024-09-10",
+    "primarySource": true
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Immunization/fhir4px-chronic-abi-adolescent-imm-0012"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Immunization/fhir4px-chronic-abi-adolescent-imm-0013",
+   "resource": {
+    "resourceType": "Immunization",
+    "id": "fhir4px-chronic-abi-adolescent-imm-0013",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
+     ]
+    },
+    "status": "completed",
+    "vaccineCode": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/cvx",
+       "code": "115",
+       "display": "tetanus toxoid, reduced diphtheria toxoid, and acellular pertussis vaccine, adsorbed"
+      }
+     ],
+     "text": "tetanus toxoid, reduced diphtheria toxoid, and acellular pertussis vaccine, adsorbed"
+    },
+    "patient": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "occurrenceDateTime": "2024-02-14",
+    "primarySource": true
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Immunization/fhir4px-chronic-abi-adolescent-imm-0013"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Immunization/fhir4px-chronic-abi-adolescent-imm-0014",
+   "resource": {
+    "resourceType": "Immunization",
+    "id": "fhir4px-chronic-abi-adolescent-imm-0014",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
+     ]
+    },
+    "status": "completed",
+    "vaccineCode": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/cvx",
+       "code": "03",
+       "display": "measles, mumps and rubella virus vaccine"
+      }
+     ],
+     "text": "measles, mumps and rubella virus vaccine"
+    },
+    "patient": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "occurrenceDateTime": "2010-02-14",
+    "primarySource": true
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Immunization/fhir4px-chronic-abi-adolescent-imm-0014"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Immunization/fhir4px-chronic-abi-adolescent-imm-0015",
+   "resource": {
+    "resourceType": "Immunization",
+    "id": "fhir4px-chronic-abi-adolescent-imm-0015",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
+     ]
+    },
+    "status": "completed",
+    "vaccineCode": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/cvx",
+       "code": "140",
+       "display": "Influenza, split virus, trivalent, injectable, preservative free"
+      }
+     ],
+     "text": "Influenza, split virus, trivalent, injectable, preservative free"
+    },
+    "patient": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "occurrenceDateTime": "2024-05-08",
+    "primarySource": true
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Immunization/fhir4px-chronic-abi-adolescent-imm-0015"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Immunization/fhir4px-chronic-abi-adolescent-imm-0016",
+   "resource": {
+    "resourceType": "Immunization",
+    "id": "fhir4px-chronic-abi-adolescent-imm-0016",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
+     ]
+    },
+    "status": "completed",
+    "vaccineCode": {
+     "coding": [
+      {
+       "system": "http://hl7.org/fhir/sid/cvx",
+       "code": "140",
+       "display": "Influenza, split virus, trivalent, injectable, preservative free"
+      }
+     ],
+     "text": "Influenza, split virus, trivalent, injectable, preservative free"
+    },
+    "patient": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "occurrenceDateTime": "2025-05-09",
+    "primarySource": true
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Immunization/fhir4px-chronic-abi-adolescent-imm-0016"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0017",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0017",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 108,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 62,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0017"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0018",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0018",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-03-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 113,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 67,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0018"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0019",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0019",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-04-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 116,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 60,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0019"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0020",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0020",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-05-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 105,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 72,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0020"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0021",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0021",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Blood pressure panel"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-06-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 111,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 56,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0021"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0022",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0022",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Blood pressure panel"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-07-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 111,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 64,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0022"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0023",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0023",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-08-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 109,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 64,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0023"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0024",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0024",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-09-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 112,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 62,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0024"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0025",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0025",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-10-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 108,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 67,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0025"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0026",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0026",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-11-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 108,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 69,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0026"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0027",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0027",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Blood pressure panel"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-12-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 111,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 62,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0027"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0028",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0028",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-01-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 105,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 70,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0028"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0029",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0029",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Blood pressure panel"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 112,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 72,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0029"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0030",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0030",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-03-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 120,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 66,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0030"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0031",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0031",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-04-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 108,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 61,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0031"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0032",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0032",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-05-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 105,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 63,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0032"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0033",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0033",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Blood pressure panel"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-06-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 109,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 74,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0033"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0034",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0034",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-07-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 111,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 62,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0034"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0035",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0035",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-08-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 115,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 64,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0035"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0036",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0036",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-09-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 116,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 65,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0036"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0037",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0037",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-10-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 109,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 64,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0037"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0038",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0038",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-11-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 104,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 74,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0038"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0039",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0039",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Blood pressure panel"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-12-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 105,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 69,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0039"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0040",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0040",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood pressure panel with all children optional"
+      }
+     ],
+     "text": "Blood pressure panel with all children optional"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2026-01-04",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 104,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 69,
+       "unit": "mmHg",
+       "system": "http://unitsofmeasure.org",
+       "code": "mm[Hg]"
+      }
+     }
+    ]
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0040"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0041",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0041",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-04",
+    "valueQuantity": {
+     "value": 83,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0041"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0042",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0042",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-03-04",
+    "valueQuantity": {
+     "value": 76,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0042"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0043",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0043",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-04-04",
+    "valueQuantity": {
+     "value": 83,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0043"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0044",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0044",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-05-04",
+    "valueQuantity": {
+     "value": 80,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0044"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0045",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0045",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-06-04",
+    "valueQuantity": {
+     "value": 73,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0045"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0046",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0046",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-07-04",
+    "valueQuantity": {
+     "value": 81,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0046"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0047",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0047",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-08-04",
+    "valueQuantity": {
+     "value": 87,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0047"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0048",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0048",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-09-04",
+    "valueQuantity": {
+     "value": 76,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0048"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0049",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0049",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-10-04",
+    "valueQuantity": {
+     "value": 83,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0049"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0050",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0050",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-11-04",
+    "valueQuantity": {
+     "value": 86,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0050"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0051",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0051",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-12-04",
+    "valueQuantity": {
+     "value": 90,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0051"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0052",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0052",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-01-04",
+    "valueQuantity": {
+     "value": 82,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0052"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0053",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0053",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-04",
+    "valueQuantity": {
+     "value": 91,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0053"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0054",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0054",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-03-04",
+    "valueQuantity": {
+     "value": 78,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0054"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0055",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0055",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-04-04",
+    "valueQuantity": {
+     "value": 76,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0055"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0056",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0056",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-05-04",
+    "valueQuantity": {
+     "value": 84,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0056"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0057",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0057",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-06-04",
+    "valueQuantity": {
+     "value": 83,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0057"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0058",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0058",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-07-04",
+    "valueQuantity": {
+     "value": 82,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0058"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0059",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0059",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-08-04",
+    "valueQuantity": {
+     "value": 85,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0059"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0060",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0060",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-09-04",
+    "valueQuantity": {
+     "value": 79,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0060"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0061",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0061",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-10-04",
+    "valueQuantity": {
+     "value": 73,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0061"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0062",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0062",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-11-04",
+    "valueQuantity": {
+     "value": 81,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0062"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0063",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0063",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-12-04",
+    "valueQuantity": {
+     "value": 83,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0063"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0064",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0064",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "8867-4",
+       "display": "Heart rate"
+      }
+     ],
+     "text": "Heart rate"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2026-01-04",
+    "valueQuantity": {
+     "value": 86,
+     "unit": "beats/minute",
+     "system": "http://unitsofmeasure.org",
+     "code": "/min"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0064"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0065",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0065",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-04",
+    "valueQuantity": {
+     "value": 168.8,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0065"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0066",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0066",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-03-04",
+    "valueQuantity": {
+     "value": 171.3,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0066"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0067",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0067",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-04-04",
+    "valueQuantity": {
+     "value": 169.2,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0067"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0068",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0068",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-05-04",
+    "valueQuantity": {
+     "value": 167.1,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0068"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0069",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0069",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-06-04",
+    "valueQuantity": {
+     "value": 166.5,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0069"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0070",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0070",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-07-04",
+    "valueQuantity": {
+     "value": 171.8,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0070"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0071",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0071",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-08-04",
+    "valueQuantity": {
+     "value": 166.5,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0071"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0072",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0072",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-09-04",
+    "valueQuantity": {
+     "value": 168.3,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0072"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0073",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0073",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-10-04",
+    "valueQuantity": {
+     "value": 167.3,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0073"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0074",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0074",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-11-04",
+    "valueQuantity": {
+     "value": 169.3,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0074"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0075",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0075",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-12-04",
+    "valueQuantity": {
+     "value": 171.6,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0075"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0076",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0076",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-01-04",
+    "valueQuantity": {
+     "value": 169.4,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0076"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0077",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0077",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-04",
+    "valueQuantity": {
+     "value": 169.8,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0077"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0078",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0078",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-03-04",
+    "valueQuantity": {
+     "value": 168.5,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0078"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0079",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0079",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-04-04",
+    "valueQuantity": {
+     "value": 170.8,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0079"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0080",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0080",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-05-04",
+    "valueQuantity": {
+     "value": 170.5,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0080"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0081",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0081",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-06-04",
+    "valueQuantity": {
+     "value": 169.6,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0081"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0082",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0082",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-07-04",
+    "valueQuantity": {
+     "value": 171.9,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0082"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0083",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0083",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-08-04",
+    "valueQuantity": {
+     "value": 169.6,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0083"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0084",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0084",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-09-04",
+    "valueQuantity": {
+     "value": 170,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0084"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0085",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0085",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-10-04",
+    "valueQuantity": {
+     "value": 167.8,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0085"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0086",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0086",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-11-04",
+    "valueQuantity": {
+     "value": 166.4,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0086"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0087",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0087",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-12-04",
+    "valueQuantity": {
+     "value": 172.5,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0087"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0088",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0088",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "29463-7",
+       "display": "Body weight"
+      }
+     ],
+     "text": "Body weight"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2026-01-04",
+    "valueQuantity": {
+     "value": 171.4,
+     "unit": "lb",
+     "system": "http://unitsofmeasure.org",
+     "code": "[lb_av]"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0088"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0089",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0089",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0089"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0090",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0090",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-03-04",
+    "valueQuantity": {
+     "value": 98,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0090"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0091",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0091",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-04-04",
+    "valueQuantity": {
+     "value": 98,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0091"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0092",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0092",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-05-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0092"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0093",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0093",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-06-04",
+    "valueQuantity": {
+     "value": 98,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0093"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0094",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0094",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-07-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0094"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0095",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0095",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-08-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0095"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0096",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0096",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-09-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0096"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0097",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0097",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-10-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0097"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0098",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0098",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-11-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0098"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0099",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0099",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-12-04",
+    "valueQuantity": {
+     "value": 96,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0099"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0100",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0100",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-01-04",
+    "valueQuantity": {
+     "value": 96,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0100"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0101",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0101",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0101"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0102",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0102",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-03-04",
+    "valueQuantity": {
+     "value": 98,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0102"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0103",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0103",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-04-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0103"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0104",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0104",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-05-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0104"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0105",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0105",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-06-04",
+    "valueQuantity": {
+     "value": 96,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0105"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0106",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0106",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-07-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0106"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0107",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0107",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-08-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0107"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0108",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0108",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-09-04",
+    "valueQuantity": {
+     "value": 98,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0108"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0109",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0109",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-10-04",
+    "valueQuantity": {
+     "value": 96,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0109"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0110",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0110",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-11-04",
+    "valueQuantity": {
+     "value": 97,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0110"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0111",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0111",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-12-04",
+    "valueQuantity": {
+     "value": 96,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0111"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0112",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0112",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2708-6",
+       "display": "Oxygen saturation in Arterial blood"
+      }
+     ],
+     "text": "Oxygen saturation in Arterial blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2026-01-04",
+    "valueQuantity": {
+     "value": 98,
+     "unit": "%",
+     "system": "http://unitsofmeasure.org",
+     "code": "%"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0112"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0113",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0113",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-04",
+    "valueQuantity": {
+     "value": 29.5,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0113"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0114",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0114",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-03-04",
+    "valueQuantity": {
+     "value": 29,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0114"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0115",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0115",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-04-04",
+    "valueQuantity": {
+     "value": 29.3,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0115"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0116",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0116",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-05-04",
+    "valueQuantity": {
+     "value": 29.3,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0116"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0117",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0117",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-06-04",
+    "valueQuantity": {
+     "value": 28.7,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0117"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0118",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0118",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-07-04",
+    "valueQuantity": {
+     "value": 28.9,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0118"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0119",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0119",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-08-04",
+    "valueQuantity": {
+     "value": 28.8,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0119"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0120",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0120",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-09-04",
+    "valueQuantity": {
+     "value": 29.4,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0120"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0121",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0121",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-10-04",
+    "valueQuantity": {
+     "value": 28.3,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0121"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0122",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0122",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-11-04",
+    "valueQuantity": {
+     "value": 28.9,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0122"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0123",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0123",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-12-04",
+    "valueQuantity": {
+     "value": 28.8,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0123"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0124",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0124",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-01-04",
+    "valueQuantity": {
+     "value": 28.5,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0124"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0125",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0125",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-04",
+    "valueQuantity": {
+     "value": 28.3,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0125"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0126",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0126",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-03-04",
+    "valueQuantity": {
+     "value": 29,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0126"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0127",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0127",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-04-04",
+    "valueQuantity": {
+     "value": 28.8,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0127"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0128",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0128",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-05-04",
+    "valueQuantity": {
+     "value": 28.5,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0128"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0129",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0129",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-06-04",
+    "valueQuantity": {
+     "value": 28.8,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0129"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0130",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0130",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-07-04",
+    "valueQuantity": {
+     "value": 28.4,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0130"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0131",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0131",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-08-04",
+    "valueQuantity": {
+     "value": 28.4,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0131"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0132",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0132",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-09-04",
+    "valueQuantity": {
+     "value": 28.3,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0132"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0133",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0133",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-10-04",
+    "valueQuantity": {
+     "value": 28.2,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0133"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0134",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0134",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-11-04",
+    "valueQuantity": {
+     "value": 27.7,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0134"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0135",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0135",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-12-04",
+    "valueQuantity": {
+     "value": 28.4,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0135"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0136",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0136",
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "vital-signs",
+        "display": "Vital Signs"
+       }
+      ],
+      "text": "Vital Signs"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "39156-5",
+       "display": "Body mass index"
+      }
+     ],
+     "text": "Body mass index"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2026-01-04",
+    "valueQuantity": {
+     "value": 28.7,
+     "unit": "kg/m2",
+     "system": "http://unitsofmeasure.org",
+     "code": "kg/m2"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0136"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0137",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0137",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "18262-6",
+       "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+      }
+     ],
+     "text": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-09",
+    "valueQuantity": {
+     "value": 101,
+     "unit": "mg/dL",
+     "system": "http://unitsofmeasure.org",
+     "code": "mg/dL"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0137"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0138",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0138",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "18262-6",
+       "display": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+      }
+     ],
+     "text": "Cholesterol in LDL [Mass/volume] in Serum or Plasma by Direct assay"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-09",
+    "valueQuantity": {
+     "value": 95,
+     "unit": "mg/dL",
+     "system": "http://unitsofmeasure.org",
+     "code": "mg/dL"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0138"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0139",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0139",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2085-9",
+       "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Cholesterol in HDL [Mass/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-09",
+    "valueQuantity": {
+     "value": 44,
+     "unit": "mg/dL",
+     "system": "http://unitsofmeasure.org",
+     "code": "mg/dL"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0139"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0140",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0140",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2085-9",
+       "display": "Cholesterol in HDL [Mass/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Cholesterol in HDL [Mass/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-09",
+    "valueQuantity": {
+     "value": 48,
+     "unit": "mg/dL",
+     "system": "http://unitsofmeasure.org",
+     "code": "mg/dL"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0140"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0141",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0141",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2571-8",
+       "display": "Triglyceride [Mass/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Triglyceride [Mass/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-09",
+    "valueQuantity": {
+     "value": 125,
+     "unit": "mg/dL",
+     "system": "http://unitsofmeasure.org",
+     "code": "mg/dL"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0141"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0142",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0142",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "text": "Triglyceride [Mass/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-09",
+    "valueQuantity": {
+     "value": 114,
+     "unit": "mg/dL",
+     "system": "http://unitsofmeasure.org",
+     "code": "mg/dL"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0142"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0143",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0143",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "1742-6",
+       "display": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-09",
+    "valueQuantity": {
+     "value": 37,
+     "unit": "U/L",
+     "system": "http://unitsofmeasure.org",
+     "code": "U/L"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0143"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0144",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0144",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "1742-6",
+       "display": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Alanine aminotransferase [Enzymatic activity/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-09",
+    "valueQuantity": {
+     "value": 33,
+     "unit": "U/L",
+     "system": "http://unitsofmeasure.org",
+     "code": "U/L"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0144"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0145",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0145",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "44249-1",
+       "display": "PHQ-9 total score"
+      }
+     ],
+     "text": "PHQ-9 total score"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2024-02-09",
+    "valueQuantity": {
+     "value": 6,
+     "unit": "{score}",
+     "system": "http://unitsofmeasure.org",
+     "code": "{score}"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0145"
+   }
+  },
+  {
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-abi-adolescent-obs-0146",
+   "resource": {
+    "resourceType": "Observation",
+    "id": "fhir4px-chronic-abi-adolescent-obs-0146",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+     ]
+    },
+    "status": "final",
+    "category": [
+     {
+      "coding": [
+       {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code": "laboratory",
+        "display": "Laboratory"
+       }
+      ],
+      "text": "Laboratory"
+     }
+    ],
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "44249-1",
+       "display": "PHQ-9 total score"
+      }
+     ],
+     "text": "PHQ-9 total score"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-chronic-abi-adolescent"
+    },
+    "effectiveDateTime": "2025-02-09",
+    "valueQuantity": {
+     "value": 4,
+     "unit": "{score}",
+     "system": "http://unitsofmeasure.org",
+     "code": "{score}"
+    }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-abi-adolescent-obs-0146"
+   }
+  }
+ ]
+}

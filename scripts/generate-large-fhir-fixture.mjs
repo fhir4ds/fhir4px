@@ -590,7 +590,7 @@ function generateCardiorenalEntries(profile) {
     }),
     medication({
       id: "fhir4px-med-furosemide",
-      code: "310429",
+      code: "313988",
       display: "furosemide 40 MG Oral Tablet",
       text: "Furosemide 40 mg tablet"
     }),
@@ -602,7 +602,7 @@ function generateCardiorenalEntries(profile) {
     }),
     medication({
       id: "fhir4px-med-carvedilol",
-      code: "200031",
+      code: "200032",
       display: "carvedilol 12.5 MG Oral Tablet",
       text: "Carvedilol 12.5 mg tablet"
     }),
@@ -892,8 +892,8 @@ function generateRespiratoryImmuneEntries(profile) {
     }),
     medication({
       id: "fhir4px-med-fluticasone-salmeterol",
-      code: "896001",
-      display: "fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler",
+      code: "896188",
+      display: "fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT [Advair]",
       text: "Fluticasone salmeterol inhaler"
     }),
     medication({
@@ -904,14 +904,14 @@ function generateRespiratoryImmuneEntries(profile) {
     }),
     medication({
       id: "fhir4px-med-lithium",
-      code: "197528",
+      code: "197889",
       display: "lithium carbonate 300 MG Oral Capsule",
       text: "Lithium carbonate 300 mg capsule"
     }),
     medication({
       id: "fhir4px-med-levothyroxine",
-      code: "966222",
-      display: "levothyroxine sodium 50 MCG Oral Tablet",
+      code: "966221",
+      display: "levothyroxine sodium 0.05 MG Oral Tablet",
       text: "Levothyroxine 50 mcg tablet"
     }),
     medication({
@@ -1015,7 +1015,7 @@ function generateRespiratoryImmuneEntries(profile) {
           date,
           categoryCode: "laboratory",
           categoryDisplay: "Laboratory",
-          code: "8122-4",
+          code: "24467-3",
           text: month % 10 === 0 ? "CD4 count" : undefined,
           display: "CD3+CD4+ (T4 helper) cells [#/volume] in Blood",
           value: Math.round(420 + drift * 90 + seasonal * 22),

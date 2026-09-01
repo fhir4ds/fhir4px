@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const DEFAULT_BASE_URL = "http://localhost:4004/hapi-fhir-jpaserver/fhir";
@@ -29,9 +29,19 @@ const fixtureInputs = (process.env.FHIR_FIXTURES || process.env.FHIR_FIXTURE || 
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
-const fixturePaths = (fixtureInputs.length ? fixtureInputs : DEFAULT_FIXTURES).map((fixture) =>
-  resolve(process.cwd(), fixture)
-);
+async function expandFixturePath(path) {
+  const info = await stat(path).catch(() => null);
+  if (!info) throw new Error(`Fixture path not found: ${path}`);
+  if (!info.isDirectory()) return [path];
+  const files = (await readdir(path)).filter((name) => name.endsWith(".json") && name !== "manifest.json").sort();
+  return files.map((name) => resolve(path, name));
+}
+
+const fixturePaths = (
+  await Promise.all(
+    (fixtureInputs.length ? fixtureInputs : DEFAULT_FIXTURES).map((fixture) => expandFixturePath(resolve(process.cwd(), fixture)))
+  )
+).flat();
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));

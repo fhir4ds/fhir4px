@@ -28,12 +28,33 @@ export interface RelatedMatch {
   provenance?: MemberProvenance;
   /** Hub concept the match came through, for "via …" attribution. */
   viaHubName?: string;
+  /** v1.2+: inclusive patient-age bounds of the matched member (years). */
+  matchedMemberAgeMin?: number;
+  matchedMemberAgeMax?: number;
+
+}
+
+/**
+ * Age gate for related-record matches (corpus v1.2 age_min/age_max).
+ * Fails OPEN: without a patient age (missing birthDate) nothing is hidden,
+ * and members without bounds are always shown.
+ */
+export function memberWithinAge(
+  match: Pick<RelatedMatch, "matchedMemberAgeMin" | "matchedMemberAgeMax">,
+  age: number | undefined | null
+): boolean {
+  if (age === undefined || age === null) return true;
+  if (match.matchedMemberAgeMin !== undefined && age < match.matchedMemberAgeMin) return false;
+  if (match.matchedMemberAgeMax !== undefined && age > match.matchedMemberAgeMax) return false;
+  return true;
 }
 
 interface IndexedMember {
   name: string;
   provenance?: MemberProvenance;
   viaHub?: string;
+  age_min?: number;
+  age_max?: number;
 }
 
 interface ConceptBucketIndex {
@@ -43,7 +64,21 @@ interface ConceptBucketIndex {
   memberConceptsByBucket: Map<AssociationBucket, Set<string>>;
 }
 
-const BUCKETS: AssociationBucket[] = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "treats"];
+const BUCKETS: AssociationBucket[] = [
+  "lab",
+  "vital",
+  "procedure",
+  "medication",
+  "vaccine",
+  "condition",
+  "treats",
+  // v1.4+ safety-signal buckets — iterated separately from treatment buckets
+  // so adverse_effect members surface on their own card section, never pooled
+  // with treats (opposite polarity per the Q4 relation-aware decision).
+  "adverse_effect",
+  "contraindicated_in",
+  "interferes_with_test"
+];
 
 /**
  * Provenance tiers excluded from default matching, weakest rungs of the
@@ -61,13 +96,10 @@ const LOOSE_PROVENANCE: ReadonlySet<string> = new Set([
   "panel_cooccurrence"
 ]);
 
-/**
- * Buckets unioned from parent (hub) concepts at click time. Monitor types
- * only, per the IS_A default-deny allowlist — hub treats/medication members
- * (e.g. the DM hub's insulins) must not badge on a subtype click because
- * treats edges are not truth-preserving downward.
- */
-const PARENT_UNION_BUCKETS: ReadonlySet<AssociationBucket> = new Set(["lab", "vital", "procedure"]);
+// v2.2 (2026-08-28): ancestor content is materialized into concept buckets
+// at build time with {path: ancestor, parent_cid} attribution. The click-time
+// PARENT_UNION_BUCKETS traversal is retired — parity gate verified 930/930
+// materialized ⊆ click-union on live v2026-08-28.2224.
 
 function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoose = false): ConceptBucketIndex | null {
   const concept = bundle.concepts[conceptKey];
@@ -83,39 +115,19 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
     const conceptKeys = new Set<string>();
     for (const member of members) {
       if (!includeLoose && member.provenance && LOOSE_PROVENANCE.has(member.provenance)) continue;
-      cidToMember.set(member.cid, { name: member.name, provenance: member.provenance });
+      const ancestorParent = member.derivations?.find((d) => d.path === "ancestor")?.parent_cid;
+      cidToMember.set(member.cid, {
+        name: member.name,
+        provenance: member.provenance,
+        age_min: member.age_min,
+        age_max: member.age_max,
+        viaHub: ancestorParent ? bundle.by_cid[ancestorParent] : undefined
+      });
       const memberConcept = bundle.by_cid[member.cid];
       if (memberConcept) conceptKeys.add(memberConcept);
     }
     index.membersByBucket.set(bucket, cidToMember);
     index.memberConceptsByBucket.set(bucket, conceptKeys);
-  }
-
-  for (const parentCid of concept.parent_cids ?? []) {
-    const parentKey = bundle.by_cid[parentCid];
-    const parent = parentKey ? bundle.concepts[parentKey] : undefined;
-    if (!parent) continue;
-    for (const bucket of PARENT_UNION_BUCKETS) {
-      const members = parent.buckets[bucket];
-      if (!members?.length) continue;
-      let cidToMember = index.membersByBucket.get(bucket);
-      let conceptKeys = index.memberConceptsByBucket.get(bucket);
-      if (!cidToMember || !conceptKeys) {
-        cidToMember = new Map();
-        conceptKeys = new Set();
-        index.membersByBucket.set(bucket, cidToMember);
-        index.memberConceptsByBucket.set(bucket, conceptKeys);
-      }
-      for (const member of members) {
-        if (!includeLoose && member.provenance && LOOSE_PROVENANCE.has(member.provenance)) continue;
-        // Direct evidence wins — never overwrite an own-bucket member with
-        // the hub's copy of the same concept.
-        if (cidToMember.has(member.cid)) continue;
-        cidToMember.set(member.cid, { name: member.name, provenance: member.provenance, viaHub: parent.name });
-        const memberConcept = bundle.by_cid[member.cid];
-        if (memberConcept) conceptKeys.add(memberConcept);
-      }
-    }
   }
   return index;
 }
@@ -150,7 +162,9 @@ function matchAgainstConcept(
         relationship: bucket,
         matchedMemberName: member?.name ?? candidate.groupName,
         provenance: member?.provenance,
-        viaHubName: member?.viaHub
+        viaHubName: member?.viaHub,
+        matchedMemberAgeMin: member?.age_min,
+        matchedMemberAgeMax: member?.age_max
       };
     }
     if (candidateParts?.length && (bucket === "lab" || bucket === "vital")) {
@@ -163,7 +177,9 @@ function matchAgainstConcept(
             relationship: bucket,
             matchedMemberName: member.name,
             provenance: member.provenance,
-            viaHubName: member.viaHub
+            viaHubName: member.viaHub,
+            matchedMemberAgeMin: member.age_min,
+            matchedMemberAgeMax: member.age_max
           };
         }
       }
@@ -265,5 +281,10 @@ export function relationshipLabel(
   if (relationship === "condition") return focusIsCondition ? "Related condition" : "Adverse event";
   if (relationship === "procedure") return "Related procedure";
   if (relationship === "vaccine") return "Related vaccine";
+  // v1.4 safety-signal buckets: opposite polarity to treats, distinct
+  // prefixes so patients can't misread a safety chip as a treatment.
+  if (relationship === "adverse_effect") return "Caution: may cause";
+  if (relationship === "contraindicated_in") return "Avoid with this";
+  if (relationship === "interferes_with_test") return "May interfere with";
   return "Related";
 }

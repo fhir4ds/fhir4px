@@ -37,7 +37,7 @@
           "coding": [
             {
               "system": "urn:oid:2.16.840.1.113883.6.88",
-              "code": "860975",
+              "code": "861007",
               "display": "metformin hydrochloride 500 MG Oral Tablet"
             }
           ],
@@ -81,20 +81,13 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "861007",
-              "display": "metformin hydrochloride 500 MG Extended Release Oral Tablet"
+              "code": "860975",
+              "display": "24 HR metformin hydrochloride 500 MG Extended Release Oral Tablet"
             }
           ],
           "text": "Metformin 500 mg extended release tablet"
         },
         "form": {
-          "coding": [
-            {
-              "system": "http://snomed.info/sct",
-              "code": "385057009",
-              "display": "Extended release tablet"
-            }
-          ],
           "text": "Extended release tablet"
         },
         "ingredient": [
@@ -125,20 +118,13 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "745679",
-              "display": "albuterol 0.09 MG/ACTUAT Metered Dose Inhaler"
+              "code": "801093",
+              "display": "albuterol 0.09 MG/ACTUAT [Ventolin]"
             }
           ],
           "text": "Albuterol inhaler"
         },
         "form": {
-          "coding": [
-            {
-              "system": "http://snomed.info/sct",
-              "code": "411062004",
-              "display": "Metered dose inhaler"
-            }
-          ],
           "text": "Metered dose inhaler"
         },
         "ingredient": [
@@ -176,13 +162,6 @@
           "text": "Albuterol nebulizer solution"
         },
         "form": {
-          "coding": [
-            {
-              "system": "http://snomed.info/sct",
-              "code": "385024007",
-              "display": "Inhalation solution"
-            }
-          ],
           "text": "Inhalation solution"
         },
         "ingredient": [
@@ -213,7 +192,7 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "617314",
+              "code": "617310",
               "display": "atorvastatin 20 MG Oral Tablet"
             }
           ],
@@ -829,8 +808,8 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "33878-0",
-              "display": "Left ventricular ejection fraction by US"
+              "code": "10230-1",
+              "display": "Ejection fraction"
             }
           ],
           "text": "Left ventricular ejection fraction"
@@ -1482,8 +1461,8 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "896001",
-              "display": "fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT Dry Powder Inhaler"
+              "code": "896188",
+              "display": "fluticasone propionate 0.25 MG/ACTUAT / salmeterol 0.05 MG/ACTUAT [Advair]"
             }
           ],
           "text": "Fluticasone salmeterol inhaler"
@@ -1542,8 +1521,8 @@
           "coding": [
             {
               "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
-              "code": "966222",
-              "display": "levothyroxine sodium 50 MCG Oral Tablet"
+              "code": "966221",
+              "display": "levothyroxine sodium 0.05 MG Oral Tablet"
             }
           ],
           "text": "Levothyroxine 50 mcg tablet"
@@ -1868,7 +1847,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ],
@@ -2541,7 +2520,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -3215,7 +3194,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -3679,7 +3658,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -4346,7 +4325,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -5023,7 +5002,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ],
@@ -5488,7 +5467,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -6158,7 +6137,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -6825,7 +6804,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -7291,7 +7270,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -7966,7 +7945,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ],
@@ -8641,7 +8620,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -9098,7 +9077,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -9769,7 +9748,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -10445,7 +10424,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -10909,7 +10888,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ],
@@ -11577,7 +11556,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]
@@ -12252,7 +12231,7 @@
           "coding": [
             {
               "system": "http://loinc.org",
-              "code": "8122-4",
+              "code": "24467-3",
               "display": "CD3+CD4+ (T4 helper) cells [#/volume] in Blood"
             }
           ]

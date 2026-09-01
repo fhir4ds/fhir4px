@@ -99,7 +99,7 @@
         "resourceType": "MedicationRequest",
         "id": "rel-med-metformin",
         "status": "active",
-        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "860975", "display": "metformin 500 MG Oral Tablet" }] },
+        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "861007", "display": "metformin hydrochloride 500 MG Oral Tablet" }] },
         "subject": { "reference": "Patient/fhir4px-tier2-relations-patient" },
         "authoredOn": "2026-01-15"
       },
@@ -121,7 +121,7 @@
         "resourceType": "MedicationRequest",
         "id": "rel-med-albuterol",
         "status": "active",
-        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "1799011", "display": "albuterol 0.083 MG/ML Inhalation Solution" }] },
+        "medicationCodeableConcept": { "coding": [{ "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "630208", "display": "albuterol 0.83 MG/ML Inhalation Solution" }] },
         "subject": { "reference": "Patient/fhir4px-tier2-relations-patient" },
         "authoredOn": "2026-01-15"
       },

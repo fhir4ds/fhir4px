@@ -124,7 +124,8 @@ import {
   type ClassificationCacheRecord,
   type ClassificationTransform
 } from "../lib/fhir/classification-cache";
-import { classifyBatch } from "../lib/embeddings";
+import { classifyBatch, embeddingResultIsReliable } from "../lib/embeddings";
+import { memberWithinAge } from "../lib/associations/matcher";
 import { preloadAssociations } from "../lib/associations/bundle";
 import { resolveGroupConcept, type GroupConceptResolution } from "../lib/associations/resolve";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
@@ -1778,7 +1779,17 @@ export function PatientExplorer() {
         if (!options.isCurrentRun()) return;
 
         const entries: ClassificationCacheEntry[] = needsEmbedding.map((record, index) => {
+          const reliable = embeddingResultIsReliable(plan.embeddingTask, results[index].confidence);
+          if (!reliable && plan.deterministic) {
+            const det = plan.deterministic(record);
+            return classificationCacheEntry(record, plan.transform, det.source, det);
+          }
           const result = mapEmbeddingResult(plan.transform, results[index].className, results[index].confidence);
+          if (!reliable) {
+            // No deterministic authority for this task; keep the prediction but
+            // mark it as a fallback so downstream consumers can treat it as uncertain.
+            return classificationCacheEntry(record, plan.transform, "fallback", { ...result, fallback: true });
+          }
           return classificationCacheEntry(record, plan.transform, "embedding", result);
         });
         await upsertAndPersist(entries);
@@ -1789,7 +1800,8 @@ export function PatientExplorer() {
           results: needsEmbedding.map((record, index) => ({
             text: texts[index],
             predicted: results[index].className,
-            confidence: Math.round(results[index].confidence * 100) / 100
+            confidence: Math.round(results[index].confidence * 100) / 100,
+            belowThreshold: !embeddingResultIsReliable(plan.embeddingTask, results[index].confidence)
           }))
         });
       } catch (caught) {
@@ -3102,14 +3114,18 @@ export function PatientExplorer() {
       resourceTypes: group.resourceTypes,
       resolution: groupConceptResolutions[group.groupId] ?? {}
     }));
+    const primary = patientProfiles[0]?.patient ?? summary?.patient;
+    const ageYears = patientAge(primary?.birthDate) ?? null;
     void (async () => {
       try {
         const next: Record<string, RelatedMatch[]> = {};
         for (const group of resolvable) {
-          const matches = await findRelatedGroups(
-            { groupId: group.groupId, resolution: groupConceptResolutions[group.groupId] },
-            candidates
-          );
+          const matches = (
+            await findRelatedGroups(
+              { groupId: group.groupId, resolution: groupConceptResolutions[group.groupId] },
+              candidates
+            )
+          ).filter((match) => memberWithinAge(match, ageYears));
           if (matches.length > 0) next[group.groupId] = matches;
         }
         if (!cancelled) setRelatedMatchesByGroupId(next);
@@ -4609,24 +4625,34 @@ export function PatientExplorer() {
     if (!matches?.length) return null;
     const focusIsCondition = group.resourceTypes.includes("Condition");
 
+    const SAFETY_BUCKETS = new Set(["adverse_effect", "contraindicated_in", "interferes_with_test"]);
+    const sorted = [...matches].sort((a, b) => {
+      const aSafety = SAFETY_BUCKETS.has(a.relationship) ? 1 : 0;
+      const bSafety = SAFETY_BUCKETS.has(b.relationship) ? 1 : 0;
+      return aSafety - bSafety;
+    });
+
     return (
       <Stack spacing={0.75}>
         <Typography variant="body2" color="text.secondary" fontWeight={700}>
           Related records
         </Typography>
         <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-          {matches.slice(0, 8).map((match) => (
-            <Chip
-              key={`${match.groupId}:${match.relationship}`}
-              size="small"
-              color="secondary"
-              variant="outlined"
-              label={`${match.groupName} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${
-                match.viaHubName ? ` (via ${match.viaHubName})` : ""
-              }`}
-              onClick={() => navigateToRelatedGroup(match.groupId)}
-            />
-          ))}
+          {sorted.slice(0, 8).map((match) => {
+            const isSafety = SAFETY_BUCKETS.has(match.relationship);
+            return (
+              <Chip
+                key={`${match.groupId}:${match.relationship}`}
+                size="small"
+                color={isSafety ? "warning" : "secondary"}
+                variant={isSafety ? "filled" : "outlined"}
+                label={`${match.groupName} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${
+                  match.viaHubName ? ` (via ${match.viaHubName})` : ""
+                }`}
+                onClick={() => navigateToRelatedGroup(match.groupId)}
+              />
+            );
+          })}
         </Stack>
       </Stack>
     );
