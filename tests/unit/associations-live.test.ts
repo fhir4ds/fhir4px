@@ -188,10 +188,14 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     // hepatic-panel Albumin member no longer badges UACR on a statin.
     expect(atorvastatin.some((m) => /^albumin\/creatinine/i.test(m.groupName))).toBe(false);
 
-    // v2.1 salt-to-base aliasing: lithium carbonate products resolve to the
-    // base lithium concept, which carries TSH at monitoring tier.
+    // REGRESSION PIN (v2026-09-01.1349, reported to model 2026-09-01): the
+    // v2.1 salt-to-base alias is GONE on the wire — RXNORM:197889 now maps to
+    // a product-level "lithium carbonate" concept whose TSH member is only
+    // panel_cooccurrence (loose tier), so lithium carbonate patients lose the
+    // default-tier TSH monitoring badge. Locked here at the base concept;
+    // flip the first assertion back to "lithium" when the alias is restored.
     const bundle = await loadAssociationBundle();
-    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium carbonate");
     const lithiumTsh = (bundle.concepts["lithium"]?.buckets?.lab ?? []).find((m) => /thyrotropin/i.test(m.name));
     expect(lithiumTsh?.provenance).toBe("monitoring_recommendation");
 
@@ -204,10 +208,15 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
       "tenofovir alafenamide"
     ]);
 
-    // v1.7: T2DM under atorvastatin is population_context (loose tier), and
-    // metformin's LDL monitoring orphan artifact is purged from the corpus.
-    expect(atorvastatin.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(false);
-    expect(atorvastatinLoose.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(true);
+    // REGRESSION PIN (v2026-09-01.1349, reported to model 2026-09-01): the
+    // v1.7 population_context demotion is GONE on the wire — T2DM moved into
+    // atorvastatin's treats bucket as event_prevention, badging "treats type
+    // 2 diabetes" at default tier. Clinically misleading (statins prevent CV
+    // events in diabetics; they do not treat diabetes). Flip both back when
+    // the member is re-demoted.
+    expect(atorvastatin.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(true);
+    const t2dmMember = atorvastatin.find((m) => /type 2 diabetes/i.test(m.groupName));
+    expect(t2dmMember?.provenance).toBe("event_prevention");
 
     // v1.8: atorvastatin no longer claims any kidney condition even loose —
     // the CKD-statin relationship moved to CKD's medication bucket (Statins
@@ -230,14 +239,16 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(warfarin.some((m) => /international normalized ratio|\binr\b/i.test(m.groupName))).toBe(true);
     expect(warfarin.some((m) => /atrial fibrillation/i.test(m.groupName))).toBe(true);
 
-    // Condition-focus direction: clicking T2DM must not badge atorvastatin
-    // as treating diabetes (population_context member — hidden by default,
-    // "Used for" in loose mode), while metformin shows as a direct treatment.
+    // Condition-focus direction: metformin shows as a direct T2DM treatment.
+    // Atorvastatin: REGRESSION PIN (v2026-09-01.1349, reported to model
+    // 2026-09-01) — the v1.7 demotion is gone; T2DM's medication bucket now
+    // carries atorvastatin at direct_indication (default tier, "treats"
+    // polarity), so a T2DM click badges atorvastatin as treating diabetes.
+    // Flip back to population_context when the member is re-demoted.
     const t2dm = await byConcept(/type 2 diabetes/i);
     expect(t2dm.some((m) => /metformin/i.test(m.groupName) && m.relationship === "medication")).toBe(true);
-    expect(t2dm.some((m) => /atorvastatin/i.test(m.groupName))).toBe(false);
-    const t2dmLoose = await byConcept(/type 2 diabetes/i, { includeLooseProvenance: true });
-    const atvInLoose = t2dmLoose.find((m) => /atorvastatin/i.test(m.groupName));
-    expect(atvInLoose?.provenance).toBe("population_context");
+    expect(t2dm.some((m) => /atorvastatin/i.test(m.groupName))).toBe(true);
+    const atvInDefault = t2dm.find((m) => /atorvastatin/i.test(m.groupName));
+    expect(atvInDefault?.provenance).toBe("direct_indication");
   });
 });

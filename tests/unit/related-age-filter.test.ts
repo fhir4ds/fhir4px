@@ -188,10 +188,14 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     }
     expect(hepB).toBeDefined();
     expect(rzv).toBeDefined();
-    // RZV is a pure stub: flat, no parent_cids, empty buckets
+    // RZV anchor drift (v2026-09-01.1349, unannounced): the stub is no longer
+    // flat — 2 VZV monitoring labs arrived via fanned_hub derivations. Still
+    // no parent_cids; buckets now carry monitoring_recommendation members.
     const rzvConcept = bundle.concepts[rzv!];
     expect(rzvConcept?.parent_cids).toBeUndefined();
-    expect(Object.keys(rzvConcept?.buckets ?? {})).toHaveLength(0);
+    const rzvLabs = rzvConcept?.buckets?.lab ?? [];
+    expect(rzvLabs.length).toBeGreaterThan(0);
+    expect(rzvLabs.every((m) => m.provenance === "monitoring_recommendation")).toBe(true);
     // Hep B resolves to a pair-carrying concept (7 monitoring-lab members),
     // not a stub — pre-existing content, newly anchored CVX code.
     // Matcher safety on both shapes verified by the suite below.
