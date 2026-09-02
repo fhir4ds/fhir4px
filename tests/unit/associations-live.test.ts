@@ -240,11 +240,13 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(warfarin.some((m) => /atrial fibrillation/i.test(m.groupName))).toBe(true);
 
     // Condition-focus direction: metformin shows as a direct T2DM treatment.
-    // Atorvastatin: REGRESSION PIN (v2026-09-01.1349, reported to model
-    // 2026-09-01) — the v1.7 demotion is gone; T2DM's medication bucket now
-    // carries atorvastatin at direct_indication (default tier, "treats"
-    // polarity), so a T2DM click badges atorvastatin as treating diabetes.
-    // Flip back to population_context when the member is re-demoted.
+    // Atorvastatin: age gate 65+ is DELIBERATE per canonical (2026-09-02,
+    // relayed via model) — accepted; the app filters it via memberWithinAge.
+    // One specific mis-route stays OPEN: this member's member-level
+    // provenance is direct_indication while its own direct derivation says
+    // event_prevention — the app renders member-level, so 65+ patients see
+    // "Treats this" on a T2DM click. Ask canonical to align member-level
+    // provenance with the derivation; then this flips to "Helps prevent".
     const t2dm = await byConcept(/type 2 diabetes/i);
     expect(t2dm.some((m) => /metformin/i.test(m.groupName) && m.relationship === "medication")).toBe(true);
     expect(t2dm.some((m) => /atorvastatin/i.test(m.groupName))).toBe(true);
