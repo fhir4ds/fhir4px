@@ -18,10 +18,11 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the provenance-display fix release announced by the model
-    // pipeline (handoff model-20260902104619: v2026-09-02.1019; member-level
-    // provenance aligned with direct derivations, 565 members corrected).
-    expect(bundle.version).toBe("2026-09-02.1019");
+    // Pinned to the display-rule refinement release announced by the model
+    // pipeline (handoff model-20260902120143: v2026-09-02.1058; lipid panel
+    // restorations on vascular disorder; pulmHTN echo demotion kept pending
+    // a structured corpus gap; preventive_indication stragglers normalizing).
+    expect(bundle.version).toBe("2026-09-02.1058");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
