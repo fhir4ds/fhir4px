@@ -14,6 +14,7 @@ export type AssociationBucket =
 export type MemberProvenance =
   | "direct_indication"
   | "event_prevention"
+  | "preventive_indication"
   | "population_context"
   | "comorbidity_section"
   | "panel_cooccurrence"
@@ -22,12 +23,7 @@ export type MemberProvenance =
   | "boxed_warning"
   | "warning_section"
   | "contraindication_section"
-  | "interference_section"
-  | "direct_indication"
-  | "event_prevention"
-  | "population_context"
-  | "comorbidity_section"
-  | "panel_cooccurrence";
+  | "interference_section";
 
 export interface AssociationMember {
   cid: string;

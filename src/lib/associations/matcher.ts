@@ -273,7 +273,7 @@ export function relationshipLabel(
   if (relationship === "treats" || relationship === "medication") {
     // v1.7 provenance tiers render honestly: event_prevention members are
     // prescribed to prevent complications, not to treat the condition.
-    if (provenance === "event_prevention") return "Helps prevent";
+    if (provenance === "event_prevention" || provenance === "preventive_indication") return "Helps prevent";
     if (provenance === "population_context") return "Used for";
     if (provenance === "comorbidity_section") return "Associated with";
     return focusIsCondition ? "Treats this" : "Treats";

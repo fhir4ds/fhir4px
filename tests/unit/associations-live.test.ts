@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadAssociationBundle, loadIcd10Crosswalk, loadLabPartCrosswalk } from "../../src/lib/associations/bundle";
 import { resolveGroupConcept } from "../../src/lib/associations/resolve";
-import { findRelatedGroups } from "../../src/lib/associations/matcher";
+import { findRelatedGroups, relationshipLabel } from "../../src/lib/associations/matcher";
 import type { GroupableRecord, PatientFriendlyGroup } from "../../src/lib/fhir/patient-groups";
 
 const live = process.env.LIVE_ASSOCIATIONS === "1";
@@ -18,9 +18,10 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the symptoms-round + ghost-18 release announced by the model
-    // pipeline (handoff model-20260902094356: v2026-09-02.0941, format v1.4).
-    expect(bundle.version).toBe("2026-09-02.0941");
+    // Pinned to the provenance-display fix release announced by the model
+    // pipeline (handoff model-20260902104619: v2026-09-02.1019; member-level
+    // provenance aligned with direct derivations, 565 members corrected).
+    expect(bundle.version).toBe("2026-09-02.1019");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
@@ -240,17 +241,14 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(warfarin.some((m) => /atrial fibrillation/i.test(m.groupName))).toBe(true);
 
     // Condition-focus direction: metformin shows as a direct T2DM treatment.
-    // Atorvastatin: age gate 65+ is DELIBERATE per canonical (2026-09-02,
-    // relayed via model) — accepted; the app filters it via memberWithinAge.
-    // One specific mis-route stays OPEN: this member's member-level
-    // provenance is direct_indication while its own direct derivation says
-    // event_prevention — the app renders member-level, so 65+ patients see
-    // "Treats this" on a T2DM click. Ask canonical to align member-level
-    // provenance with the derivation; then this flips to "Helps prevent".
+    // Atorvastatin <-> T2DM: FIXED in v2026-09-02.1019 (model's provenance-
+    // display release) — member-level provenance now aligns with the direct
+    // derivation (event_prevention, gated 65+ per canonical's deliberate
+    // geriatric-trial design). Renders "Helps prevent", never "Treats this".
     const t2dm = await byConcept(/type 2 diabetes/i);
     expect(t2dm.some((m) => /metformin/i.test(m.groupName) && m.relationship === "medication")).toBe(true);
-    expect(t2dm.some((m) => /atorvastatin/i.test(m.groupName))).toBe(true);
-    const atvInDefault = t2dm.find((m) => /atorvastatin/i.test(m.groupName));
-    expect(atvInDefault?.provenance).toBe("direct_indication");
+    const atvMatch = t2dm.find((m) => /atorvastatin/i.test(m.groupName));
+    expect(atvMatch?.provenance).toBe("event_prevention");
+    expect(relationshipLabel(atvMatch!.relationship, true, atvMatch?.provenance)).toBe("Helps prevent");
   });
 });
