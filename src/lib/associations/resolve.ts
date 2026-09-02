@@ -4,8 +4,9 @@
  * Resolution order per resource type (most authoritative first):
  *   Medication — product CID (RXNORM:{code}) → canonical code → ingredient
  *                decomposition → by_name fallback
- *   Condition  — SNOMED anchor → ICD-10 anchor (exact) → ICD-10 3-char
- *                category → ICD-10→SNOMED crosswalk → by_name fallback
+ *   Condition  — SNOMED anchor → SNOMED symptom anchor → ICD-10 anchor
+ *                (exact) → ICD-10 3-char category → ICD-10→SNOMED crosswalk
+ *                → by_name fallback
  *   Lab        — LOINC test code → part CIDs via crosswalk (labs are bucket
  *                members, not concepts, so they resolve to part CID sets)
  *   Immunization — CVX anchor → by_name fallback
@@ -77,6 +78,14 @@ async function resolveCondition(
   for (const code of codingKeysOfSystem(records, "snomed")) {
     const conceptKey = conceptForCid(byCid, `VAL-COND-SNOMED-${code}`);
     if (conceptKey) return { conceptKey, via: `VAL-COND-SNOMED-${code}` };
+  }
+
+  // Symptom-coded conditions (corpus v2026-09-02.0941: 271 VAL-SYMP-SNOMED
+  // anchors, zero code overlap with VAL-COND-SNOMED). Tried after the
+  // condition family so true condition codings always win.
+  for (const code of codingKeysOfSystem(records, "snomed")) {
+    const conceptKey = conceptForCid(byCid, `VAL-SYMP-SNOMED-${code}`);
+    if (conceptKey) return { conceptKey, via: `VAL-SYMP-SNOMED-${code}` };
   }
 
   const icd10Codes = codingKeysOfSystem(records, "icd10cm");

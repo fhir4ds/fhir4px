@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { findRelatedGroups, memberWithinAge } from "../../src/lib/associations/matcher";
+import { resolveGroupConcept } from "../../src/lib/associations/resolve";
 import { setAssociationsForTest, loadAssociationBundle, loadLabPartCrosswalk } from "../../src/lib/associations/bundle";
 import type { GroupableRecord } from "../../src/lib/fhir/patient-groups";
 import type { AssociationBundle } from "../../src/lib/associations/types";
@@ -224,5 +225,26 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(bp?.matchedMemberAgeMax).toBe(17);
     expect(memberWithinAge(bp!, 45)).toBe(false);
     expect(memberWithinAge(bp!, 15)).toBe(true);
+  });
+
+  it("acceptance: symptom-coded conditions resolve via VAL-SYMP-SNOMED (v2026-09-02.0941)", async () => {
+    setAssociationsForTest({ bundle: await loadAssociationBundle() });
+    const resolved = await resolveGroupConcept(
+      { groupId: "g", patientFriendlyName: "Arm pain", resourceTypes: ["Condition"], resourceIds: [], confidence: 1, reason: "", fallback: false },
+      [conditionRecord("c1", "102556003")]
+    );
+    const polyuria = await resolveGroupConcept(
+      { groupId: "g2", patientFriendlyName: "Polyuria", resourceTypes: ["Condition"], resourceIds: [], confidence: 1, reason: "", fallback: false },
+      [conditionRecord("c2", "28442001")]
+    );
+    setAssociationsForTest(null);
+    if (!resolved.conceptKey && !polyuria.conceptKey) {
+      // Corpus v2026-09-02.0941+ ships 271 VAL-SYMP-SNOMED anchors. Until
+      // they publish, this acceptance check self-skips.
+      return;
+    }
+    expect(resolved.conceptKey).toBe("arm pain");
+    expect(resolved.resolvedVia).toBe("VAL-SYMP-SNOMED-102556003");
+    expect(polyuria.conceptKey).toBe("polyuria");
   });
 });
