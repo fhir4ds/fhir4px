@@ -192,7 +192,6 @@ describe.skipIf(!live)("chronic cohort: association relationships (live bundle)"
   it("links focus conditions to their clinically-related medication and lab groups", async () => {
     const lookup = await loadLocalPatientFriendlyLookup();
     setRxnormDecompositionForTest(JSON.parse(await readFile("public/terminology/rxnorm-ingredients.json", "utf8")));
-
     interface Expectation {
       patientId: string;
       focusType: GroupableResourceType;
@@ -288,5 +287,5 @@ describe.skipIf(!live)("chronic cohort: association relationships (live bundle)"
         }
       }
     }
-  });
+  }, 30_000);
 });

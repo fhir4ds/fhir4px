@@ -18,11 +18,10 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the display-rule refinement release announced by the model
-    // pipeline (handoff model-20260902120143: v2026-09-02.1058; lipid panel
-    // restorations on vascular disorder; pulmHTN echo demotion kept pending
-    // a structured corpus gap; preventive_indication stragglers normalizing).
-    expect(bundle.version).toBe("2026-09-02.1058");
+    // Pinned to the corpus tier-fix release announced by the model pipeline
+    // (handoff model-20260902170127: v2026-09-02.1440; pulmHTN echo +
+    // cardiac cath re-promoted on GOLD COPD guideline evidence).
+    expect(bundle.version).toBe("2026-09-02.1440");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
@@ -251,5 +250,15 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     const atvMatch = t2dm.find((m) => /atorvastatin/i.test(m.groupName));
     expect(atvMatch?.provenance).toBe("event_prevention");
     expect(relationshipLabel(atvMatch!.relationship, true, atvMatch?.provenance)).toBe("Helps prevent");
+
+    // v2026-09-02.1440: pulmHTN Echocardiography re-promoted on real corpus
+    // evidence (GOLD COPD guideline pair, previously the subject-side leak
+    // class demoted in .1019). Pinned so a future tier regression resurfaces
+    // here; Cardiac Catheterization folds the right-heart-cath upgrade.
+    const phConcept = bundle.concepts["pulmonary hypertension"];
+    const phEcho = (phConcept?.buckets?.procedure ?? []).find((m) => /echocardiography/i.test(m.name));
+    expect(phEcho?.provenance).toBe("monitoring_recommendation");
+    const phCath = (phConcept?.buckets?.procedure ?? []).find((m) => /cardiac catheterization/i.test(m.name));
+    expect(phCath?.provenance).toBe("monitoring_recommendation");
   });
 });
