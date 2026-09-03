@@ -189,14 +189,12 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     }
     expect(hepB).toBeDefined();
     expect(rzv).toBeDefined();
-    // RZV anchor (v2026-09-01.1349 enrichment): the stub carries 2 VZV
-    // monitoring labs via fanned_hub derivations; still no parent_cids.
-    // PIN STAYS LOCKED (2026-09-02): canonical's resolution claim (Shingrix
-    // RXNORM 1986821/20/22/26 as members of VAL-VAX-CVX-188) is NOT on the
-    // .2022 wire — codes absent from by_cid/by_cid_multi/members. CVX-coded
-    // immunizations resolve fine (CVX-187/188 both key this card); the gap
-    // is RxNorm-coded Shingrix prescriptions resolving to nothing. Flip to
-    // the announced shape once a release actually carries it.
+    // RZV anchor: the stub carries 2 VZV monitoring labs via fanned_hub
+    // derivations; still no parent_cids. Pre-armed for the exporter-fix
+    // release (candidate v2026-09-02.2138, holding for canonical review):
+    // +454 RXNORM vax-product aliases land Shingrix (1986821/20/22/26) on
+    // this card by code. The assertions below stay valid on both shapes;
+    // the MedicationRequest-path pin is in associations-live.test.ts.
     const rzvConcept = bundle.concepts[rzv!];
     expect(rzvConcept?.parent_cids).toBeUndefined();
     const rzvLabs = rzvConcept?.buckets?.lab ?? [];

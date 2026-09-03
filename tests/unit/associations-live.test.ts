@@ -222,6 +222,37 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     const t2dmMember = atorvastatin.find((m) => /type 2 diabetes/i.test(m.groupName));
     expect(t2dmMember?.provenance).toBe("event_prevention");
 
+    // v2026-09-02.2138 (holding for canonical review): +454 RXNORM vax-
+    // product aliases. Pre-armed Shingrix pin — resolves by product code to
+    // the zoster card through the full MedicationRequest path. Self-skips
+    // until the exporter-fix release is on the wire.
+    const shingrix = bundle.by_cid["RXNORM:1986821"];
+    if (shingrix) {
+      expect(shingrix).toBe("shingles (zoster) vaccine");
+      const shingrixResolved = await resolveGroupConcept(
+        {
+          groupId: "rzv",
+          patientFriendlyName: "Shingrix",
+          resourceIds: [],
+          resourceTypes: ["MedicationRequest"],
+          confidence: 1,
+          reason: "",
+          fallback: false
+        },
+        [
+          {
+            id: "1986821",
+            resourceType: "MedicationRequest",
+            sourceLabel: "Shingrix",
+            source: "provider",
+            codingKeys: ["rxnorm:1986821"]
+          }
+        ]
+      );
+      expect(shingrixResolved.conceptKey).toBe("shingles (zoster) vaccine");
+      expect(shingrixResolved.resolvedVia).toBe("RXNORM:1986821");
+    }
+
     // v1.8: atorvastatin no longer claims any kidney condition even loose —
     // the CKD-statin relationship moved to CKD's medication bucket (Statins
     // as event_prevention with class-expanded ingredients).
