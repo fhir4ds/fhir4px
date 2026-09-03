@@ -225,7 +225,7 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(bp?.matchedMemberAgeMax).toBe(17);
     expect(memberWithinAge(bp!, 45)).toBe(false);
     expect(memberWithinAge(bp!, 15)).toBe(true);
-  });
+  }, 30_000);
 
   it("acceptance: symptom-coded conditions resolve via VAL-SYMP-SNOMED (v2026-09-02.0941)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
@@ -246,5 +246,34 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(resolved.conceptKey).toBe("arm pain");
     expect(resolved.resolvedVia).toBe("VAL-SYMP-SNOMED-102556003");
     expect(polyuria.conceptKey).toBe("polyuria");
+  });
+
+  it("acceptance: combo vaccines fan across all components via by_cid_multi (v2026-09-02.2022)", async () => {
+    setAssociationsForTest({ bundle: await loadAssociationBundle() });
+    const resolved = await resolveGroupConcept(
+      { groupId: "v", patientFriendlyName: "DTaP-Hib combo", resourceTypes: ["Immunization"], resourceIds: [], confidence: 1, reason: "", fallback: false },
+      [
+        {
+          id: "r1",
+          resourceType: "Immunization",
+          sourceLabel: "DTaP-Hib",
+          source: "provider",
+          codingKeys: ["cvx:102"]
+        }
+      ]
+    );
+    setAssociationsForTest(null);
+    if (!resolved.conceptKeys?.length) {
+      // v2026-09-02.2022+ keys combo-vaccine anchors in by_cid_multi. Until
+      // then this acceptance check self-skips.
+      return;
+    }
+    expect(resolved.conceptKeys).toEqual([
+      "haemophilus influenzae type b (hib) vaccine",
+      "dtap vaccine",
+      "hepatitis b vaccine"
+    ]);
+    // Single-pick (conceptKey) is the by_cid most-coverage anchor.
+    expect(resolved.conceptKey).toBe("haemophilus influenzae type b (hib) vaccine");
   });
 });

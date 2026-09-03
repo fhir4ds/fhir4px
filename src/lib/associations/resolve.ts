@@ -185,7 +185,7 @@ async function resolveAnchorPrefixed(
   records: GroupableRecord[],
   group: PatientFriendlyGroup,
   prefixesAndSystems: Array<{ prefix: string; system: string }>
-): Promise<{ conceptKey: string; via: string } | undefined> {
+): Promise<{ conceptKey: string; conceptKeys?: string[]; via: string } | undefined> {
   const bundle = await loadAssociationBundle();
   const byCid = bundle.by_cid;
   // Anchor families are tried in order; later families (CPT/HCPCS/SNOMED-med,
@@ -193,7 +193,19 @@ async function resolveAnchorPrefixed(
   for (const { prefix, system } of prefixesAndSystems) {
     for (const code of codingKeysOfSystem(records, system)) {
       const conceptKey = conceptForCid(byCid, `${prefix}${code}`);
-      if (conceptKey) return { conceptKey, via: `${prefix}${code}` };
+      if (conceptKey) {
+        // Combo anchors (v2026-09-02.2022: DTaP-Hib, Hib-MenCY vaccines)
+        // fan across ALL component concepts — by_cid keeps only the
+        // most-coverage single pick, by_cid_multi retains every component.
+        // The by_cid pick leads conceptKeys so single-key consumers get the
+        // highest-coverage card while the matcher still fans across all.
+        const multi = bundle.by_cid_multi?.[`${prefix}${code}`]?.filter((key) => bundle.concepts[key]);
+        if (multi?.length) {
+          const ordered = [conceptKey, ...multi.filter((key) => key !== conceptKey)];
+          return multiResolution(ordered, `by_cid_multi:${prefix}${code}`);
+        }
+        return { conceptKey, via: `${prefix}${code}` };
+      }
     }
   }
   return byNameConcept(byCid, bundle.by_name, group.patientFriendlyName);
@@ -220,7 +232,9 @@ export async function resolveGroupConcept(
     }
     if (group.resourceTypes.includes("Immunization")) {
       const resolved = await resolveAnchorPrefixed(memberRecords, group, [{ prefix: "VAL-VAX-CVX-", system: "cvx" }]);
-      return resolved ? { conceptKey: resolved.conceptKey, resolvedVia: resolved.via } : {};
+      return resolved
+        ? { conceptKey: resolved.conceptKey, conceptKeys: resolved.conceptKeys, resolvedVia: resolved.via }
+        : {};
     }
     if (group.resourceTypes.includes("Procedure")) {
       const resolved = await resolveAnchorPrefixed(memberRecords, group, [
@@ -228,7 +242,9 @@ export async function resolveGroupConcept(
         { prefix: "VAL-PROC-CPT-", system: "cpt" },
         { prefix: "VAL-PROC-HCPCS-", system: "hcpcs" }
       ]);
-      return resolved ? { conceptKey: resolved.conceptKey, resolvedVia: resolved.via } : {};
+      return resolved
+        ? { conceptKey: resolved.conceptKey, conceptKeys: resolved.conceptKeys, resolvedVia: resolved.via }
+        : {};
     }
   } catch {
     // Association data unavailable — resolution stays empty; UI falls back to
