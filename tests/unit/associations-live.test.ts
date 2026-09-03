@@ -18,10 +18,11 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the corpus tier-fix release announced by the model pipeline
-    // (handoff model-20260902170127: v2026-09-02.1440; pulmHTN echo +
-    // cardiac cath re-promoted on GOLD COPD guideline evidence).
-    expect(bundle.version).toBe("2026-09-02.1440");
+    // Pinned to the vax-boundary release announced by the model pipeline
+    // (handoff model-20260902203245: v2026-09-02.2022; hep-B consolidation
+    // to CVX-45, zoster rank-1 at CVX-188, 613 anchor retirements, +936
+    // sibling aliases on name-collision families).
+    expect(bundle.version).toBe("2026-09-02.2022");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
