@@ -190,12 +190,14 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     // hepatic-panel Albumin member no longer badges UACR on a statin.
     expect(atorvastatin.some((m) => /^albumin\/creatinine/i.test(m.groupName))).toBe(false);
 
-    // REGRESSION PIN (v2026-09-01.1349, reported to model 2026-09-01): the
-    // v2.1 salt-to-base alias is GONE on the wire — RXNORM:197889 now maps to
-    // a product-level "lithium carbonate" concept whose TSH member is only
-    // panel_cooccurrence (loose tier), so lithium carbonate patients lose the
-    // default-tier TSH monitoring badge. Locked here at the base concept;
-    // flip the first assertion back to "lithium" when the alias is restored.
+    // DOCUMENTED LIMITATION (Joel via model, 2026-09-02): no salt-to-base
+    // aliasing will be built — salt-specific anchors are unwanted; salts
+    // exist in RxNorm authority data as-is and resolution happens at the
+    // ingredient level the corpus already uses. RXNORM:197889 serves the
+    // product-level "lithium carbonate" card (TSH only panel_cooccurrence,
+    // loose tier). Consequence: lithium carbonate patients see the TSH
+    // monitoring badge only in loose mode. Documented here so a future
+    // reversal of the decision flips this assertion back to "lithium".
     const bundle = await loadAssociationBundle();
     expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium carbonate");
     const lithiumTsh = (bundle.concepts["lithium"]?.buckets?.lab ?? []).find((m) => /thyrotropin/i.test(m.name));

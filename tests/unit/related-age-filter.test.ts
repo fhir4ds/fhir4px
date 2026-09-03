@@ -189,9 +189,14 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     }
     expect(hepB).toBeDefined();
     expect(rzv).toBeDefined();
-    // RZV anchor drift (v2026-09-01.1349, unannounced): the stub is no longer
-    // flat — 2 VZV monitoring labs arrived via fanned_hub derivations. Still
-    // no parent_cids; buckets now carry monitoring_recommendation members.
+    // RZV anchor (v2026-09-01.1349 enrichment): the stub carries 2 VZV
+    // monitoring labs via fanned_hub derivations; still no parent_cids.
+    // PIN STAYS LOCKED (2026-09-02): canonical's resolution claim (Shingrix
+    // RXNORM 1986821/20/22/26 as members of VAL-VAX-CVX-188) is NOT on the
+    // .2022 wire — codes absent from by_cid/by_cid_multi/members. CVX-coded
+    // immunizations resolve fine (CVX-187/188 both key this card); the gap
+    // is RxNorm-coded Shingrix prescriptions resolving to nothing. Flip to
+    // the announced shape once a release actually carries it.
     const rzvConcept = bundle.concepts[rzv!];
     expect(rzvConcept?.parent_cids).toBeUndefined();
     const rzvLabs = rzvConcept?.buckets?.lab ?? [];
