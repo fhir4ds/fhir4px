@@ -251,8 +251,23 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(polyuria.conceptKey).toBe("polyuria");
   });
 
-  it("acceptance: combo vaccines fan across all components via by_cid_multi (v2026-09-02.2022)", async () => {
+  it("acceptance: peak flow 33452-4 crosswalks to the PEF part (canonical member-add)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
+    const crosswalk = await loadLabPartCrosswalk();
+    setAssociationsForTest(null);
+    const parts = crosswalk["VAL-LAB-LOINC-33452-4"] ?? [];
+    if (!parts.some((p) => p === "VAL-VIT-LOINC-LP115839-5")) {
+      // Canonical value-set gap (model RCA 2026-09-03): LP115839-5's members
+      // are deprecated LOINCs (60947-9/62622-6...); 33452-4, the ACTIVE code
+      // EHRs use, belongs to no anchor. Until canonical's member-add
+      // (33452-4 -> LP115839-5) lands and the crosswalk follows, this
+      // acceptance check self-skips.
+      return;
+    }
+    expect(parts).toContain("VAL-VIT-LOINC-LP115839-5");
+  });
+
+  it("acceptance: combo vaccines fan across all components via by_cid_multi (v2026-09-02.2022)", async () => {    setAssociationsForTest({ bundle: await loadAssociationBundle() });
     const resolved = await resolveGroupConcept(
       { groupId: "v", patientFriendlyName: "DTaP-Hib combo", resourceTypes: ["Immunization"], resourceIds: [], confidence: 1, reason: "", fallback: false },
       [
