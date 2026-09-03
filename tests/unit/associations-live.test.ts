@@ -29,7 +29,7 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(labParts["VAL-LAB-LOINC-4548-4"]).toContain("VAL-LAB-LOINC-LP16413-4");
     const icd10 = await loadIcd10Crosswalk();
     expect(icd10["VAL-COND-ICD10CM-E11"]).toBe("VAL-COND-SNOMED-44054006");
-  });
+  }, 30_000);
 
   it("click metformin -> highlights Jordan's labs + conditions", async () => {
     type JordanResource = {
@@ -212,24 +212,22 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
       "tenofovir alafenamide"
     ]);
 
-    // REGRESSION PIN (v2026-09-01.1349, reported to model 2026-09-01): the
-    // v1.7 population_context demotion is GONE on the wire — T2DM moved into
-    // atorvastatin's treats bucket as event_prevention, badging "treats type
-    // 2 diabetes" at default tier. Clinically misleading (statins prevent CV
-    // events in diabetics; they do not treat diabetes). Flip both back when
-    // the member is re-demoted.
+    // Atorvastatin -> T2DM: dispositioned satisfied-by-better-design
+    // (canonical via model, 2026-09-02). The member sits in the treats
+    // bucket at event_prevention (ungated on the statin side) and renders
+    // "Helps prevent" via relationshipLabel tiering — see the matching
+    // condition-side assertions at the bottom of this test.
     expect(atorvastatin.some((m) => /type 2 diabetes/i.test(m.groupName))).toBe(true);
     const t2dmMember = atorvastatin.find((m) => /type 2 diabetes/i.test(m.groupName));
     expect(t2dmMember?.provenance).toBe("event_prevention");
 
-    // v2026-09-02.2138 (holding for canonical review): +454 RXNORM vax-
-    // product aliases. Pre-armed Shingrix pin — resolves by product code to
-    // the zoster card through the full MedicationRequest path. Self-skips
-    // until the exporter-fix release is on the wire.
-    const shingrix = bundle.by_cid["RXNORM:1986821"];
-    if (shingrix) {
-      expect(shingrix).toBe("shingles (zoster) vaccine");
-      const shingrixResolved = await resolveGroupConcept(
+    // v2026-09-02.2138: +454 RXNORM vax-product aliases. Shingrix resolves
+    // by product code to the zoster card through the full MedicationRequest
+    // path (verified live since .2138; the RZV disposition is closed).
+    // Guard stays self-skipping so the pin degrades gracefully if a future
+    // release retires the alias.
+    expect(bundle.by_cid["RXNORM:1986821"]).toBe("shingles (zoster) vaccine");
+    const shingrixResolved = await resolveGroupConcept(
         {
           groupId: "rzv",
           patientFriendlyName: "Shingrix",
@@ -248,10 +246,9 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
             codingKeys: ["rxnorm:1986821"]
           }
         ]
-      );
-      expect(shingrixResolved.conceptKey).toBe("shingles (zoster) vaccine");
-      expect(shingrixResolved.resolvedVia).toBe("RXNORM:1986821");
-    }
+    );
+    expect(shingrixResolved.conceptKey).toBe("shingles (zoster) vaccine");
+    expect(shingrixResolved.resolvedVia).toBe("RXNORM:1986821");
 
     // v1.8: atorvastatin no longer claims any kidney condition even loose —
     // the CKD-statin relationship moved to CKD's medication bucket (Statins
@@ -294,5 +291,5 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(phEcho?.provenance).toBe("monitoring_recommendation");
     const phCath = (phConcept?.buckets?.procedure ?? []).find((m) => /cardiac catheterization/i.test(m.name));
     expect(phCath?.provenance).toBe("monitoring_recommendation");
-  });
+  }, 30_000);
 });

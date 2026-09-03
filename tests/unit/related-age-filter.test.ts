@@ -127,7 +127,7 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(memberWithinAge(nir!, 45)).toBe(false);
     expect(memberWithinAge(nir!, 0)).toBe(true);
     setAssociationsForTest(null);
-  });
+  }, 30_000);
 
   it("acceptance: procedure member CIDs self-anchor (PT/OT/acupuncture resolve)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
@@ -157,7 +157,7 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     }
     expect(flu).toBeDefined();
     expect(covid).toBeDefined();
-  });
+  }, 30_000);
 
   it("acceptance: ANC monitoring attaches to the Neutrophils part (LP14267-6)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
@@ -175,7 +175,7 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(ancMember?.name).toBeDefined();
     // by_cid for the part is only required when the part resolves as a
     // standalone concept; part-CID bucket matching works without it.
-  });
+  }, 30_000);
 
   it("acceptance: universal anchor stubs resolve (CVX 43/187, previously-unresolvable codes)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
@@ -249,7 +249,7 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(resolved.conceptKey).toBe("arm pain");
     expect(resolved.resolvedVia).toBe("VAL-SYMP-SNOMED-102556003");
     expect(polyuria.conceptKey).toBe("polyuria");
-  });
+  }, 30_000);
 
   it("acceptance: peak flow 33452-4 crosswalks to the PEF part (canonical member-add)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
@@ -265,9 +265,10 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
       return;
     }
     expect(parts).toContain("VAL-VIT-LOINC-LP115839-5");
-  });
+  }, 30_000);
 
-  it("acceptance: combo vaccines fan across all components via by_cid_multi (v2026-09-02.2022)", async () => {    setAssociationsForTest({ bundle: await loadAssociationBundle() });
+  it("acceptance: combo vaccines fan across all components via by_cid_multi (v2026-09-02.2022)", async () => {
+    setAssociationsForTest({ bundle: await loadAssociationBundle() });
     const resolved = await resolveGroupConcept(
       { groupId: "v", patientFriendlyName: "DTaP-Hib combo", resourceTypes: ["Immunization"], resourceIds: [], confidence: 1, reason: "", fallback: false },
       [
@@ -293,5 +294,5 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     ]);
     // Single-pick (conceptKey) is the by_cid most-coverage anchor.
     expect(resolved.conceptKey).toBe("haemophilus influenzae type b (hib) vaccine");
-  });
+  }, 30_000);
 });

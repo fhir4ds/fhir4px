@@ -25,7 +25,9 @@ BASE = "https://huggingface.co/fhir4ds/fhir4px/resolve/main/associations"
 RXNORM_INGREDIENTS = os.path.join(os.path.dirname(__file__), "..", "public", "terminology", "rxnorm-ingredients.json")
 
 LOOSE = {"population_context", "comorbidity_section", "panel_cooccurrence"}
-BUCKETS = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "treats"]
+# Order mirrors matcher.ts BUCKETS — first bucket wins per candidate.
+BUCKETS = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "treats",
+           "adverse_effect", "contraindicated_in", "interferes_with_test"]
 
 
 def ensure_file(name):
@@ -70,6 +72,10 @@ def system_of(coding):
         return "icd10"
     if "cvx" in s:
         return "cvx"
+    if "cpt" in s:
+        return "cpt"
+    if "hcpcs" in s:
+        return "hcpcs"
     return None
 
 
@@ -129,13 +135,13 @@ class Patient:
                 if codes:
                     display = next((c.get("display") for c in codings(r, "vaccineCode") if c.get("display")), codes[0][1])
                     self.items.append({"id": r.get("id"), "kind": "vax", "display": display, "codes": codes,
-                                       "resolution": self.resolve_anchor(codes, "VAL-VAX-CVX-", display)})
+                                       "resolution": self.resolve_anchor(codes, [("VAL-VAX-CVX-", "cvx")], display)})
             elif rt == "Procedure":
                 codes = [(system_of(c), c["code"]) for c in codings(r, "code") if c.get("code")]
                 if codes:
                     display = next((c.get("display") for c in codings(r, "code") if c.get("display")), codes[0][1])
                     self.items.append({"id": r.get("id"), "kind": "proc", "display": display, "codes": codes,
-                                       "resolution": self.resolve_anchor(codes, "VAL-PROC-SNOMED-", display)})
+                                       "resolution": self.resolve_anchor(codes, [("VAL-PROC-SNOMED-", "snomed"), ("VAL-PROC-CPT-", "cpt"), ("VAL-PROC-HCPCS-", "hcpcs")], display)})
 
     def by_name_fallback(self, display):
         if not display:
@@ -153,6 +159,12 @@ class Patient:
                 concept = self.by_cid.get(f"RXNORM:{code}")
                 if concept:
                     return {"conceptKey": concept, "via": f"RXNORM:{code}"}
+        # SNOMED-coded medication products (matcher.ts resolveMedication).
+        for system, code in codes:
+            if system == "snomed":
+                concept = self.by_cid.get(f"VAL-MED-SNOMED-{code}")
+                if concept:
+                    return {"conceptKey": concept, "via": f"VAL-MED-SNOMED-{code}"}
         # Multi-anchor combos (by_cid_multi) — mirrors the app matcher.
         multi = self.bundle.get("by_cid_multi") or {}
         for system, code in codes:
@@ -177,6 +189,13 @@ class Patient:
                 concept = self.by_cid.get(f"VAL-COND-SNOMED-{code}")
                 if concept:
                     return {"conceptKey": concept, "via": f"VAL-COND-SNOMED-{code}"}
+        # Symptom-coded conditions (corpus v2026-09-02.0941: VAL-SYMP-SNOMED
+        # family, zero code overlap with VAL-COND-SNOMED).
+        for system, code in codes:
+            if system == "snomed":
+                concept = self.by_cid.get(f"VAL-SYMP-SNOMED-{code}")
+                if concept:
+                    return {"conceptKey": concept, "via": f"VAL-SYMP-SNOMED-{code}"}
         for system, code in codes:
             if system == "icd10":
                 concept = self.by_cid.get(f"VAL-COND-ICD10CM-{code}")
@@ -204,10 +223,21 @@ class Patient:
                 parts.add(f"VAL-VIT-LOINC-{code}")
         return {"labPartCids": sorted(parts)} if parts else None
 
-    def resolve_anchor(self, codes, prefix, display):
-        for system, code in codes:
-            concept = self.by_cid.get(f"{prefix}{code}")
-            if concept:
+    def resolve_anchor(self, codes, prefixes, display):
+        # Ordered anchor families, mirroring resolveAnchorPrefixed; combo
+        # anchors fan across by_cid_multi with the by_cid pick leading.
+        for prefix, system in prefixes:
+            for s, code in codes:
+                if s != system:
+                    continue
+                concept = self.by_cid.get(f"{prefix}{code}")
+                if not concept:
+                    continue
+                multi = self.bundle.get("by_cid_multi") or {}
+                keys = [k for k in multi.get(f"{prefix}{code}", []) if k in self.concepts]
+                if keys:
+                    ordered = [concept] + [k for k in keys if k != concept]
+                    return {"conceptKey": concept, "conceptKeys": ordered, "via": f"by_cid_multi:{prefix}{code}"}
                 return {"conceptKey": concept, "via": f"{prefix}{code}"}
         return self.by_name_fallback(display)
 
@@ -224,30 +254,19 @@ class Patient:
                 prov = m.get("provenance")
                 if not include_loose and prov in LOOSE:
                     continue
-                indexed[m["cid"]] = (m["name"], prov, None)
+                # v2.2: ancestor content is materialized at build time with
+                # {path: ancestor, parent_cid} attribution — viaHub name.
+                hub = None
+                for dv in m.get("derivations") or []:
+                    if dv.get("path") == "ancestor" and dv.get("parent_cid"):
+                        hub = self.by_cid.get(dv["parent_cid"])
+                        break
+                indexed[m["cid"]] = (m["name"], prov, hub, m.get("age_min"), m.get("age_max"))
                 member_concept = self.by_cid.get(m["cid"])
                 if member_concept:
                     concepts.add(member_concept)
             if indexed:
                 index[bucket] = (indexed, concepts)
-        # Parent (hub) union — monitor buckets only, per the IS_A allowlist.
-        for parent_cid in concept.get("parent_cids") or []:
-            parent_key = self.by_cid.get(parent_cid)
-            parent = self.concepts.get(parent_key) if parent_key else None
-            if not parent:
-                continue
-            for bucket in ("lab", "vital", "procedure"):
-                for m in parent.get("buckets", {}).get(bucket) or []:
-                    prov = m.get("provenance")
-                    if not include_loose and prov in LOOSE:
-                        continue
-                    entry = index.setdefault(bucket, ({}, set()))
-                    if m["cid"] in entry[0]:
-                        continue
-                    entry[0][m["cid"]] = (m["name"], prov, parent.get("name"))
-                    member_concept = self.by_cid.get(m["cid"])
-                    if member_concept:
-                        entry[1].add(member_concept)
         return index
 
     def _match_focus_against(self, fk, cand, cres, cand_keys, include_loose):
@@ -265,7 +284,7 @@ class Patient:
             mk = next((k for k in cand_keys if k in concepts), None)
             if mk:
                 name = prov = hub = None
-                for cid, (n, p, h) in members.items():
+                for cid, (n, p, h, amin, amax) in members.items():
                     if self.by_cid.get(cid) == mk:
                         name, prov, hub = n, p, h
                         break
@@ -273,7 +292,7 @@ class Patient:
             if cand_parts and bucket in ("lab", "vital"):
                 for part in cand_parts:
                     if part in members:
-                        n, p, h = members[part]
+                        n, p, h, amin, amax = members[part]
                         return (cand, bucket, n, p, h)
         return None
 
@@ -310,7 +329,7 @@ class Patient:
                     members, concepts = entry
                     if cand_concept and cand_concept in concepts:
                         name = prov = hub = None
-                        for cid, (n, p, h) in members.items():
+                        for cid, (n, p, h, amin, amax) in members.items():
                             if self.by_cid.get(cid) == cand_concept:
                                 name, prov, hub = n, p, h
                                 break
@@ -319,7 +338,7 @@ class Patient:
                     if cand_parts and bucket in ("lab", "vital"):
                         for part in cand_parts:
                             if part in members:
-                                n, p, h = members[part]
+                                n, p, h, amin, amax = members[part]
                                 results.append((cand, bucket, n, p, h))
                                 break
                         else:
@@ -339,7 +358,7 @@ class Patient:
                     members, _ = entry
                     for part in res["labPartCids"]:
                         if part in members:
-                            n, p, h = members[part]
+                            n, p, h, amin, amax = members[part]
                             results.append((cand, bucket, n, p, h))
                             break
                     else:
@@ -389,10 +408,63 @@ class Patient:
 
 
 def main():
-    fixture = sys.argv[1]
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("fixture")
+    parser.add_argument("--json", action="store_true",
+                        help="machine-readable match table (id, focusId, bucket, member, provenance) per tier — used by the parity test")
+    parser.add_argument("--bundle-dir", default=None,
+                        help="read bundle artifacts from this directory instead of fetching (offline/parity mode)")
+    args = parser.parse_args()
+    global BUNDLE_DIR
+    if args.bundle_dir:
+        BUNDLE_DIR = args.bundle_dir
+        def load_bundle():
+            def read(name):
+                import gzip as _gz
+                path = os.path.join(BUNDLE_DIR, name)
+                if path.endswith(".gz"):
+                    with _gz.open(path, "rb") as f:
+                        return json.loads(f.read().decode("utf8"))
+                with open(path, "rb") as f:
+                    return json.loads(f.read().decode("utf8"))
+            bundle = read("associations.json" + ("" if os.path.exists(os.path.join(BUNDLE_DIR, "associations.json")) else ".gz"))
+            with open(os.path.join(BUNDLE_DIR, "crosswalks", "loinc_test_to_part.json")) as f:
+                lab_parts = json.load(f)
+            with open(os.path.join(BUNDLE_DIR, "crosswalks", "icd10_to_snomed.json")) as f:
+                icd_xwalk = json.load(f)
+            with open(RXNORM_INGREDIENTS) as f:
+                raw = json.load(f)
+                ingredients = {k: v for k, v in raw.items() if k != "_meta"}
+            return bundle, lab_parts, icd_xwalk, ingredients
+    else:
+        load_bundle_ = load_bundle
+        def load_bundle():
+            return load_bundle_()
     bundle, lab_parts, icd_xwalk, ingredients = load_bundle()
-    patient = Patient(fixture, bundle, lab_parts, icd_xwalk, ingredients)
-    print(patient.report(os.path.basename(fixture)))
+    patient = Patient(args.fixture, bundle, lab_parts, icd_xwalk, ingredients)
+    if args.json:
+        rows = []
+        for tier, include_loose in (("default", False), ("loose", True)):
+            for item in patient.items:
+                res = item.get("resolution") or {}
+                if not res.get("conceptKey") and not res.get("labPartCids"):
+                    continue
+                for cand, bucket, name, prov, hub in patient.match(item, include_loose):
+                    rows.append({
+                        "tier": tier,
+                        "focusId": item["id"],
+                        "focusDisplay": item["display"],
+                        "candidateId": cand["id"],
+                        "candidateDisplay": cand["display"],
+                        "bucket": bucket,
+                        "matchedMember": name,
+                        "provenance": prov,
+                        "viaHub": hub,
+                    })
+        print(json.dumps(rows, indent=1, sort_keys=True))
+    else:
+        print(patient.report(os.path.basename(args.fixture)))
 
 
 if __name__ == "__main__":
