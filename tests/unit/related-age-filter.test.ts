@@ -203,7 +203,7 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     // Hep B resolves to a pair-carrying concept (7 monitoring-lab members),
     // not a stub — pre-existing content, newly anchored CVX code.
     // Matcher safety on both shapes verified by the suite below.
-  });
+  }, 30_000);
 
   it("acceptance: BP panel (85354-9) fans to component identities so obesity's 3-17 bounds match panel data", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });

@@ -18,10 +18,11 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the exporter-fix release (handoff model-20260902213918 +
-    // publish notice model-20260902214519: v2026-09-02.2138; +454 RXNORM
-    // vax-product aliases, zero removals — closes the RZV disposition).
-    expect(bundle.version).toBe("2026-09-02.2138");
+    // Pinned to the doctrine-v3 batch release (handoff model-20260903162904:
+    // v2026-09-03.1430; 307 hub->specific re-stamps, 157 ATC display-name
+    // restorations, symptoms-round-2 anchors, +940 regenerated sibling
+    // aliases; 157 short ATC by_name keys removed).
+    expect(bundle.version).toBe("2026-09-03.1430");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
