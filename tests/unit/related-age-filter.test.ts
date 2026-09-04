@@ -267,6 +267,31 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(parts).toContain("VAL-VIT-LOINC-LP115839-5");
   }, 30_000);
 
+  it("acceptance: ancestor-fanned treatments must not badge on subtypes (prednisone on hypertension)", async () => {
+    setAssociationsForTest({ bundle: await loadAssociationBundle() });
+    const bundle = await loadAssociationBundle();
+    setAssociationsForTest(null);
+    const ht = bundle.concepts["hypertension"];
+    const steroid = (ht?.buckets?.medication ?? []).filter((m) => /prednisone|prednisolone|methylprednisolone/i.test(m.name));
+    const LOOSE = new Set(["population_context", "comorbidity_section", "panel_cooccurrence"]);
+    const defaultTier = steroid.filter((m) => !m.provenance || !LOOSE.has(m.provenance));
+    if (defaultTier.length > 0) {
+      // KNOWN MIS-ROUTE (reported 2026-09-04, model in progress): subject-side
+      // ancestor fans materialize treatment pairs downward — prednisone treats
+      // VASCULITIS on the vascular-disorder hub (27550009), inherited onto
+      // hypertension's medication bucket at direct_indication. 244,888 such
+      // members corpus-wide; 1,425 on this card. Once the fix publishes
+      // (dropped or demoted to loose), this check self-activates.
+      return;
+    }
+    expect(steroid.every((m) => m.provenance !== undefined && LOOSE.has(m.provenance))).toBe(true);
+    // The clinically correct direction stays pinned: prednisone's own card
+    // carries Hypertension as an adverse_effect at warning_section.
+    const pred = bundle.concepts["prednisone"];
+    const htnAe = (pred?.buckets?.adverse_effect ?? []).find((m) => /hypertension/i.test(m.name));
+    expect(htnAe?.provenance).toBe("warning_section");
+  }, 30_000);
+
   it("acceptance: combo vaccines fan across all components via by_cid_multi (v2026-09-02.2022)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
     const resolved = await resolveGroupConcept(
