@@ -205,9 +205,10 @@ describe.skipIf(!live)("chronic cohort: association relationships (live bundle)"
         focusName: /asthma/i,
         expectRelated: [
           { name: /albuterol/i, bucket: "medication" },
-          // NOTE: peak-flow (33452-4 -> VAL-VIT-LOINC-LP115839-5) does NOT
-          // resolve yet — the loinc_test_to_part crosswalk lacks that entry.
-          // Upstream data gap; tracked for the corpus pipeline.
+          // Peak flow (33452-4) resolves since v2026-09-03.2215 — canonical
+          // f0bbd28 member-added the active LOINC PT onto LP115839-5 after
+          // the deprecated-code RCA (handoff model-20260903175620).
+          { name: /peak flow|peak expiratory/i, bucket: "vital" },
           { name: /oxygen saturation/i, bucket: "vital" }
         ]
       },

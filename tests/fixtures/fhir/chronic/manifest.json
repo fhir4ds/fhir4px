@@ -6,7 +6,7 @@
    "name": "Mabel Okafor",
    "tier": "M",
    "focus": "Mild intermittent asthma with atopic comorbidities",
-   "total": 155,
+   "total": 156,
    "counts": {
     "Patient": 1,
     "Practitioner": 1,
@@ -15,7 +15,7 @@
     "MedicationRequest": 5,
     "AllergyIntolerance": 3,
     "Encounter": 3,
-    "Observation": 128,
+    "Observation": 129,
     "Procedure": 2,
     "Immunization": 3
    },
@@ -916,6 +916,13 @@
       "coded": true,
       "expected": "lab",
       "month": 24
+     },
+     {
+      "id": "fhir4px-chronic-mabel-atopic-asthma-obs-0149",
+      "text": "Peak expiratory flow",
+      "coded": true,
+      "expected": "vital",
+      "month": 4
      }
     ],
     "allergies": [
