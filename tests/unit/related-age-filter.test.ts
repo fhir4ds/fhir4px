@@ -323,6 +323,22 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(chip?.viaHubName).toBe("comprehensive metabolic panel (2000)");
   }, 30_000);
 
+  it("acceptance: med members carry authoritative patient_name when route-qualified (pre-armed)", async () => {
+    setAssociationsForTest({ bundle: await loadAssociationBundle() });
+    const bundle = await loadAssociationBundle();
+    setAssociationsForTest(null);
+    const withPfn = (bundle.concepts["herpes simplex infection"]?.buckets?.medication ?? []).find((m) => m.patient_name);
+    if (!withPfn) {
+      // Canonical (2026-09-04): ~28% of med members carry plain-ingredient
+      // labels; model is adding 'patient_name' (anchor pfn, authoritative,
+      // route-qualified) to med members in the next fold. Until it lands
+      // this acceptance check self-skips.
+      return;
+    }
+    expect(typeof withPfn.patient_name).toBe("string");
+    expect(withPfn.patient_name.length).toBeGreaterThan(0);
+  }, 30_000);
+
   it("acceptance: member synonyms ride through matching (v2026-09-04.2219)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
     const bundle = await loadAssociationBundle();

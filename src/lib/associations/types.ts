@@ -51,6 +51,11 @@ export interface AssociationMember {
    *  name ("SBP", "Chem 7"). Rendering aid; prefer these + name over the
    *  raw-code long-name path. */
   synonyms?: string[];
+  /** Canonical patient_name (next fold after v2026-09-04.2219): the
+   *  authoritative anchor PFN — route-qualified for medication members
+   *  ("Acyclovir (Ophthalmic)"). Authoritative over name/synonyms for
+   *  med chips once present. */
+  patient_name?: string;
 }
 
 /** Lab gate carried by threshold-bearing members (1,210 on the wire). */

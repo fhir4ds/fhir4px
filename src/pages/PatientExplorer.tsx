@@ -4643,13 +4643,19 @@ export function PatientExplorer() {
             const thresholdText = match.matchedMemberThreshold
               ? ` if ${match.matchedMemberThreshold.lab_name} ${match.matchedMemberThreshold.comparator} ${match.matchedMemberThreshold.value} ${match.matchedMemberThreshold.unit}`
               : "";
+            // Canonical terminology guidance (2026-09-04): the wire member
+            // name IS the patient-friendly layer; the local lnc table is the
+            // raw-code fallback and can carry long LCNames. Chips read the
+            // member name; synonyms stay available as alternates.
+            const memberLabel = match.matchedMemberName || match.groupName;
             return (
               <Chip
                 key={`${match.groupId}:${match.relationship}`}
                 size="small"
                 color={isSafety ? "warning" : "secondary"}
                 variant={isSafety ? "filled" : "outlined"}
-                label={`${match.groupName} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${thresholdText}${
+                title={match.matchedMemberSynonyms?.length ? `Also known as: ${match.matchedMemberSynonyms.join(", ")}` : undefined}
+                label={`${memberLabel} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${thresholdText}${
                   match.viaHubName ? ` (via ${match.viaHubName})` : ""
                 }`}
                 onClick={() => navigateToRelatedGroup(match.groupId)}
