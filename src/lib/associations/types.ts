@@ -47,6 +47,10 @@ export interface AssociationMember {
    *  mg/dL, adverse_effect when absolute neutrophil count < 1000. Rendering
    *  aid only; matching semantics unchanged. */
   threshold?: MemberThreshold;
+  /** v2026-09-04.2219+ (consumer-synonym layer): lay aliases for the member
+   *  name ("SBP", "Chem 7"). Rendering aid; prefer these + name over the
+   *  raw-code long-name path. */
+  synonyms?: string[];
 }
 
 /** Lab gate carried by threshold-bearing members (1,210 on the wire). */

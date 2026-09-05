@@ -18,10 +18,10 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the de-park + C2 visibility release (handoff
-    // model-20260904205744: v2026-09-04.2055; threshold/severity qualifiers
-    // on members, 563 de-parked slots; additive schema).
-    expect(bundle.version).toBe("2026-09-04.2055");
+    // Pinned to the consumer-synonym release (handoff model-20260904222234:
+    // v2026-09-04.2219; member synonyms, display-layer only, routing
+    // untouched — drift 0/0/0).
+    expect(bundle.version).toBe("2026-09-04.2219");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();

@@ -34,6 +34,9 @@ export interface RelatedMatch {
   /** C2 visibility (v2026-09-04.2055+): quantitative gate on the matched
    *  member, e.g. {serum triglycerides, >, 500, mg/dL}. Rendering aid. */
   matchedMemberThreshold?: MemberThreshold;
+  /** Consumer-synonym layer (v2026-09-04.2219+): lay aliases for the
+   *  matched member name. Rendering aid. */
+  matchedMemberSynonyms?: string[];
 
 }
 
@@ -59,6 +62,7 @@ interface IndexedMember {
   age_min?: number;
   age_max?: number;
   threshold?: MemberThreshold;
+  synonyms?: string[];
 }
 
 interface ConceptBucketIndex {
@@ -131,6 +135,7 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
         age_min: member.age_min,
         age_max: member.age_max,
         threshold: member.threshold,
+        synonyms: member.synonyms,
         viaHub: attribution?.parent_cid ? bundle.by_cid[attribution.parent_cid] : undefined
       });
       const memberConcept = bundle.by_cid[member.cid];
@@ -191,7 +196,8 @@ function matchAgainstConcept(
             viaHubName: member.viaHub,
             matchedMemberAgeMin: member.age_min,
             matchedMemberAgeMax: member.age_max,
-            matchedMemberThreshold: member.threshold
+            matchedMemberThreshold: member.threshold,
+            matchedMemberSynonyms: member.synonyms
           };
         }
       }
@@ -264,7 +270,11 @@ export async function findRelatedGroups(
             relationship: bucket,
             matchedMemberName: member.name,
             provenance: member.provenance,
-            viaHubName: member.viaHub
+            viaHubName: member.viaHub,
+            matchedMemberAgeMin: member.age_min,
+            matchedMemberAgeMax: member.age_max,
+            matchedMemberThreshold: member.threshold,
+            matchedMemberSynonyms: member.synonyms
           });
           break;
         }

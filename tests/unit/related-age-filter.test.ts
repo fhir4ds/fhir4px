@@ -323,6 +323,34 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(chip?.viaHubName).toBe("comprehensive metabolic panel (2000)");
   }, 30_000);
 
+  it("acceptance: member synonyms ride through matching (v2026-09-04.2219)", async () => {
+    setAssociationsForTest({ bundle: await loadAssociationBundle() });
+    const bundle = await loadAssociationBundle();
+    setAssociationsForTest(null);
+    const ht = bundle.concepts["hypertension"];
+    const dbp = (ht?.buckets?.vital ?? []).find((m) => m.name === "Diastolic Blood Pressure");
+    if (!dbp?.synonyms?.length) {
+      // Consumer-synonym layer (v2026-09-04.2219+). Until then this
+      // acceptance check self-skips.
+      return;
+    }
+    expect(dbp.synonyms).toContain("DBP");
+    const matches = await findRelatedGroups(
+      { groupId: "f", resolution: { conceptKey: "hypertension", resolvedVia: "test" } },
+      [
+        {
+          groupId: "dbp",
+          groupName: "Diastolic blood pressure",
+          resourceTypes: ["Observation"],
+          resolution: { labPartCids: ["VAL-VIT-LOINC-8462-4", "VAL-LAB-LOINC-8462-4"] }
+        }
+      ],
+      { includeLooseProvenance: true }
+    );
+    const chip = matches.find((m) => m.groupId === "dbp" && m.relationship === "vital");
+    expect(chip?.matchedMemberSynonyms).toContain("DBP");
+  }, 30_000);
+
   it("acceptance: threshold qualifiers render lab gates (v2026-09-04.2055)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
     const bundle = await loadAssociationBundle();
