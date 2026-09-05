@@ -4640,13 +4640,16 @@ export function PatientExplorer() {
         <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
           {sorted.slice(0, 8).map((match) => {
             const isSafety = SAFETY_BUCKETS.has(match.relationship);
+            const thresholdText = match.matchedMemberThreshold
+              ? ` if ${match.matchedMemberThreshold.lab_name} ${match.matchedMemberThreshold.comparator} ${match.matchedMemberThreshold.value} ${match.matchedMemberThreshold.unit}`
+              : "";
             return (
               <Chip
                 key={`${match.groupId}:${match.relationship}`}
                 size="small"
                 color={isSafety ? "warning" : "secondary"}
                 variant={isSafety ? "filled" : "outlined"}
-                label={`${match.groupName} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${
+                label={`${match.groupName} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${thresholdText}${
                   match.viaHubName ? ` (via ${match.viaHubName})` : ""
                 }`}
                 onClick={() => navigateToRelatedGroup(match.groupId)}

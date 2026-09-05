@@ -42,6 +42,19 @@ export interface AssociationMember {
    *  provenance tiers. */
   age_min?: number;
   age_max?: number;
+  /** v2026-09-04.2055+ (C2 visibility): quantitative gate on the
+   *  relationship — e.g. contraindicated_in when serum triglycerides > 500
+   *  mg/dL, adverse_effect when absolute neutrophil count < 1000. Rendering
+   *  aid only; matching semantics unchanged. */
+  threshold?: MemberThreshold;
+}
+
+/** Lab gate carried by threshold-bearing members (1,210 on the wire). */
+export interface MemberThreshold {
+  lab_name: string;
+  comparator: ">" | "<" | ">=" | "<=";
+  value: number;
+  unit: string;
 }
 
 export interface AssociationConcept {

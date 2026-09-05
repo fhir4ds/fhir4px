@@ -18,10 +18,10 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the rules-based hierarchy-fan release (handoff
-    // model-20260904140658: v2026-09-04.1359; +97K monitoring placements
-    // restored, supersedes .0903's heuristic; prednisone pins stay valid).
-    expect(bundle.version).toBe("2026-09-04.1359");
+    // Pinned to the de-park + C2 visibility release (handoff
+    // model-20260904205744: v2026-09-04.2055; threshold/severity qualifiers
+    // on members, 563 de-parked slots; additive schema).
+    expect(bundle.version).toBe("2026-09-04.2055");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();

@@ -8,7 +8,7 @@
  * the bucket carries.
  */
 
-import type { AssociationBucket, AssociationBundle, MemberProvenance } from "./types";
+import type { AssociationBucket, AssociationBundle, MemberProvenance, MemberThreshold } from "./types";
 import type { GroupConceptResolution } from "./resolve";
 
 export interface AssociationCandidate {
@@ -31,6 +31,9 @@ export interface RelatedMatch {
   /** v1.2+: inclusive patient-age bounds of the matched member (years). */
   matchedMemberAgeMin?: number;
   matchedMemberAgeMax?: number;
+  /** C2 visibility (v2026-09-04.2055+): quantitative gate on the matched
+   *  member, e.g. {serum triglycerides, >, 500, mg/dL}. Rendering aid. */
+  matchedMemberThreshold?: MemberThreshold;
 
 }
 
@@ -55,6 +58,7 @@ interface IndexedMember {
   viaHub?: string;
   age_min?: number;
   age_max?: number;
+  threshold?: MemberThreshold;
 }
 
 interface ConceptBucketIndex {
@@ -121,6 +125,7 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
         provenance: member.provenance,
         age_min: member.age_min,
         age_max: member.age_max,
+        threshold: member.threshold,
         viaHub: ancestorParent ? bundle.by_cid[ancestorParent] : undefined
       });
       const memberConcept = bundle.by_cid[member.cid];
@@ -164,7 +169,8 @@ function matchAgainstConcept(
         provenance: member?.provenance,
         viaHubName: member?.viaHub,
         matchedMemberAgeMin: member?.age_min,
-        matchedMemberAgeMax: member?.age_max
+        matchedMemberAgeMax: member?.age_max,
+        matchedMemberThreshold: member?.threshold
       };
     }
     if (candidateParts?.length && (bucket === "lab" || bucket === "vital")) {
@@ -179,7 +185,8 @@ function matchAgainstConcept(
             provenance: member.provenance,
             viaHubName: member.viaHub,
             matchedMemberAgeMin: member.age_min,
-            matchedMemberAgeMax: member.age_max
+            matchedMemberAgeMax: member.age_max,
+            matchedMemberThreshold: member.threshold
           };
         }
       }
