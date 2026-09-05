@@ -323,20 +323,24 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(chip?.viaHubName).toBe("comprehensive metabolic panel (2000)");
   }, 30_000);
 
-  it("acceptance: med members carry authoritative patient_name when route-qualified (pre-armed)", async () => {
+  it("acceptance: med member names are route-qualified anchors (v2026-09-04.2259)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
     const bundle = await loadAssociationBundle();
     setAssociationsForTest(null);
-    const withPfn = (bundle.concepts["herpes simplex infection"]?.buckets?.medication ?? []).find((m) => m.patient_name);
-    if (!withPfn) {
-      // Canonical (2026-09-04): ~28% of med members carry plain-ingredient
-      // labels; model is adding 'patient_name' (anchor pfn, authoritative,
-      // route-qualified) to med members in the next fold. Until it lands
-      // this acceptance check self-skips.
+    const hs = bundle.concepts["herpes simplex infection"];
+    const labels = new Set((hs?.buckets?.medication ?? []).map((m) => m.name));
+    const ophthalmic = [...labels].some((n) => n === "Acyclovir (Ophthalmic)");
+    if (!labels.has("Acyclovir") && !ophthalmic) {
+      // Route-shadow identity fix (v2026-09-04.2259+): member name is the
+      // authoritative patient name universally. Until route-qualified labels
+      // ship this acceptance check self-skips.
       return;
     }
-    expect(typeof withPfn.patient_name).toBe("string");
-    expect(withPfn.patient_name.length).toBeGreaterThan(0);
+    // The route-shadow fix resolves 4-cids-one-label ambiguity: route anchors
+    // render qualified, never as three identical 'Acyclovir' entries.
+    expect(ophthalmic).toBe(true);
+    expect(labels.has("Acyclovir (Systemic)")).toBe(true);
+    expect(labels.has("Acyclovir (Topical)")).toBe(true);
   }, 30_000);
 
   it("acceptance: member synonyms ride through matching (v2026-09-04.2219)", async () => {
