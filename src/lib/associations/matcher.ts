@@ -119,14 +119,19 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
     const conceptKeys = new Set<string>();
     for (const member of members) {
       if (!includeLoose && member.provenance && LOOSE_PROVENANCE.has(member.provenance)) continue;
-      const ancestorParent = member.derivations?.find((d) => d.path === "ancestor")?.parent_cid;
+      // Attribution: an ancestor path credits the condition hub; a fanned
+      // path credits the panel the member rode in on ("Calcium · via
+      // Comprehensive Metabolic Panel"). Direct members carry no via.
+      const attribution = member.derivations?.find(
+        (d) => (d.path === "ancestor" || d.path === "fanned" || d.path === "fanned_hub") && d.parent_cid
+      );
       cidToMember.set(member.cid, {
         name: member.name,
         provenance: member.provenance,
         age_min: member.age_min,
         age_max: member.age_max,
         threshold: member.threshold,
-        viaHub: ancestorParent ? bundle.by_cid[ancestorParent] : undefined
+        viaHub: attribution?.parent_cid ? bundle.by_cid[attribution.parent_cid] : undefined
       });
       const memberConcept = bundle.by_cid[member.cid];
       if (memberConcept) conceptKeys.add(memberConcept);

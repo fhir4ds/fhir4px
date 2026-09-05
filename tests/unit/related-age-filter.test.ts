@@ -292,6 +292,37 @@ describe.skipIf(!live)("age bounds against the live corpus", () => {
     expect(htnAe?.provenance).toBe("warning_section");
   }, 30_000);
 
+  it("acceptance: panel-fanned members attribute their panel (Calcium via CMP on ibuprofen)", async () => {
+    setAssociationsForTest({ bundle: await loadAssociationBundle() });
+    const bundle = await loadAssociationBundle();
+    setAssociationsForTest(null);
+    const ibu = bundle.concepts["ibuprofen"];
+    const calcium = (ibu?.buckets?.lab ?? []).find((m) => m.name === "Calcium");
+    if (!calcium?.derivations?.some((d) => d.path === "fanned")) {
+      // Panel fan attribution (v2026-09-04+): fanned members carry the
+      // panel parent_cid. Until present this acceptance check self-skips.
+      return;
+    }
+    const panelCid = calcium.derivations!.find((d) => d.path === "fanned")!.parent_cid;
+    const panelName = bundle.by_cid[panelCid ?? ""];
+    expect(panelName).toBe("comprehensive metabolic panel (2000)");
+    // End-to-end: the calcium chip on an ibuprofen click credits the panel.
+    const matches = await findRelatedGroups(
+      { groupId: "ibu", resolution: { conceptKey: "ibuprofen", resolvedVia: "test" } },
+      [
+        {
+          groupId: "ca",
+          groupName: "Calcium",
+          resourceTypes: ["Observation"],
+          resolution: { conceptKey: "calcium", resolvedVia: "test" }
+        }
+      ],
+      { includeLooseProvenance: true }
+    );
+    const chip = matches.find((m) => m.groupId === "ca" && m.relationship === "lab");
+    expect(chip?.viaHubName).toBe("comprehensive metabolic panel (2000)");
+  }, 30_000);
+
   it("acceptance: threshold qualifiers render lab gates (v2026-09-04.2055)", async () => {
     setAssociationsForTest({ bundle: await loadAssociationBundle() });
     const bundle = await loadAssociationBundle();
