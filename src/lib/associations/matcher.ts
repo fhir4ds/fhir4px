@@ -37,6 +37,9 @@ export interface RelatedMatch {
   /** Consumer-synonym layer (v2026-09-04.2219+): lay aliases for the
    *  matched member name. Rendering aid. */
   matchedMemberSynonyms?: string[];
+  /** Wave-2 (v2026-09-07.0118+, causes_abnormality only): which way the
+   *  drug moves the matched target — see AssociationMember.direction. */
+  matchedMemberDirection?: "increase" | "decrease" | "abnormal";
 
 }
 
@@ -63,6 +66,7 @@ interface IndexedMember {
   age_max?: number;
   threshold?: MemberThreshold;
   synonyms?: string[];
+  direction?: "increase" | "decrease" | "abnormal";
 }
 
 interface ConceptBucketIndex {
@@ -85,7 +89,12 @@ const BUCKETS: AssociationBucket[] = [
   // with treats (opposite polarity per the Q4 relation-aware decision).
   "adverse_effect",
   "contraindicated_in",
-  "interferes_with_test"
+  "interferes_with_test",
+  // v2026-09-07.0118 wave-2 buckets, ordered after the core families so the
+  // richer lab/vital monitoring badges win first for the same target.
+  "causes_abnormality",
+  "screens_before",
+  "antidote_for"
 ];
 
 /**
@@ -136,6 +145,7 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
         age_max: member.age_max,
         threshold: member.threshold,
         synonyms: member.synonyms,
+        direction: member.direction,
         viaHub: attribution?.parent_cid ? bundle.by_cid[attribution.parent_cid] : undefined
       });
       const memberConcept = bundle.by_cid[member.cid];
@@ -178,10 +188,12 @@ function matchAgainstConcept(
         matchedMemberName: member?.name ?? candidate.groupName,
         provenance: member?.provenance,
         viaHubName: member?.viaHub,
-        matchedMemberAgeMin: member?.age_min,
-        matchedMemberAgeMax: member?.age_max,
-        matchedMemberThreshold: member?.threshold
-      };
+            matchedMemberAgeMin: member?.age_min,
+            matchedMemberAgeMax: member?.age_max,
+            matchedMemberThreshold: member?.threshold,
+            matchedMemberSynonyms: member?.synonyms,
+            matchedMemberDirection: member?.direction
+          };
     }
     if (candidateParts?.length && (bucket === "lab" || bucket === "vital")) {
       for (const part of candidateParts) {
@@ -197,7 +209,8 @@ function matchAgainstConcept(
             matchedMemberAgeMin: member.age_min,
             matchedMemberAgeMax: member.age_max,
             matchedMemberThreshold: member.threshold,
-            matchedMemberSynonyms: member.synonyms
+            matchedMemberSynonyms: member.synonyms,
+            matchedMemberDirection: member.direction
           };
         }
       }
@@ -274,7 +287,8 @@ export async function findRelatedGroups(
             matchedMemberAgeMin: member.age_min,
             matchedMemberAgeMax: member.age_max,
             matchedMemberThreshold: member.threshold,
-            matchedMemberSynonyms: member.synonyms
+            matchedMemberSynonyms: member.synonyms,
+            matchedMemberDirection: member.direction
           });
           break;
         }
@@ -288,7 +302,8 @@ export async function findRelatedGroups(
 export function relationshipLabel(
   relationship: AssociationBucket,
   focusIsCondition: boolean,
-  provenance?: MemberProvenance
+  provenance?: MemberProvenance,
+  direction?: "increase" | "decrease" | "abnormal"
 ): string {
   if (relationship === "lab") return "Lab to monitor";
   if (relationship === "vital") return "Vital to monitor";
@@ -308,5 +323,14 @@ export function relationshipLabel(
   if (relationship === "adverse_effect") return "Caution: may cause";
   if (relationship === "contraindicated_in") return "Avoid with this";
   if (relationship === "interferes_with_test") return "May interfere with";
+  // v2026-09-07.0118 wave-2 buckets.
+  if (relationship === "causes_abnormality") {
+    // Direction-qualified label warning (prednisone → "May raise · Glucose").
+    if (direction === "increase") return "Caution: may raise";
+    if (direction === "decrease") return "Caution: may lower";
+    return "Caution: may affect";
+  }
+  if (relationship === "screens_before") return "Check before starting";
+  if (relationship === "antidote_for") return "Reverses";
   return "Related";
 }

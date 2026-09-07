@@ -9,7 +9,15 @@ export type AssociationBucket =
   // v1.4+ safety-signal buckets — OPPOSITE polarity to treats; never pooled
   | "adverse_effect"
   | "contraindicated_in"
-  | "interferes_with_test";
+  | "interferes_with_test"
+  // v2026-09-07.0118 wave-2 buckets — drug-card lab/vital perturbations
+  // (direction-qualified), pre-treatment screening, and antidote identity.
+  // causes_abnormality renders with the safety family (it is a warning that
+  // this drug moves the number); screens_before renders monitoring;
+  // antidote_for renders treatment ("Reverses").
+  | "causes_abnormality"
+  | "screens_before"
+  | "antidote_for";
 
 export type MemberProvenance =
   | "direct_indication"
@@ -23,7 +31,13 @@ export type MemberProvenance =
   | "boxed_warning"
   | "warning_section"
   | "contraindication_section"
-  | "interference_section";
+  | "interference_section"
+  // v2026-09-07.0118 (observed on wire earlier, typed now): dosage/admin
+  // sourcing for screens/antidotes, condition-context pairs, and
+  // overdosage-section sourcing on antidote members.
+  | "dosage_section"
+  | "overdosage_section"
+  | "disease_context";
 
 export interface AssociationMember {
   cid: string;
@@ -51,6 +65,14 @@ export interface AssociationMember {
    *  name ("SBP", "Chem 7"). Rendering aid; prefer these + name over the
    *  raw-code long-name path. */
   synonyms?: string[];
+  /** v2026-09-07.0118 (wave-2, causes_abnormality only): which way the drug
+   *  moves the target — "increase" (prednisone → Glucose), "decrease"
+   *  (prednisone → Potassium), or "abnormal"/absent when the label does not
+   *  qualify the direction. Rendering aid; matching semantics unchanged. */
+  direction?: "increase" | "decrease" | "abnormal";
+  /** v2026-09-07.0118 (wave-2): label evidence distance (0 = the drug's own
+   *  label, 1 = an ingredient ancestor's). Reserved for richer attribution. */
+  distance?: number;
 }
 
 /** Lab gate carried by threshold-bearing members (1,210 on the wire). */

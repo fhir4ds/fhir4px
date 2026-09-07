@@ -18,12 +18,12 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the D10/P2 authority wave (handoff
-    // model-20260906193056-462830: v2026-09-06.1734; +91 P2 stub concepts,
-    // +1,074 cid entries, +504 members incl sJIA/tendinitis/pericarditis/
-    // pemphigus/LVH, 2,152 by_cid flips mostly rich->stub precision routing,
-    // 0 removals / 0 provenance changes).
-    expect(bundle.version).toBe("2026-09-06.1734");
+    // Pinned to the wave-2 release (handoff model-20260907074251-722015:
+    // v2026-09-07.0118; NEW buckets causes_abnormality 3,380 /
+    // screens_before 878 / antidote_for 1,866, +28,862 placements,
+    // 1,121 combos retargeted off sparse-ingredient shadows, 0 fully lost,
+    // 91 unannounced provenance upgrades monitoring->warning_section).
+    expect(bundle.version).toBe("2026-09-07.0118");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
@@ -292,5 +292,36 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(phEcho?.provenance).toBe("monitoring_recommendation");
     const phCath = (phConcept?.buckets?.procedure ?? []).find((m) => /cardiac catheterization/i.test(m.name));
     expect(phCath?.provenance).toBe("monitoring_recommendation");
+  }, 30_000);
+
+  it("wave-2 buckets live on the wire with direction qualifiers (v2026-09-07.0118)", async () => {
+    const bundle = await loadAssociationBundle();
+    // Bucket presence + scale (wire-verified counts from acceptance diff).
+    const ca = bundle.concepts["prednisone"]?.buckets?.causes_abnormality ?? [];
+    expect(ca.length).toBeGreaterThan(0);
+    const glucose = ca.find((m) => m.name === "Glucose");
+    expect(glucose?.direction).toBe("increase");
+    const potassium = ca.find((m) => m.name === "Potassium");
+    expect(potassium?.direction).toBe("decrease");
+    // causes_abnormality is warning-sourced and renders with the caution prefix.
+    expect(glucose?.provenance).toBe("warning_section");
+    expect(relationshipLabel("causes_abnormality", false, glucose?.provenance, glucose?.direction)).toBe("Caution: may raise");
+
+    // screens_before: pre-treatment screening on a statin card.
+    const simva = bundle.concepts["simvastatin"]?.buckets?.screens_before ?? [];
+    expect(simva.some((m) => /creatine kinase/i.test(m.name))).toBe(true);
+    expect(relationshipLabel("screens_before", false)).toBe("Check before starting");
+
+    // antidote_for lives on the ANTIDOTE's card — naloxone reverses opioids.
+    const naloxone = bundle.concepts["naloxone"]?.buckets?.antidote_for ?? [];
+    expect(naloxone.length).toBeGreaterThan(0);
+    expect(naloxone.some((m) => /tramadol|buprenorphine/i.test(m.name))).toBe(true);
+    expect(relationshipLabel("antidote_for", false)).toBe("Reverses");
+
+    // Combo retarget (announced): the chloramphenicol/prednisolone combo now
+    // resolves to prednisolone's full card.
+    const predCard = bundle.concepts["prednisolone"]?.buckets ?? {};
+    expect((predCard.treats ?? []).length).toBeGreaterThan(40);
+    expect((predCard.adverse_effect ?? []).some((m) => m.name === "Adrenal Suppression")).toBe(true);
   }, 30_000);
 });

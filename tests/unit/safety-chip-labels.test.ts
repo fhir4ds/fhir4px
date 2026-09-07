@@ -19,4 +19,14 @@ describe("safety-signal chip labels (v1.4)", () => {
     expect(relationshipLabel("adverse_effect", true, "boxed_warning")).toBe("Caution: may cause");
     expect(relationshipLabel("adverse_effect", true, "warning_section")).toBe("Caution: may cause");
   });
+
+  it("wave-2 buckets label with safety-prefix / screening / reversal copy", () => {
+    expect(relationshipLabel("causes_abnormality", false, "warning_section", "increase")).toBe("Caution: may raise");
+    expect(relationshipLabel("causes_abnormality", false, "warning_section", "decrease")).toBe("Caution: may lower");
+    expect(relationshipLabel("causes_abnormality", false, "warning_section")).toBe("Caution: may affect");
+    expect(relationshipLabel("screens_before", false)).toBe("Check before starting");
+    expect(relationshipLabel("antidote_for", false)).toBe("Reverses");
+    // Safety prefix distinct from treatment copy.
+    expect(relationshipLabel("causes_abnormality", false, "warning_section", "increase")).not.toContain("Treats");
+  });
 });

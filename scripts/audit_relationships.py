@@ -26,8 +26,10 @@ RXNORM_INGREDIENTS = os.path.join(os.path.dirname(__file__), "..", "public", "te
 
 LOOSE = {"population_context", "comorbidity_section", "panel_cooccurrence"}
 # Order mirrors matcher.ts BUCKETS — first bucket wins per candidate.
+# Wave-2 (v2026-09-07.0118) buckets trail the core families.
 BUCKETS = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "treats",
-           "adverse_effect", "contraindicated_in", "interferes_with_test"]
+           "adverse_effect", "contraindicated_in", "interferes_with_test",
+           "causes_abnormality", "screens_before", "antidote_for"]
 
 
 def ensure_file(name):
@@ -255,10 +257,12 @@ class Patient:
                 if not include_loose and prov in LOOSE:
                     continue
                 # v2.2: ancestor content is materialized at build time with
-                # {path: ancestor, parent_cid} attribution — viaHub name.
+                # {path: ancestor, parent_cid} attribution; fanned/fanned_hub
+                # credit the panel. Mirrors matcher.ts: FIRST derivation
+                # carrying a parent_cid of any hub path wins.
                 hub = None
                 for dv in m.get("derivations") or []:
-                    if dv.get("path") == "ancestor" and dv.get("parent_cid"):
+                    if dv.get("path") in ("ancestor", "fanned", "fanned_hub") and dv.get("parent_cid"):
                         hub = self.by_cid.get(dv["parent_cid"])
                         break
                 indexed[m["cid"]] = (m["name"], prov, hub, m.get("age_min"), m.get("age_max"))
