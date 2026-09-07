@@ -7652,7 +7652,12 @@
      "system": "http://unitsofmeasure.org",
      "code": "L/min"
     }
-   }
+   },
+   "request": {
+    "method": "PUT",
+    "url": "Observation/fhir4px-chronic-mabel-atopic-asthma-obs-0149"
+   },
+   "fullUrl": "https://fhir4px.local/r4/Observation/fhir4px-chronic-mabel-atopic-asthma-obs-0149"
   }
  ]
 }
