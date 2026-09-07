@@ -18,11 +18,12 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the route-shadow identity fix release (handoff
-    // model-20260904230314: v2026-09-04.2259; member name universally the
-    // authoritative patient name, +9,604 route-qualified label renames,
-    // display-layer only — drift 0/0/0).
-    expect(bundle.version).toBe("2026-09-04.2259");
+    // Pinned to the D10/P2 authority wave (handoff
+    // model-20260906193056-462830: v2026-09-06.1734; +91 P2 stub concepts,
+    // +1,074 cid entries, +504 members incl sJIA/tendinitis/pericarditis/
+    // pemphigus/LVH, 2,152 by_cid flips mostly rich->stub precision routing,
+    // 0 removals / 0 provenance changes).
+    expect(bundle.version).toBe("2026-09-06.1734");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
