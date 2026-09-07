@@ -130,6 +130,13 @@ import { preloadAssociations } from "../lib/associations/bundle";
 import { resolveGroupConcept, type GroupConceptResolution } from "../lib/associations/resolve";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
 import {
+  collapsedFamilyLabel,
+  groupRelatedSections,
+  SAFETY_BUCKETS,
+  collapseViaHubFamilies,
+  type RelatedChip
+} from "../lib/associations/relatedDisplay";
+import {
   emptyRelationshipCache,
   RELATIONSHIP_CACHE_ID,
   RELATIONSHIP_CACHE_VERSION,
@@ -1298,6 +1305,11 @@ export function PatientExplorer() {
   const [selectedMatchingRecordKeys, setSelectedMatchingRecordKeys] = useState<string[]>([]);
   const [selectedMatchReason, setSelectedMatchReason] = useState<string | null>(null);
   const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
+  // Related-records family collapse: keys of collapsed panel families that
+  // the patient expanded ("Calcium +2 more via CMP" → show all members).
+  const [expandedFamilyKeys, setExpandedFamilyKeys] = useState<Set<string>>(new Set());
+  // Per-section chip cap ("Show all N" per section), keyed group+section.
+  const [expandedSectionKeys, setExpandedSectionKeys] = useState<Set<string>>(new Set());
   const [groupConceptResolutions, setGroupConceptResolutions] = useState<Record<string, GroupConceptResolution>>({});
   const [relatedMatchesByGroupId, setRelatedMatchesByGroupId] = useState<Record<string, RelatedMatch[]>>({});
   const conceptResolutionSignatureRef = useRef("");
@@ -3321,6 +3333,24 @@ export function PatientExplorer() {
     });
   }
 
+  function toggleFamilyExpanded(key: string) {
+    setExpandedFamilyKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleSectionExpanded(key: string) {
+    setExpandedSectionKeys((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   function recordsForGroup(group: PatientFriendlyGroup): GroupableRecord[] {
     return records.filter(
       (record) =>
@@ -4620,49 +4650,81 @@ export function PatientExplorer() {
     setExpandedGroupKeys((prev) => new Set([...prev, groupExpansionKey(group, tab ?? activeTab)]));
   }
 
+  function renderRelatedChip(chip: RelatedChip, focusIsCondition: boolean) {
+    const match = chip.match;
+    const isSafety = SAFETY_BUCKETS.has(match.relationship);
+    const thresholdText = match.matchedMemberThreshold
+      ? ` if ${match.matchedMemberThreshold.lab_name} ${match.matchedMemberThreshold.comparator} ${match.matchedMemberThreshold.value} ${match.matchedMemberThreshold.unit}`
+      : "";
+    // Canonical terminology guidance (2026-09-04): the wire member
+    // name IS the patient-friendly layer; the local lnc table is the
+    // raw-code fallback and can carry long LCNames. Chips read the
+    // member name; synonyms stay available as alternates.
+    const memberLabel = match.matchedMemberName || match.groupName;
+    const familyKey = `${match.groupId}:${chip.key}`;
+    const isCollapsedFamily = chip.hidden.length > 0 && !expandedFamilyKeys.has(familyKey);
+    const viaSuffix = match.viaHubName ? ` (via ${match.viaHubName})` : "";
+    const familySuffix = isCollapsedFamily ? ` · ${collapsedFamilyLabel(chip)}` : "";
+    return (
+      <Chip
+        key={chip.key}
+        size="small"
+        color={isSafety ? "warning" : "secondary"}
+        variant={isSafety ? "filled" : "outlined"}
+        title={match.matchedMemberSynonyms?.length ? `Also known as: ${match.matchedMemberSynonyms.join(", ")}` : undefined}
+        label={`${memberLabel} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance, match.matchedMemberDirection)}${thresholdText}${viaSuffix}${familySuffix}`}
+        onClick={() => {
+          if (chip.hidden.length > 0 && !expandedFamilyKeys.has(familyKey)) {
+            toggleFamilyExpanded(familyKey);
+            return;
+          }
+          navigateToRelatedGroup(match.groupId);
+        }}
+      />
+    );
+  }
+
   function renderRelatedGroupLinks(group: PatientFriendlyGroup) {
     const matches = relatedMatchesByGroupId[group.groupId];
     if (!matches?.length) return null;
     const focusIsCondition = group.resourceTypes.includes("Condition");
-
-    const SAFETY_BUCKETS = new Set(["adverse_effect", "contraindicated_in", "interferes_with_test"]);
-    const sorted = [...matches].sort((a, b) => {
-      const aSafety = SAFETY_BUCKETS.has(a.relationship) ? 1 : 0;
-      const bSafety = SAFETY_BUCKETS.has(b.relationship) ? 1 : 0;
-      return aSafety - bSafety;
-    });
+    const sections = groupRelatedSections(matches);
+    // Safety section never truncates; other sections cap at 8 chips with a
+    // "Show all N" toggle. Collapsed families count as one chip.
+    const SECTION_CHIP_CAP = 8;
 
     return (
       <Stack spacing={0.75}>
         <Typography variant="body2" color="text.secondary" fontWeight={700}>
           Related records
         </Typography>
-        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-          {sorted.slice(0, 8).map((match) => {
-            const isSafety = SAFETY_BUCKETS.has(match.relationship);
-            const thresholdText = match.matchedMemberThreshold
-              ? ` if ${match.matchedMemberThreshold.lab_name} ${match.matchedMemberThreshold.comparator} ${match.matchedMemberThreshold.value} ${match.matchedMemberThreshold.unit}`
-              : "";
-            // Canonical terminology guidance (2026-09-04): the wire member
-            // name IS the patient-friendly layer; the local lnc table is the
-            // raw-code fallback and can carry long LCNames. Chips read the
-            // member name; synonyms stay available as alternates.
-            const memberLabel = match.matchedMemberName || match.groupName;
-            return (
-              <Chip
-                key={`${match.groupId}:${match.relationship}`}
-                size="small"
-                color={isSafety ? "warning" : "secondary"}
-                variant={isSafety ? "filled" : "outlined"}
-                title={match.matchedMemberSynonyms?.length ? `Also known as: ${match.matchedMemberSynonyms.join(", ")}` : undefined}
-                label={`${memberLabel} · ${relationshipLabel(match.relationship, focusIsCondition, match.provenance)}${thresholdText}${
-                  match.viaHubName ? ` (via ${match.viaHubName})` : ""
-                }`}
-                onClick={() => navigateToRelatedGroup(match.groupId)}
-              />
-            );
-          })}
-        </Stack>
+        {sections.map((section) => {
+          const { chips } = collapseViaHubFamilies(section.matches);
+          const sectionKey = `${group.groupId}:${section.id}`;
+          const capped = section.id !== "safety" && chips.length > SECTION_CHIP_CAP;
+          const isExpanded = expandedSectionKeys.has(sectionKey);
+          const visibleChips = capped && !isExpanded ? chips.slice(0, SECTION_CHIP_CAP) : chips;
+          return (
+            <Stack key={section.id} spacing={0.75}>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>
+                {section.label}
+              </Typography>
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                {visibleChips.map((chip) => renderRelatedChip(chip, focusIsCondition))}
+                {capped && (
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={() => toggleSectionExpanded(sectionKey)}
+                    sx={{ p: 0, minWidth: 0, textTransform: "none", alignSelf: "center" }}
+                  >
+                    {isExpanded ? "Show fewer" : `Show all ${chips.length}`}
+                  </Button>
+                )}
+              </Stack>
+            </Stack>
+          );
+        })}
       </Stack>
     );
   }
