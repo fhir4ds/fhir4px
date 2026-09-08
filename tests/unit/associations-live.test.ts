@@ -18,14 +18,24 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the P2R umbrella release (handoff model-20260907225747-1032779:
-    // v2026-09-07.2239; +197 empty P2R umbrella anchors, +11,622 by_cid,
-    // members +733/-50 (40 prenatal re-parents, 9 vasculitis re-stamps,
-    // 1 prov-only), icd10 crosswalk +2,069; fan-up verified hypotension
-    // 17->102, dyslipidemia 233->308, heart transplant failure 95->180).
-    expect(bundle.version).toBe("2026-09-07.2239");
+    // Pinned to the resolution-layer release (handoff model-20260908134304-1207332:
+    // v2026-09-08.0740; member graph exactly +0/-0 vs .2239; icd10_to_snomed
+    // rebuilt as pure inversion of canonical authoritative_pick 24,538 picks
+    // -> 28,096 entries; loinc_test_to_part value-set inversion -> 46,833;
+    // by_cid +1,139/-8,600 resolution-only (96 documented_leave, 5,358
+    // no-claimant S/T-chapter + M/H residual, 3,143 RXNORM singles absorbed
+    // into by_cid_multi, 3 generic PROC drops); P3 picks landed (C79.82 ->
+    // secondary malignant neoplasm, A69.22 -> polyneuropathy, L56.2 -> UV
+    // effect, O24.41/.43 -> diabetes mellitus); lithium salt-split retired
+    // at resolution layer (RXNORM:197889 -> unified "lithium" card); known
+    // P4 on wire: I25.10 -> Chronic Heart Disease 128238001, folds into next
+    // candidate as I25.10 -> IHD 414545008).
+    expect(bundle.version).toBe("2026-09-08.0740");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
+    // Resolution-layer inversion pins (2026-09-08.0740)
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
+    expect(bundle.by_cid["VAL-COND-ICD10CM-O24.41"]).toBe("diabetes mellitus");
     const labParts = await loadLabPartCrosswalk();
     expect(labParts["VAL-LAB-LOINC-4548-4"]).toContain("VAL-LAB-LOINC-LP16413-4");
     const icd10 = await loadIcd10Crosswalk();
@@ -191,16 +201,13 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     // hepatic-panel Albumin member no longer badges UACR on a statin.
     expect(atorvastatin.some((m) => /^albumin\/creatinine/i.test(m.groupName))).toBe(false);
 
-    // DOCUMENTED LIMITATION (Joel via model, 2026-09-02): no salt-to-base
-    // aliasing will be built — salt-specific anchors are unwanted; salts
-    // exist in RxNorm authority data as-is and resolution happens at the
-    // ingredient level the corpus already uses. RXNORM:197889 serves the
-    // product-level "lithium carbonate" card (TSH only panel_cooccurrence,
-    // loose tier). Consequence: lithium carbonate patients see the TSH
-    // monitoring badge only in loose mode. Documented here so a future
-    // reversal of the decision flips this assertion back to "lithium".
+    // v2026-09-08.0740: P3 authoritative_pick inversion retired the salt-split
+    // (Joel's no-salt-aliasing decision of 2026-09-02 moved to resolution layer —
+    // RXNORM:197889 now resolves to the unified "lithium" card, which carries the
+    // TSH member at monitoring_recommendation). Salt-specific cards still exist for
+    // by-name/legacy lookups; resolution lands on the ingredient card.
     const bundle = await loadAssociationBundle();
-    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium carbonate");
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
     const lithiumTsh = (bundle.concepts["lithium"]?.buckets?.lab ?? []).find((m) => /thyrotropin/i.test(m.name));
     expect(lithiumTsh?.provenance).toBe("monitoring_recommendation");
 
