@@ -18,12 +18,12 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the wave-2 release (handoff model-20260907074251-722015:
-    // v2026-09-07.0118; NEW buckets causes_abnormality 3,380 /
-    // screens_before 878 / antidote_for 1,866, +28,862 placements,
-    // 1,121 combos retargeted off sparse-ingredient shadows, 0 fully lost,
-    // 91 unannounced provenance upgrades monitoring->warning_section).
-    expect(bundle.version).toBe("2026-09-07.0118");
+    // Pinned to the P2R umbrella release (handoff model-20260907225747-1032779:
+    // v2026-09-07.2239; +197 empty P2R umbrella anchors, +11,622 by_cid,
+    // members +733/-50 (40 prenatal re-parents, 9 vasculitis re-stamps,
+    // 1 prov-only), icd10 crosswalk +2,069; fan-up verified hypotension
+    // 17->102, dyslipidemia 233->308, heart transplant failure 95->180).
+    expect(bundle.version).toBe("2026-09-07.2239");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     const labParts = await loadLabPartCrosswalk();
