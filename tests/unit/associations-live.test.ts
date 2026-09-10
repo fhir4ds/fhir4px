@@ -18,24 +18,31 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the resolution-layer release (handoff model-20260908134304-1207332:
-    // v2026-09-08.0740; member graph exactly +0/-0 vs .2239; icd10_to_snomed
-    // rebuilt as pure inversion of canonical authoritative_pick 24,538 picks
-    // -> 28,096 entries; loinc_test_to_part value-set inversion -> 46,833;
-    // by_cid +1,139/-8,600 resolution-only (96 documented_leave, 5,358
-    // no-claimant S/T-chapter + M/H residual, 3,143 RXNORM singles absorbed
-    // into by_cid_multi, 3 generic PROC drops); P3 picks landed (C79.82 ->
-    // secondary malignant neoplasm, A69.22 -> polyneuropathy, L56.2 -> UV
-    // effect, O24.41/.43 -> diabetes mellitus); lithium salt-split retired
-    // at resolution layer (RXNORM:197889 -> unified "lithium" card); known
-    // P4 on wire: I25.10 -> Chronic Heart Disease 128238001, folds into next
-    // candidate as I25.10 -> IHD 414545008).
-    expect(bundle.version).toBe("2026-09-08.0740");
+    // Pinned to the P4a remediation release (handoff model-20260909233101-776357:
+    // v2026-09-09.0026; members 532,212 (-139 net; +143/-282 across exactly 9
+    // electrolyte/mineral cards, 0 pure-loss); ICD10 crosswalk 26 I25-family
+    // flips -> ischemic heart disease 414545008 incl I25.10, closing the last
+    // known P4 test-case gap; LOINC 5,467 pure-additive part flips + 1 removal
+    // (58197-5, honest fall-through); member swaps from canonical G8 refresh
+    // (sodium lab 30->7, calcium lab 29->2, magnesium AE 24->2 etc.); 5 prov
+    // changes panel_cooccurrence -> monitoring_recommendation on Mg/Na cards;
+    // parent_cids surface 6,765 -> 6,694 concepts, 71 concepts lost the field
+    // entirely; RXNORM re-key surface 3,143 added / 1,003 dropped, net +2,143
+    // = 230,066 by_cid).
+    expect(bundle.version).toBe("2026-09-09.0026");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
-    // Resolution-layer inversion pins (2026-09-08.0740)
-    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
+    // Resolution-layer pins (2026-09-08.0740; PARTIALLY REVERTED in
+    // 2026-09-09.0026 by the G8 route-attribution refresh — 7 salt keys
+    // incl. RXNORM:197889 flipped unified "lithium" -> "lithium carbonate",
+    // dropping the 23-member AE bucket and causes_abnormality. Flagged to
+    // model in the acceptance report; pin tracks the wire.)
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium carbonate");
     expect(bundle.by_cid["VAL-COND-ICD10CM-O24.41"]).toBe("diabetes mellitus");
+    // P4a remediation pin (2026-09-09.0026): I25.10 -> ischemic heart
+    // disease — the richer card (lab 67 / vital 2 / procedure 20 / med 141),
+    // closing the chronic-heart-disease test-case gap.
+    expect(bundle.by_cid["VAL-COND-ICD10CM-I25.10"]).toBe("ischemic heart disease");
     const labParts = await loadLabPartCrosswalk();
     expect(labParts["VAL-LAB-LOINC-4548-4"]).toContain("VAL-LAB-LOINC-LP16413-4");
     const icd10 = await loadIcd10Crosswalk();
@@ -202,12 +209,13 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(atorvastatin.some((m) => /^albumin\/creatinine/i.test(m.groupName))).toBe(false);
 
     // v2026-09-08.0740: P3 authoritative_pick inversion retired the salt-split
-    // (Joel's no-salt-aliasing decision of 2026-09-02 moved to resolution layer —
-    // RXNORM:197889 now resolves to the unified "lithium" card, which carries the
-    // TSH member at monitoring_recommendation). Salt-specific cards still exist for
-    // by-name/legacy lookups; resolution lands on the ingredient card.
+    // (RXNORM:197889 -> unified "lithium" card, TSH at monitoring_recommendation).
+    // v2026-09-09.0026 G8 refresh PARTIALLY REVERTED this: the salt key now
+    // resolves to "lithium carbonate" whose TSH member is panel_cooccurrence
+    // (hidden by default) — monitoring regression flagged to model. The unified
+    // "lithium" card still exists for the ingredient-keyed family.
     const bundle = await loadAssociationBundle();
-    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium carbonate");
     const lithiumTsh = (bundle.concepts["lithium"]?.buckets?.lab ?? []).find((m) => /thyrotropin/i.test(m.name));
     expect(lithiumTsh?.provenance).toBe("monitoring_recommendation");
 
