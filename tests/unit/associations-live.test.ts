@@ -18,26 +18,22 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the P4a remediation release (handoff model-20260909233101-776357:
-    // v2026-09-09.0026; members 532,212 (-139 net; +143/-282 across exactly 9
-    // electrolyte/mineral cards, 0 pure-loss); ICD10 crosswalk 26 I25-family
-    // flips -> ischemic heart disease 414545008 incl I25.10, closing the last
-    // known P4 test-case gap; LOINC 5,467 pure-additive part flips + 1 removal
-    // (58197-5, honest fall-through); member swaps from canonical G8 refresh
-    // (sodium lab 30->7, calcium lab 29->2, magnesium AE 24->2 etc.); 5 prov
-    // changes panel_cooccurrence -> monitoring_recommendation on Mg/Na cards;
-    // parent_cids surface 6,765 -> 6,694 concepts, 71 concepts lost the field
-    // entirely; RXNORM re-key surface 3,143 added / 1,003 dropped, net +2,143
-    // = 230,066 by_cid).
-    expect(bundle.version).toBe("2026-09-09.0026");
+    // Pinned to the structured wave-2 tranche-2 + lithium-fix release (handoff
+    // model-20260912210447-1592699: v2026-09-12.1902; members 564,171 (+31,959
+    // net vs .0026); wave-2 tranche-2 live on wire — causesab 24,553 /
+    // screens 7,569 / antidote 1,874 members; LITHIUM SPLIT FIXED: all 9 salt
+    // codes re-unified to the "lithium" card (the .0026 G8 regression
+    // reverted, richness guard added to route joins); 209 by_cid flips
+    // (202 up / 6 salt-combo re-keys / 1 route stub), 180 dropped keys all
+    // consolidated into by_cid_multi, 262 added (261 rich); 692 prov-only
+    // changes; 83 new concepts all product cards).
+    expect(bundle.version).toBe("2026-09-12.1902");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
-    // Resolution-layer pins (2026-09-08.0740; PARTIALLY REVERTED in
-    // 2026-09-09.0026 by the G8 route-attribution refresh — 7 salt keys
-    // incl. RXNORM:197889 flipped unified "lithium" -> "lithium carbonate",
-    // dropping the 23-member AE bucket and causes_abnormality. Flagged to
-    // model in the acceptance report; pin tracks the wire.)
-    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium carbonate");
+    // Resolution-layer pins (2026-09-08.0740, lithium restored 2026-09-12.1902:
+    // the .0026 G8 route-join overwrite was reverted with a richness guard —
+    // all 9 lithium salt codes resolve to the unified "lithium" card again).
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
     expect(bundle.by_cid["VAL-COND-ICD10CM-O24.41"]).toBe("diabetes mellitus");
     // P4a remediation pin (2026-09-09.0026): I25.10 -> ischemic heart
     // disease — the richer card (lab 67 / vital 2 / procedure 20 / med 141),
@@ -210,12 +206,11 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
 
     // v2026-09-08.0740: P3 authoritative_pick inversion retired the salt-split
     // (RXNORM:197889 -> unified "lithium" card, TSH at monitoring_recommendation).
-    // v2026-09-09.0026 G8 refresh PARTIALLY REVERTED this: the salt key now
-    // resolves to "lithium carbonate" whose TSH member is panel_cooccurrence
-    // (hidden by default) — monitoring regression flagged to model. The unified
-    // "lithium" card still exists for the ingredient-keyed family.
+    // v2026-09-09.0026 G8 refresh briefly reverted this; v2026-09-12.1902
+    // restored the unification with a route-join richness guard — salt keys
+    // resolve to the unified card, TSH back at monitoring_recommendation.
     const bundle = await loadAssociationBundle();
-    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium carbonate");
+    expect(bundle.by_cid["RXNORM:197889"]).toBe("lithium");
     const lithiumTsh = (bundle.concepts["lithium"]?.buckets?.lab ?? []).find((m) => /thyrotropin/i.test(m.name));
     expect(lithiumTsh?.provenance).toBe("monitoring_recommendation");
 
