@@ -18,16 +18,17 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the structured wave-2 tranche-2 + lithium-fix release (handoff
-    // model-20260912210447-1592699: v2026-09-12.1902; members 564,171 (+31,959
-    // net vs .0026); wave-2 tranche-2 live on wire — causesab 24,553 /
-    // screens 7,569 / antidote 1,874 members; LITHIUM SPLIT FIXED: all 9 salt
-    // codes re-unified to the "lithium" card (the .0026 G8 regression
-    // reverted, richness guard added to route joins); 209 by_cid flips
-    // (202 up / 6 salt-combo re-keys / 1 route stub), 180 dropped keys all
-    // consolidated into by_cid_multi, 262 added (261 rich); 692 prov-only
-    // changes; 83 new concepts all product cards).
-    expect(bundle.version).toBe("2026-09-12.1902");
+    // Pinned to the P5 universe-v3 fold release (handoff
+    // model-20260918202203-1214691: v2026-09-18.1626; members flat at
+    // 564,171 except 3 prenatal combo cards (+33/-33 whole-bucket swap);
+    // icd10 crosswalk +1,787 letter-bearing 2023+ codes (C83.xA/.3X1/.081A
+    // shapes) via authoritative picks; 245 by_cid flips (52 ICD pick-
+    // resolved, 193 RXNORM route-parent swaps); 12 new empty P5 anchor
+    // stubs incl uterine isthmocele (N85.A + SNOMED 862703121000119109
+    // re-anchored from postoperative-complication walk); standing test
+    // cases intact: I25.10 -> IHD, C79.82 -> secondary malignant neoplasm,
+    // A69.22 -> polyneuropathy, E11.9 -> type 2 diabetes).
+    expect(bundle.version).toBe("2026-09-18.1626");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     // Resolution-layer pins (2026-09-08.0740, lithium restored 2026-09-12.1902:
