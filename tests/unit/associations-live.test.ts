@@ -18,20 +18,20 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the P6 tier-2 wave-1 fold release (handoff
-    // model-20260919110925-1333028: v2026-09-19.1010; by_cid +32,521 —
-    // icd10 crosswalk +26,441 picks (56,324 total) + 6,081 SNOMED anchors,
-    // S/T/V/W/X/Y injury + external-cause + Z3A/Z11-13 codes now resolving;
-    // 2,663 flips = 1,792 stub renames + 835 to-new-anchors (T81.12 ->
-    // postprocedural septic shock class, content returns with corpus
-    // pairs) + 36 route-stub->base upgrades; members +50 (IHD/angina/MI/
-    // myocardial ischemia +11 curated d0 monitoring each, corneal
-    // abrasion +6; IHD now lab 76/vital 2/proc 22/med 141); -1 VAL-PROC-
-    // SNOMED-268547008 breast-procedure stub (no claimants, honest
-    // fall-through); standing test cases intact: I25.10 -> IHD, C79.82 ->
-    // secondary malignant neoplasm, A69.22 -> polyneuropathy, E11.9 ->
-    // type 2 diabetes).
-    expect(bundle.version).toBe("2026-09-19.1010");
+    // Pinned to the P6 billable-universe milestone release (handoff
+    // model-20260920140808-2420322: v2026-09-20.1337; full 88,535-code
+    // billable ICD-10-CM universe accounted (77,657 picks + 10,878
+    // documented leaves); by_cid +33,206/-58 (dup-name consolidations,
+    // content preserved — pregnancy 289908002->77386006 bucket-identical,
+    // cadmium poisoning intact); 3,331 flips = 2,569 stub renames + 557
+    // to-empty specific-anchor class + 76 route-qualifier swaps + 87 up
+    // + 40 empty-to-rich + 2 equal; members +100 (poisoning-biological-
+    // substance +34, cytokine release syndrome +30, ABO incompatibility
+    // +27); icd10 crosswalk 78,307; A69.22 re-anchored polyneuropathy ->
+    // spirochetal infection stub (A69.2 stays lyme disease 153); standing
+    // test cases intact: I25.10 -> IHD, C79.82 -> secondary malignant
+    // neoplasm, E11.9 -> type 2 diabetes, lithium unified).
+    expect(bundle.version).toBe("2026-09-20.1337");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     // Resolution-layer pins (2026-09-08.0740, lithium restored 2026-09-12.1902:
