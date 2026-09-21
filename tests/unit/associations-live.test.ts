@@ -18,22 +18,25 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the P6 billable-universe milestone release (handoff
-    // model-20260920140808-2420322: v2026-09-20.1337; full 88,535-code
-    // billable ICD-10-CM universe accounted (77,657 picks + 10,878
-    // documented leaves); by_cid +33,206/-58 (dup-name consolidations,
-    // content preserved — pregnancy 289908002->77386006 bucket-identical,
-    // cadmium poisoning intact); 3,331 flips = 2,569 stub renames + 557
-    // to-empty specific-anchor class + 76 route-qualifier swaps + 87 up
-    // + 40 empty-to-rich + 2 equal; members +100 (poisoning-biological-
-    // substance +34, cytokine release syndrome +30, ABO incompatibility
-    // +27); icd10 crosswalk 78,307; A69.22 re-anchored polyneuropathy ->
-    // spirochetal infection stub (A69.2 stays lyme disease 153); standing
-    // test cases intact: I25.10 -> IHD, C79.82 -> secondary malignant
-    // neoplasm, E11.9 -> type 2 diabetes, lithium unified).
-    expect(bundle.version).toBe("2026-09-20.1337");
+    // Pinned to the P7 residue fold batch-1+2 release (handoff
+    // model-20260920210409-2795606: v2026-09-20.1857; canonical
+    // fda8402/cdb_2026_09_20 folded; members FLAT +0/-0; +12 concepts all
+    // empty stubs — group a/b streptococcal + pneumococcal sepsis,
+    // secondary syphilis, tick-borne encephalitis, vaccinia, orthopox/
+    // parapox/arbovirus/herpesvirus infection, acariasis; by_cid +133 =
+    // 23 ICD10CM picks (A40.0/.1/.9, A24.3, A51.4, B08.x, B88.0 …) +
+    // 110 SNOMED member-code aliases; icd10 crosswalk 78,330; 140 flips
+    // = 111 RXNORM route swaps + 22 SNOMED re-anchors to new specific
+    // stubs (rich generic cards preserved: sepsis 258, syphilis 180,
+    // encephalitis 210, pneumococcal infection 160) + 7 ICD leaf
+    // re-anchors; standing pins re-derived from claimant_details:
+    // I25.10 -> IHD, lithium unified, Z33.1 -> pregnancy, A40.0 new.)
+    expect(bundle.version).toBe("2026-09-20.1857");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
+    // P7 fold pin: A40.0 picks to the new specific sepsis stub (canonical
+    // 449504009), the leaf our batch filing requested.
+    expect(bundle.by_cid["VAL-COND-ICD10CM-A40.0"]).toBe("group a streptococcal sepsis");
     // Resolution-layer pins (2026-09-08.0740, lithium restored 2026-09-12.1902:
     // the .0026 G8 route-join overwrite was reverted with a richness guard —
     // all 9 lithium salt codes resolve to the unified "lithium" card again).
