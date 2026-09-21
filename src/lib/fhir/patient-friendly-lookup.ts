@@ -2,6 +2,17 @@ import type { GroupableRecord, GroupableResourceType } from "./patient-groups";
 
 export const PATIENT_FRIENDLY_LOOKUP_MODEL = "patient-friendly-lookup-v2";
 
+/**
+ * Dual-lookup merge (canonical-approved 2026-09-21, c27a3db slim-set):
+ * the icd10cm shard is slimmed to non-picked codes (documented leaves +
+ * non-billable base headers); patient-friendly names for crosswalk-covered
+ * ICD-10-CM codes are merged at load time from the association bundle's
+ * card names (by_cid[crosswalk[code]]). Shard entries stay authoritative
+ * where present — the merge only fills codes the slim shard no longer
+ * carries, so display names are unchanged versus the pre-slim shard.
+ */
+export const ICD10CM_BUNDLE_OVERLAY_SOURCE = "fhir4px-associations-card";
+
 export type PatientFriendlyLookupSystem =
   | "loinc"
   | "rxnorm"
@@ -104,7 +115,11 @@ const MATCH_CONFIDENCE: Record<string, number> = {
   snomed_to_target_native_hierarchy: 0.72,
   snomed_to_target_snomed_fallback: 0.68,
   snomed_fallback: 0.64,
-  original: 0.5
+  original: 0.5,
+  // Bundle card names (dual-lookup overlay) are anchor-level names from
+  // the association bundle — authoritative routing, naming tiers below
+  // curated exact matches but above generic fallbacks.
+  bundle_card: 0.9
 };
 
 /**
@@ -159,6 +174,75 @@ function codeSpecificityRank(entry: PatientFriendlyLookupEntry): number {
 const shardPromises = new Map<PatientFriendlyLookupSystem, Promise<Map<string, PatientFriendlyLookupEntry>>>();
 
 /**
+ * Bundle-card-name overlay for crosswalk-covered ICD-10-CM codes.
+ * Returns icd10cm code → card-name entries, or an empty map when the
+ * bundle is unavailable (offline / not yet preloaded) — the slim shard
+ * then carries naming alone for the codes it still holds.
+ */
+async function icd10cmBundleOverlay(): Promise<Map<string, PatientFriendlyLookupEntry>> {
+  const entries = new Map<string, PatientFriendlyLookupEntry>();
+  try {
+    const { loadAssociationBundle, loadIcd10Crosswalk } = await import("../associations/bundle");
+    const [bundle, crosswalk] = await Promise.all([loadAssociationBundle(), loadIcd10Crosswalk()]);
+    for (const [key, cid] of Object.entries(crosswalk)) {
+      if (!cid) continue;
+      const cardName = bundle.by_cid[cid];
+      const code = key.replace("VAL-COND-ICD10CM-", "");
+      if (!cardName || !code) continue;
+      entries.set(code, {
+        system: "icd10cm",
+        code,
+        name: cardName,
+        friendlySource: ICD10CM_BUNDLE_OVERLAY_SOURCE,
+        matchType: "bundle_card"
+      });
+    }
+  } catch {
+    // Bundle unavailable — overlay stays empty; shard-only naming.
+  }
+  return entries;
+}
+
+async function loadShardEntries(system: PatientFriendlyLookupSystem): Promise<Map<string, PatientFriendlyLookupEntry>> {
+  const fileName = SYSTEM_FILE_MAP[system];
+  const response = await fetch(`${terminologyBaseUrl()}/${fileName}`);
+  if (!response.ok) throw new Error(`Patient-friendly lookup ${system} unavailable (${response.status})`);
+  const raw = (await response.json()) as Record<string, NewFormatEntry>;
+  const entries = new Map<string, PatientFriendlyLookupEntry>();
+  for (const [code, entry] of Object.entries(raw)) {
+    if (!entry || typeof entry.name !== "string") continue;
+    entries.set(code, {
+      system,
+      code,
+      name: entry.name,
+      friendlySource: entry.friendly_source ?? "",
+      matchType: entry.match_type ?? "",
+      cui: entry.cui,
+      tty: entry.tty,
+      canonicalCode: entry.canonical_code,
+      canonicalSystem: entry.canonical_system ? normalizeCanonicalSystem(entry.canonical_system) : undefined
+    });
+  }
+  if (system === "icd10cm") {
+    // Shard entries win; the overlay only fills slim-dropped codes.
+    const overlay = await icd10cmBundleOverlay();
+    for (const [code, entry] of overlay) {
+      if (!entries.has(code)) entries.set(code, entry);
+    }
+  }
+  return entries;
+}
+
+export async function loadShard(system: PatientFriendlyLookupSystem): Promise<Map<string, PatientFriendlyLookupEntry>> {
+  const existing = shardPromises.get(system);
+  if (existing) return existing;
+
+  const promise = loadShardEntries(system);
+  shardPromises.set(system, promise);
+  return promise;
+}
+
+/**
  * Normalize canonical_system values from the data files to the app's
  * CanonicalCodeSystem type. The data uses "lnc" for LOINC and
  * "snomedct_us" for SNOMED — we normalize to "loinc" and "snomed".
@@ -193,39 +277,6 @@ function parseCodingKey(key: string): { system: PatientFriendlyLookupSystem; cod
   const code = key.slice(separator + 1).trim();
   if (!system || !code) return null;
   return { system, code };
-}
-
-export async function loadShard(system: PatientFriendlyLookupSystem): Promise<Map<string, PatientFriendlyLookupEntry>> {
-  const existing = shardPromises.get(system);
-  if (existing) return existing;
-
-  const fileName = SYSTEM_FILE_MAP[system];
-  const promise = fetch(`${terminologyBaseUrl()}/${fileName}`)
-    .then(async (response) => {
-      if (!response.ok) throw new Error(`Patient-friendly lookup ${system} unavailable (${response.status})`);
-      return (await response.json()) as Record<string, NewFormatEntry>;
-    })
-    .then((raw) => {
-      const entries = new Map<string, PatientFriendlyLookupEntry>();
-      for (const [code, entry] of Object.entries(raw)) {
-        if (!entry || typeof entry.name !== "string") continue;
-        entries.set(code, {
-          system,
-          code,
-          name: entry.name,
-          friendlySource: entry.friendly_source ?? "",
-          matchType: entry.match_type ?? "",
-          cui: entry.cui,
-          tty: entry.tty,
-          canonicalCode: entry.canonical_code,
-          canonicalSystem: entry.canonical_system ? normalizeCanonicalSystem(entry.canonical_system) : undefined
-        });
-      }
-      return entries;
-    });
-
-  shardPromises.set(system, promise);
-  return promise;
 }
 
 export function patientFriendlyLookupSystemsForRecords(records: GroupableRecord[]): PatientFriendlyLookupSystem[] {

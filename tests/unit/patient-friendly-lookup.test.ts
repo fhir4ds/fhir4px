@@ -329,4 +329,99 @@ describe("patient-friendly lookup", () => {
     const result = lookupPatientFriendlyName(condition, lookup);
     expect(result?.code).toBe("E11.65");
   });
+
+  it("merges bundle card names for crosswalk-covered icd10cm codes at load (dual-lookup)", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_icd10cm.json")) {
+            // Slim shard: J44.9 is crosswalk-covered, so it is NOT in the shard.
+            return { "A40.2": { name: "Septicemia", friendly_source: "CHV", match_type: "exact" } };
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setAssociationsForTest } = await import("../../src/lib/associations/bundle");
+    setAssociationsForTest({
+      bundle: {
+        format: "fhir4px_associations_v1.4",
+        version: "test",
+        by_cid: { "VAL-COND-SNOMED-49049000": "chronic obstructive pulmonary disease" },
+        by_cid_multi: {},
+        by_name: {},
+        concepts: {}
+      },
+      icd10: { "VAL-COND-ICD10CM-J44.9": "VAL-COND-SNOMED-49049000" }
+    });
+
+    try {
+      const lookup = await loadPatientFriendlyLookupForRecords([
+        record({
+          id: "cond-copd",
+          resourceType: "Condition",
+          sourceLabel: "Chronic obstructive pulmonary disease",
+          codingKeys: ["icd10cm:J44.9"]
+        })
+      ]);
+      const copd = lookupPatientFriendlyName(
+        record({
+          id: "cond-copd",
+          resourceType: "Condition",
+          sourceLabel: "Chronic obstructive pulmonary disease",
+          codingKeys: ["icd10cm:J44.9"]
+        }),
+        lookup
+      );
+      // Overlay filled the slim-dropped code with the bundle card name.
+      expect(copd).toMatchObject({
+        patientFriendlyName: "chronic obstructive pulmonary disease",
+        system: "icd10cm",
+        code: "J44.9",
+        matchType: "bundle_card"
+      });
+      // Shard entry still present verbatim (shard wins where it exists).
+      expect(lookup.icd10cm?.get("A40.2")?.name).toBe("Septicemia");
+    } finally {
+      setAssociationsForTest(null);
+    }
+  });
+
+  it("keeps shard-only naming when the bundle is unavailable", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_icd10cm.json")) {
+            return { "A40.2": { name: "Septicemia", friendly_source: "CHV", match_type: "exact" } };
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setAssociationsForTest } = await import("../../src/lib/associations/bundle");
+    setAssociationsForTest(null);
+
+    const lookup = await loadPatientFriendlyLookupForRecords([
+      record({
+        id: "cond-sepsis",
+        resourceType: "Condition",
+        sourceLabel: "Septicemia",
+        codingKeys: ["icd10cm:A40.2"]
+      })
+    ]);
+    const sepsis = lookupPatientFriendlyName(
+      record({
+        id: "cond-sepsis",
+        resourceType: "Condition",
+        sourceLabel: "Septicemia",
+        codingKeys: ["icd10cm:A40.2"]
+      }),
+      lookup
+    );
+    expect(sepsis?.patientFriendlyName).toBe("Septicemia");
+  });
 });
