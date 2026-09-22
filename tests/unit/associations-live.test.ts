@@ -18,20 +18,15 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the P7 residue fold batch-1+2 release (handoff
-    // model-20260920210409-2795606: v2026-09-20.1857; canonical
-    // fda8402/cdb_2026_09_20 folded; members FLAT +0/-0; +12 concepts all
-    // empty stubs — group a/b streptococcal + pneumococcal sepsis,
-    // secondary syphilis, tick-borne encephalitis, vaccinia, orthopox/
-    // parapox/arbovirus/herpesvirus infection, acariasis; by_cid +133 =
-    // 23 ICD10CM picks (A40.0/.1/.9, A24.3, A51.4, B08.x, B88.0 …) +
-    // 110 SNOMED member-code aliases; icd10 crosswalk 78,330; 140 flips
-    // = 111 RXNORM route swaps + 22 SNOMED re-anchors to new specific
-    // stubs (rich generic cards preserved: sepsis 258, syphilis 180,
-    // encephalitis 210, pneumococcal infection 160) + 7 ICD leaf
-    // re-anchors; standing pins re-derived from claimant_details:
-    // I25.10 -> IHD, lithium unified, Z33.1 -> pregnancy, A40.0 new.)
-    expect(bundle.version).toBe("2026-09-20.1857");
+    // Pinned to the Option A Track-2 release (handoff
+    // model-20260922141439-3524302: v2026-09-21.1940; associations content
+    // byte-identical to the accepted .1857 modulo the version stamp — same
+    // P7 residue fold batch-1+2 member graph, canonical fda8402/
+    // cdb_2026_09_20; the release adds the display_names.json.gz sibling
+    // artifact, see the version-match test at the bottom of this file.
+    // Standing pins re-derived from claimant_details: I25.10 -> IHD,
+    // lithium unified, Z33.1 -> pregnancy, A40.0 specific sepsis.)
+    expect(bundle.version).toBe("2026-09-21.1940");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     // P7 fold pin: A40.0 picks to the new specific sepsis stub (canonical
@@ -340,5 +335,31 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     const predCard = bundle.concepts["prednisolone"]?.buckets ?? {};
     expect((predCard.treats ?? []).length).toBeGreaterThan(40);
     expect((predCard.adverse_effect ?? []).some((m) => m.name === "Adrenal Suppression")).toBe(true);
+  }, 30_000);
+
+  it("display_names sibling artifact version-matches the bundle (Option A, v2026-09-21.1940+)", async () => {
+    // Dual-publish guardrail: the display_names artifact rides the same
+    // release tag as associations (handoff model-20260922141439-3524302,
+    // Track-2 publish; gz md5 c4f2c70c48e9caada07a13624d465cf4, raw
+    // 92d837250476538812de6348be32d326; format fhir4px_display_names_v1,
+    // 1,122,177 entries / 8 systems; CPT AMA originals 7,665 excluded).
+    const [{ loadDisplayNames }, assoc] = await Promise.all([
+      import("../../src/lib/associations/display-names"),
+      loadAssociationBundle()
+    ]);
+    const names = await loadDisplayNames();
+    expect(names).not.toBeNull();
+    expect(names!.format).toBe("fhir4px_display_names_v1");
+    expect(names!.version).toBe(assoc.version);
+    expect(names!.version).toBe("2026-09-21.1940");
+    // Spot pins across systems: card overlays won where cards exist,
+    // shard verbatim elsewhere.
+    expect(names!.systems?.icd10cm?.["E11.9"]).toMatchObject({ name: "type 2 diabetes", match_type: "card_overlay" });
+    expect(names!.systems?.rxnorm?.["197889"]?.name).toBe("lithium");
+    expect(names!.systems?.loinc?.["4548-4"]?.name).toContain("Hemoglobin A1c");
+    expect(names!.systems?.cpt?.["93000"]?.match_type).not.toBe("original");
+    // Full-system counts from the acceptance review.
+    expect(Object.keys(names!.systems?.icd10cm ?? {}).length).toBe(98_506);
+    expect(Object.keys(names!.systems?.loinc ?? {}).length).toBe(301_558);
   }, 30_000);
 });

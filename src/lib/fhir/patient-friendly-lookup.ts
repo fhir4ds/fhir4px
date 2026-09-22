@@ -119,7 +119,11 @@ const MATCH_CONFIDENCE: Record<string, number> = {
   // Bundle card names (dual-lookup overlay) are anchor-level names from
   // the association bundle — authoritative routing, naming tiers below
   // curated exact matches but above generic fallbacks.
-  bundle_card: 0.9
+  bundle_card: 0.9,
+  // display_names artifact (Option A): card-name-wins overlay computed
+  // at export time — same anchor-level tier as bundle_card.
+  card_overlay: 0.9,
+  card_derived: 0.88
 };
 
 /**
@@ -172,6 +176,20 @@ function codeSpecificityRank(entry: PatientFriendlyLookupEntry): number {
 }
 
 const shardPromises = new Map<PatientFriendlyLookupSystem, Promise<Map<string, PatientFriendlyLookupEntry>>>();
+
+// display_names artifact (Option A): system aliases differ slightly — the
+// artifact uses "snomedct"/"loinc" where the app's shard layer uses
+// "snomed"/"loinc".
+const DISPLAY_NAMES_SYSTEM_MAP: Record<PatientFriendlyLookupSystem, string> = {
+  loinc: "loinc",
+  rxnorm: "rxnorm",
+  icd10cm: "icd10cm",
+  icd10pcs: "icd10pcs",
+  snomed: "snomedct",
+  cvx: "cvx",
+  cpt: "cpt",
+  hcpcs: "hcpcs"
+};
 
 /**
  * Bundle-card-name overlay for crosswalk-covered ICD-10-CM codes.
@@ -230,6 +248,39 @@ async function loadShardEntries(system: PatientFriendlyLookupSystem): Promise<Ma
       if (!entries.has(code)) entries.set(code, entry);
     }
   }
+  // display_names artifact (Option A, v2026-09-21.1940+): authoritative
+  // naming layer — card-name-wins overlay computed upstream by the model
+  // exporter. Applied on top of shard + bundle overlay so every code the
+  // artifact covers carries its name; structural fields (canonical codes,
+  // TTY, CUI) still come from the shard entries. Offline (artifact null)
+  // keeps the previous naming path intact.
+  try {
+    const { loadDisplayNames } = await import("../associations/display-names");
+    const names = await loadDisplayNames();
+    const artifactSystem = names?.systems?.[
+      DISPLAY_NAMES_SYSTEM_MAP[system] as keyof typeof names.systems
+    ];
+    if (artifactSystem) {
+      for (const [code, entry] of Object.entries(artifactSystem)) {
+        if (!entry || typeof entry.name !== "string") continue;
+        const existing = entries.get(code);
+        if (existing) {
+          existing.name = entry.name;
+          existing.matchType = entry.match_type ?? existing.matchType;
+        } else {
+          entries.set(code, {
+            system,
+            code,
+            name: entry.name,
+            friendlySource: "display_names",
+            matchType: entry.match_type ?? ""
+          });
+        }
+      }
+    }
+  } catch {
+    // Artifact unavailable — shard naming stands.
+  }
   return entries;
 }
 
@@ -240,6 +291,11 @@ export async function loadShard(system: PatientFriendlyLookupSystem): Promise<Ma
   const promise = loadShardEntries(system);
   shardPromises.set(system, promise);
   return promise;
+}
+
+/** Test-only: clear cached shard maps so a fresh load re-applies overlays. */
+export function resetPatientFriendlyLookupForTest(): void {
+  shardPromises.clear();
 }
 
 /**

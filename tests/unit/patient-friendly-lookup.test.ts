@@ -5,6 +5,7 @@ import {
   lookupPatientFriendlyName,
   PATIENT_FRIENDLY_LOOKUP_MODEL,
   patientFriendlyLookupSystemsForRecords,
+  resetPatientFriendlyLookupForTest,
   type PatientFriendlyLookup
 } from "../../src/lib/fhir/patient-friendly-lookup";
 import type { GroupableRecord } from "../../src/lib/fhir/patient-groups";
@@ -19,6 +20,10 @@ function record(overrides: Partial<GroupableRecord> & Pick<GroupableRecord, "id"
 describe("patient-friendly lookup", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    resetPatientFriendlyLookupForTest();
+    void import("../../src/lib/associations/display-names").then(({ setDisplayNamesForTest }) =>
+      setDisplayNamesForTest(null)
+    );
   });
 
   it("normalizes app coding keys into supported lookup systems", () => {
@@ -51,7 +56,11 @@ describe("patient-friendly lookup", () => {
               "4548-4": { name: "Hemoglobin A1c", friendly_source: "CHV", match_type: "broader", cui: "C4519732" }
             };
           }
-          return {};
+          if (url.includes("display_names.json")) {
+            // Artifact absent in this test — offline naming path.
+            return {};
+          }
+          throw new Error(`unexpected fetch: ${url}`);
         }
       };
     });
@@ -68,7 +77,9 @@ describe("patient-friendly lookup", () => {
     const lookup = await loadPatientFriendlyLookupForRecords(records);
     const result = lookupPatientFriendlyName(records[0], lookup);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Shard fetch + display_names artifact probe (offline: {} shape fails
+    // the format guard and falls back to shard-only naming).
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[0][0]).toContain("/terminology/patient_friendly_lnc.json");
     expect(result).toMatchObject({
       patientFriendlyName: "Hemoglobin A1c",
@@ -423,5 +434,77 @@ describe("patient-friendly lookup", () => {
       lookup
     );
     expect(sepsis?.patientFriendlyName).toBe("Septicemia");
+  });
+
+  it("applies display_names card-wins naming on top of shard entries (Option A)", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_lnc.json")) {
+            return { "4548-4": { name: "Hemoglobin A1c", friendly_source: "CHV", match_type: "broader", cui: "C4519732" } };
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setDisplayNamesForTest } = await import("../../src/lib/associations/display-names");
+    setDisplayNamesForTest({
+      format: "fhir4px_display_names_v1",
+      version: "test",
+      systems: {
+        loinc: {
+          // Card overlay renames a shard-carried code (name replaced,
+          // structural fields preserved from the shard entry).
+          "4548-4": { name: "A1c", match_type: "card_overlay" },
+          // Artifact-only code fills the map when the shard lacks it.
+          "718-7": { name: "Hemoglobin", match_type: "exact" }
+        }
+      }
+    });
+
+    try {
+      const lookup = await loadPatientFriendlyLookupForRecords([
+        record({
+          id: "obs-a1c",
+          resourceType: "Observation",
+          sourceLabel: "Hemoglobin A1c/Hemoglobin.total in Blood",
+          codingKeys: ["loinc:4548-4", "loinc:718-7"]
+        })
+      ]);
+      const overlaid = lookup.loinc?.get("4548-4");
+      expect(overlaid).toMatchObject({ name: "A1c", matchType: "card_overlay", cui: "C4519732" });
+      expect(lookup.loinc?.get("718-7")?.name).toBe("Hemoglobin");
+    } finally {
+      setDisplayNamesForTest(null);
+    }
+  });
+
+  it("keeps shard naming when the display_names artifact is unavailable (offline fallback)", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_lnc.json")) {
+            return { "4548-4": { name: "Hemoglobin A1c", friendly_source: "CHV", match_type: "broader" } };
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setDisplayNamesForTest } = await import("../../src/lib/associations/display-names");
+    setDisplayNamesForTest(null);
+
+    const lookup = await loadPatientFriendlyLookupForRecords([
+      record({
+        id: "obs-a1c",
+        resourceType: "Observation",
+        sourceLabel: "Hemoglobin A1c",
+        codingKeys: ["loinc:4548-4"]
+      })
+    ]);
+    expect(lookup.loinc?.get("4548-4")?.name).toBe("Hemoglobin A1c");
   });
 });
