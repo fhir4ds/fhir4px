@@ -355,6 +355,13 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     // Spot pins across systems: card overlays won where cards exist,
     // shard verbatim elsewhere.
     expect(names!.systems?.icd10cm?.["E11.9"]).toMatchObject({ name: "type 2 diabetes", match_type: "card_overlay" });
+    // Canonical green-light ask (canonical-20260922231714): prove BOTH
+    // layers — the I25.10 card overlay (P4a pick, richer IHD card) and one
+    // snomed_fallback-tier entry. B33.3 is a canonical-confirmed standing
+    // leave (batch-2 adjudication), so its shard tier survives verbatim in
+    // the artifact — exactly the two-layer contract.
+    expect(names!.systems?.icd10cm?.["I25.10"]).toMatchObject({ name: "ischemic heart disease", match_type: "card_overlay" });
+    expect(names!.systems?.icd10cm?.["B33.3"]).toMatchObject({ name: "Viral Infections", match_type: "snomed_fallback" });
     expect(names!.systems?.rxnorm?.["197889"]?.name).toBe("lithium");
     expect(names!.systems?.loinc?.["4548-4"]?.name).toContain("Hemoglobin A1c");
     expect(names!.systems?.cpt?.["93000"]?.match_type).not.toBe("original");
