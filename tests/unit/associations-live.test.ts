@@ -18,15 +18,18 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to the Option A Track-2 release (handoff
-    // model-20260922141439-3524302: v2026-09-21.1940; associations content
-    // byte-identical to the accepted .1857 modulo the version stamp — same
-    // P7 residue fold batch-1+2 member graph, canonical fda8402/
-    // cdb_2026_09_20; the release adds the display_names.json.gz sibling
-    // artifact, see the version-match test at the bottom of this file.
+    // Pinned to the c-bundle-alignment release (handoff
+    // model-20261005133452-1789286: v2026-10-05.0402; canonical 505634f/
+    // cdb_2026_10_05 folds the 7 user-approved migrations — K35.20 ->
+    // 85189001 REAL acute appendicitis with the 71388002 procedure-root
+    // de-anchor, J98.51 -> 373409004 mediastinitis, I41.0 absent (leave
+    // honored); members +77 net (sodium +80 / potassium +48 electrolyte
+    // re-homings), 0 fully lost; display_names re-emitted with all 8
+    // provenance stamps filled, version-locked. Successor of .1940
+    // (Track-2, content-identical to the accepted .1857).)
     // Standing pins re-derived from claimant_details: I25.10 -> IHD,
     // lithium unified, Z33.1 -> pregnancy, A40.0 specific sepsis.)
-    expect(bundle.version).toBe("2026-09-21.1940");
+    expect(bundle.version).toBe("2026-10-05.0402");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     // P7 fold pin: A40.0 picks to the new specific sepsis stub (canonical
@@ -351,7 +354,7 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(names).not.toBeNull();
     expect(names!.format).toBe("fhir4px_display_names_v1");
     expect(names!.version).toBe(assoc.version);
-    expect(names!.version).toBe("2026-09-21.1940");
+    expect(names!.version).toBe("2026-10-05.0402");
     // Spot pins across systems: card overlays won where cards exist,
     // shard verbatim elsewhere.
     expect(names!.systems?.icd10cm?.["E11.9"]).toMatchObject({ name: "type 2 diabetes", match_type: "card_overlay" });
