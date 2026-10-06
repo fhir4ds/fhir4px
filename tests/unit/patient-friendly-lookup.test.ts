@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFile } from "node:fs/promises";
 import {
+  enrichMedicationIngredients,
+  setRxnormDecompositionForTest
+} from "../../src/lib/fhir/rxnorm-decomposition";
+import {
   loadPatientFriendlyLookupForRecords,
   lookupPatientFriendlyName,
   PATIENT_FRIENDLY_LOOKUP_MODEL,
@@ -506,5 +510,69 @@ describe("patient-friendly lookup", () => {
       })
     ]);
     expect(lookup.loinc?.get("4548-4")?.name).toBe("Hemoglobin A1c");
+  });
+
+  it("enriches missing medication ingredients from the decomposition table (Synthea inline-codeable meds)", async () => {
+    // Regression (TASK 4, 2026-10-05): rxnorm 904419 "Alendronic acid 10 MG
+    // Oral Tablet" carries no referenced Medication resource, so ingredients
+    // stayed empty and the Tier-1 token guard rejected the correct shard
+    // entry "Alendronate Pill". The decomposition table provides them.
+    setRxnormDecompositionForTest({ "904419": [{ c: "46041", n: "alendronate" }] });
+    const medication = record({
+      id: "medreq-alendronate",
+      resourceType: "MedicationRequest",
+      sourceLabel: "Alendronic acid 10 MG Oral Tablet",
+      codingKeys: ["rxnorm:904419"]
+    });
+
+    const [enriched] = await enrichMedicationIngredients([medication]);
+    expect(enriched.ingredients).toEqual(["alendronate"]);
+
+    // With ingredients present, the Tier-1 lookup accepts the shard entry.
+    const lookup: PatientFriendlyLookup = {
+      rxnorm: new Map([
+        [
+          "904419",
+          {
+            system: "rxnorm",
+            code: "904419",
+            name: "Alendronate Pill",
+            friendlySource: "RXNORM",
+            matchType: "group"
+          }
+        ]
+      ])
+    };
+    expect(lookupPatientFriendlyName(enriched, lookup)).toMatchObject({ name: "Alendronate Pill" });
+    setRxnormDecompositionForTest(null);
+  });
+
+  it("leaves records untouched when they already carry ingredients or the table misses the code", async () => {
+    setRxnormDecompositionForTest({ "999999": [{ c: "1", n: "x" }] });
+    const withIngredients = record({
+      id: "med-a",
+      resourceType: "MedicationRequest",
+      sourceLabel: "Mirena",
+      codingKeys: ["rxnorm:807283"],
+      ingredients: ["levonorgestrel"]
+    });
+    const unknownCode = record({
+      id: "med-b",
+      resourceType: "MedicationRequest",
+      sourceLabel: "Mystery",
+      codingKeys: ["rxnorm:123456"]
+    });
+    const observation = record({
+      id: "obs-1",
+      resourceType: "Observation",
+      sourceLabel: "Glucose",
+      codingKeys: ["loinc:2339-0"]
+    });
+
+    const results = await enrichMedicationIngredients([withIngredients, unknownCode, observation]);
+    expect(results[0].ingredients).toEqual(["levonorgestrel"]);
+    expect(results[1].ingredients).toBeUndefined();
+    expect(results[2]).toBe(observation);
+    setRxnormDecompositionForTest(null);
   });
 });

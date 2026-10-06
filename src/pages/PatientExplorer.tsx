@@ -128,6 +128,7 @@ import { classifyBatch, embeddingResultIsReliable } from "../lib/embeddings";
 import { memberWithinAge } from "../lib/associations/matcher";
 import { preloadAssociations } from "../lib/associations/bundle";
 import { resolveGroupConcept, type GroupConceptResolution } from "../lib/associations/resolve";
+import { enrichMedicationIngredients } from "../lib/fhir/rxnorm-decomposition";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
 import {
   collapsedFamilyLabel,
@@ -2344,6 +2345,13 @@ export function PatientExplorer() {
         const compactRecords = compactRecordsForModel(subset);
         return { type, subset, compactRecords };
       });
+      // Synthea-style inline-codeable meds carry no referenced Medication
+      // resource, so ingredients are empty and the Tier-1 guard rejects
+      // correct ingredient-based shard names. Fill from the decomposition
+      // table before the naming pass (best-effort, offline-safe).
+      for (const plan of basePlans) {
+        plan.compactRecords = await enrichMedicationIngredients(plan.compactRecords);
+      }
       groupingConsoleLog("info", "compact-records-built", {
         runId,
         plans: basePlans.map((plan) => ({

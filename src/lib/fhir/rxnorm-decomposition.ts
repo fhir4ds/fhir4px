@@ -43,6 +43,45 @@ export async function getIngredientsForRxnormCode(
   return (data[rxnormCode] ?? []).map((entry) => ({ code: entry.c, name: entry.n }));
 }
 
+/**
+ * Fill missing `ingredients` on medication records from the bundled
+ * RxNorm decomposition table. Sources that encode the product inline
+ * (medicationCodeableConcept, e.g. Synthea) carry no referenced
+ * Medication resource, so normalizeMedication leaves ingredients empty —
+ * which makes the Tier-1 naming guard reject correct shard entries whose
+ * patient-friendly name is ingredient-based ("Alendronic acid 10 MG Oral
+ * Tablet" vs "Alendronate Pill"). Best-effort: offline table keeps the
+ * records untouched.
+ */
+export async function enrichMedicationIngredients<
+  T extends { resourceType?: string; codingKeys?: string[]; ingredients?: string[] }
+>(records: T[]): Promise<T[]> {
+  const needing = records.filter(
+    (record) =>
+      record.resourceType === "MedicationRequest" &&
+      !(record.ingredients ?? []).length &&
+      (record.codingKeys ?? []).some((key) => key.startsWith("rxnorm:"))
+  );
+  if (needing.length === 0) return records;
+  const enriched = new Map<T, string[]>();
+  for (const record of needing) {
+    const names: string[] = [];
+    for (const key of record.codingKeys ?? []) {
+      if (!key.startsWith("rxnorm:")) continue;
+      const ingredients = await getIngredientsForRxnormCode(key.slice("rxnorm:".length));
+      for (const ingredient of ingredients) {
+        if (!names.includes(ingredient.name)) names.push(ingredient.name);
+      }
+    }
+    if (names.length > 0) enriched.set(record, names);
+  }
+  if (enriched.size === 0) return records;
+  return records.map((record) => {
+    const names = enriched.get(record);
+    return names ? { ...record, ingredients: names } : record;
+  });
+}
+
 export async function preloadRxnormDecomposition(): Promise<void> {
   await loadDecomposition();
 }
