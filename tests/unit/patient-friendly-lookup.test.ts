@@ -512,6 +512,59 @@ describe("patient-friendly lookup", () => {
     expect(lookup.loinc?.get("4548-4")?.name).toBe("Hemoglobin A1c");
   });
 
+  it("surfaces display_names v2 per-code descriptors with code_name tiers (v2026-10-13.0746+)", async () => {
+    // Collider class: codes where the full per-code descriptor replaces the
+    // anchor-level card name (76,327 icd10cm colliders). The v2 match types
+    // carry their own confidence tiers — above curated broader, below exact.
+    const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_icd10cm.json")) {
+            return { "E11.9": { name: "Type 2 diabetes", friendly_source: "CHV", match_type: "broader" } };
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setDisplayNamesForTest } = await import("../../src/lib/associations/display-names");
+    setDisplayNamesForTest({
+      format: "fhir4px_display_names_v1",
+      version: "test",
+      systems: {
+        icd10cm: {
+          // Collider: per-code descriptor wins over the card name.
+          "E11.9": { name: "Type 2 diabetes mellitus without complications", match_type: "code_name" },
+          "R99": { name: "Ill-defined and unknown cause of mortality", match_type: "code_name_repaired" }
+        }
+      }
+    });
+
+    try {
+      const lookup = await loadPatientFriendlyLookupForRecords([
+        record({
+          id: "cond-t2dm",
+          resourceType: "Condition",
+          sourceLabel: "Type 2 diabetes",
+          codingKeys: ["icd10cm:E11.9", "icd10cm:R99"]
+        })
+      ]);
+      const descriptor = lookupPatientFriendlyName(
+        record({ id: "cond-t2dm", resourceType: "Condition", sourceLabel: "Type 2 diabetes", codingKeys: ["icd10cm:E11.9"] }),
+        lookup
+      );
+      expect(descriptor).toMatchObject({ name: "Type 2 diabetes mellitus without complications", confidence: 0.86 });
+      const repaired = lookupPatientFriendlyName(
+        record({ id: "cond-x", resourceType: "Condition", sourceLabel: "R99", codingKeys: ["icd10cm:R99"] }),
+        lookup
+      );
+      expect(repaired).toMatchObject({ name: "Ill-defined and unknown cause of mortality", confidence: 0.82 });
+    } finally {
+      setDisplayNamesForTest(null);
+    }
+  });
+
   it("enriches missing medication ingredients from the decomposition table (Synthea inline-codeable meds)", async () => {
     // Regression (TASK 4, 2026-10-05): rxnorm 904419 "Alendronic acid 10 MG
     // Oral Tablet" carries no referenced Medication resource, so ingredients

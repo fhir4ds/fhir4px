@@ -123,7 +123,14 @@ const MATCH_CONFIDENCE: Record<string, number> = {
   // display_names artifact (Option A): card-name-wins overlay computed
   // at export time — same anchor-level tier as bundle_card.
   card_overlay: 0.9,
-  card_derived: 0.88
+  card_derived: 0.88,
+  // display_names v2 (v2026-10-13.0746+): full per-code descriptors from
+  // the canonical code_names layer. Colliders (codes where the per-code
+  // descriptor beats anchor-level card names) surface code_name; the
+  // repaired variant was reconciled against UMLS. Authoritative per-code
+  // text — above curated broader tiers, below exact curated matches.
+  code_name: 0.86,
+  code_name_repaired: 0.82
 };
 
 /**
