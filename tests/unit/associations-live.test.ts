@@ -18,17 +18,21 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
   it("fetches and decompresses the real bundle", async () => {
     const bundle = await loadAssociationBundle();
     expect(bundle.format).toMatch(/^fhir4px_associations_v1(\.\d+)?$/);
-    // Pinned to v2026-10-07.0238 (handoff model-20261007073126-2667441,
-    // Joel's Track-1 relay; canonical deb7b39/cdb_2026_10_06): members
-    // FLAT (+0/-0 vs .0402), +19 zero-member anchor stubs, 22 rich->empty
-    // re-keys = the cdb_2026_10_06 specific-over-generic class (B04->mpox,
-    // H53.x->amblyopia, K50.x->crohn disease of terminal ileum, R55->syncope
-    // 271594007, E84.0 LP56779-9 dual-claimant tie resolved to COND anchor
-    // 235978006, Z11.52 NEW ->rubella in pregnancy); old generic cards
-    // content-preserved (sepsis 258, hypercortisolism 9, cerebral palsy 4).
+    // Pinned to v2026-10-13.1228 (handoff model-20261013123210-1705413,
+    // version-lock fix re-emit of the .0746 data fold; the original .0746
+    // publish crossed a minute boundary in the exporter's two strftime
+    // calls — assoc .0745 vs names .0746 — caught by the dual-publish
+    // guardrail below; fixed with a single BUNDLE_VERSION constant).
+    // Data-only fold on esp_f6c5c18d5f3ee3b5: +4 zero-member stubs, 12
+    // FINAL-4 re-keys (O65.x family -> obstructed labor due to maternal
+    // pelvis abnormality 10751631000119101, E71.42 -> carnitine deficiency,
+    // R90.82 -> white matter disease, R99 -> child death), members +228
+    // (iatrogenic carnitine deficiency 58 -> 286), content preserved on
+    // old cards. display_names v2 code_names layer: 1,127,137 entries,
+    // code_name 367,956 / repaired 1,356 / card_overlay 144,732.
     // Standing pins re-derived: I25.10 -> IHD, lithium unified, Z33.1 ->
     // pregnancy, A40.0 specific sepsis, C92.A0 -> AML.
-    expect(bundle.version).toBe("2026-10-07.0238");
+    expect(bundle.version).toBe("2026-10-13.1228");
     expect(Object.keys(bundle.concepts).length).toBeGreaterThan(10000);
     expect(bundle.by_cid["VAL-COND-ICD10CM-E11.65"]).toBe("type 2 diabetes");
     // P7 fold pin: A40.0 picks to the new specific sepsis stub (canonical
@@ -341,11 +345,12 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
 
   it("display_names sibling artifact version-matches the bundle (Option A, v2026-09-21.1940+)", async () => {
     // Dual-publish guardrail: the display_names artifact rides the same
-    // release tag as associations (v2026-10-07.0238, handoff
-    // model-20261007073126-2667441; gz md5 c413c0f0d98c6471a5577d0009774804,
-    // raw cef2e29547d1a515c1cd1e474c9526db; 1,122,177 entries / 8 systems,
-    // 221,049 card_overlay; migration-touched codes render the new anchor
-    // names — B04 mpox, R55 syncope, Z11.52 rubella in pregnancy).
+    // release tag as associations (v2026-10-13.1228; gz md5
+    // 751a9aee1422d092ceb783cf169774f5, raw f5bf385d0281b09c921e1b64927cb2b9;
+    // 1,127,137 entries / 8 systems, v2 code_names layer census code_name
+    // 367,956 / code_name_repaired 1,356 / card_overlay 144,732). This
+    // equality pin is the guardrail that caught the .0746 minute-boundary
+    // stamp split (.0745 assoc vs .0746 names) — keep it strict.
     const [{ loadDisplayNames }, assoc] = await Promise.all([
       import("../../src/lib/associations/display-names"),
       loadAssociationBundle()
@@ -354,17 +359,18 @@ describe.skipIf(!live)("associations live (real HF bundle + Jordan)", () => {
     expect(names).not.toBeNull();
     expect(names!.format).toBe("fhir4px_display_names_v1");
     expect(names!.version).toBe(assoc.version);
-    expect(names!.version).toBe("2026-10-07.0238");
-    // Spot pins across systems: card overlays won where cards exist,
-    // shard verbatim elsewhere.
-    expect(names!.systems?.icd10cm?.["E11.9"]).toMatchObject({ name: "type 2 diabetes", match_type: "card_overlay" });
+    expect(names!.version).toBe("2026-10-13.1228");
+    // Spot pins across systems. v2 collider class: codes where the full
+    // per-code descriptor replaces the anchor card name (E11.9, I25.10 now
+    // code_name) — card-name assertions target card_overlay rows only.
+    expect(names!.systems?.icd10cm?.["E11.9"]).toMatchObject({ name: "Type 2 diabetes mellitus without complications", match_type: "code_name" });
+    expect(names!.systems?.icd10cm?.["I25.10"]).toMatchObject({ name: "Atherosclerotic heart disease of native coronary artery without angina pectoris", match_type: "code_name" });
+    expect(names!.systems?.icd10cm?.["R99"]).toMatchObject({ name: "Ill-defined and unknown cause of mortality", match_type: "code_name" });
     expect(names!.systems?.icd10cm?.["B04"]).toMatchObject({ name: "mpox", match_type: "card_overlay" });
-    // Canonical green-light ask (canonical-20260922231714): prove BOTH
-    // layers — the I25.10 card overlay (P4a pick, richer IHD card) and one
-    // snomed_fallback-tier entry. B33.3 is a canonical-confirmed standing
-    // leave (batch-2 adjudication), so its shard tier survives verbatim in
-    // the artifact — exactly the two-layer contract.
-    expect(names!.systems?.icd10cm?.["I25.10"]).toMatchObject({ name: "ischemic heart disease", match_type: "card_overlay" });
+    // Canonical green-light pin (canonical-20260922231714): a
+    // snomed_fallback-tier entry proves the shard layer survives verbatim
+    // in the artifact — the two-layer contract. B33.3 is a canonical-
+    // confirmed standing leave (batch-2 adjudication).
     expect(names!.systems?.icd10cm?.["B33.3"]).toMatchObject({ name: "Viral Infections", match_type: "snomed_fallback" });
     expect(names!.systems?.rxnorm?.["197889"]?.name).toBe("lithium");
     expect(names!.systems?.loinc?.["4548-4"]?.name).toContain("Hemoglobin A1c");
