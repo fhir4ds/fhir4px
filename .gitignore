@@ -38,3 +38,8 @@ __pycache__/
 
 # Python scratch
 __pycache__/
+
+# runtime dirs (never commit)
+.oc-serve/
+.opencode/
+.env
