@@ -81,9 +81,10 @@ describe("patient-friendly lookup", () => {
     const lookup = await loadPatientFriendlyLookupForRecords(records);
     const result = lookupPatientFriendlyName(records[0], lookup);
 
-    // Shard fetch + display_names artifact probe (offline: {} shape fails
-    // the format guard and falls back to shard-only naming).
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // Shard fetch + value_sets artifact probe (offline: HF listing fails,
+    // canonical layer falls back) + display_names artifact probe (offline:
+    // {} shape fails the format guard and falls back to shard-only naming).
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[0][0]).toContain("/terminology/patient_friendly_lnc.json");
     expect(result).toMatchObject({
       patientFriendlyName: "Hemoglobin A1c",
@@ -485,8 +486,117 @@ describe("patient-friendly lookup", () => {
     }
   });
 
-  it("keeps shard naming when the display_names artifact is unavailable (offline fallback)", async () => {
+  it("canonical value_sets names win over the display_names overlay (Option B, fhir4ds/terminology)", async () => {
     const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_lnc.json")) {
+            return { "4548-4": { name: "Hemoglobin A1c", friendly_source: "CHV", match_type: "broader", cui: "C4519732" } };
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setDisplayNamesForTest } = await import("../../src/lib/associations/display-names");
+    setDisplayNamesForTest({
+      format: "fhir4px_display_names_v1",
+      version: "test",
+      systems: {
+        loinc: {
+          // Card overlay would rename 4548-4 to "A1c" — value_sets must win.
+          "4548-4": { name: "A1c", match_type: "card_overlay" },
+          // Code value_sets does not cover still gets the overlay name.
+          "718-7": { name: "Hemoglobin", match_type: "exact" }
+        }
+      }
+    });
+    const { setValueSetsForTest } = await import("../../src/lib/terminology/valueSets");
+    setValueSetsForTest([
+      {
+        canonical_id: "VAL-LAB-LOINC-4548-4",
+        system: "LOINC",
+        code: "4548-4",
+        patient_friendly_name: "Hemoglobin A1c Test",
+        cui: "C4519732"
+      }
+    ]);
+
+    try {
+      resetPatientFriendlyLookupForTest();
+      const lookup = await loadPatientFriendlyLookupForRecords([
+        record({
+          id: "obs-a1c",
+          resourceType: "Observation",
+          sourceLabel: "Hemoglobin A1c",
+          codingKeys: ["loinc:4548-4", "loinc:718-7"]
+        })
+      ]);
+      const canonical = lookup.loinc?.get("4548-4");
+      expect(canonical).toMatchObject({
+        name: "Hemoglobin A1c Test",
+        friendlySource: "fhir4ds-valuesets",
+        matchType: "canonical",
+        // Structural fields survive from the shard entry.
+        cui: "C4519732"
+      });
+      expect(lookup.loinc?.get("718-7")?.name).toBe("Hemoglobin");
+    } finally {
+      setDisplayNamesForTest(null);
+      setValueSetsForTest(null);
+      resetPatientFriendlyLookupForTest();
+    }
+  });
+
+  it("fills codes the shards lack with value_sets names (canonical fills gaps)", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_rxnorm.json")) {
+            return {};
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setValueSetsForTest } = await import("../../src/lib/terminology/valueSets");
+    setValueSetsForTest([
+      {
+        canonical_id: "VAL-MED-RXNORM-106892",
+        system: "RXNORM",
+        code: "106892",
+        patient_friendly_name: "Insulin, Regular, Human",
+        tty: "IN"
+      }
+    ]);
+
+    try {
+      resetPatientFriendlyLookupForTest();
+      const lookup = await loadPatientFriendlyLookupForRecords([
+        record({
+          id: "med-insulin",
+          resourceType: "MedicationRequest",
+          sourceLabel: "insulin, regular, human",
+          codingKeys: ["rxnorm:106892"]
+        })
+      ]);
+      const entry = lookup.rxnorm?.get("106892");
+      expect(entry).toMatchObject({
+        name: "Insulin, Regular, Human",
+        friendlySource: "fhir4ds-valuesets",
+        matchType: "canonical",
+        tty: "IN"
+      });
+    } finally {
+      setValueSetsForTest(null);
+      resetPatientFriendlyLookupForTest();
+    }
+  });
+
+  it("keeps shard naming when the display_names artifact is unavailable (offline fallback)", async () => {    const fetchMock = vi.fn(async (url: string) => {
       return {
         ok: true,
         async json() {

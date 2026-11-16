@@ -12,6 +12,7 @@ export const PATIENT_FRIENDLY_LOOKUP_MODEL = "patient-friendly-lookup-v2";
  * carries, so display names are unchanged versus the pre-slim shard.
  */
 export const ICD10CM_BUNDLE_OVERLAY_SOURCE = "fhir4px-associations-card";
+export const VALUE_SETS_SOURCE = "fhir4ds-valuesets";
 
 export type PatientFriendlyLookupSystem =
   | "loinc"
@@ -54,6 +55,9 @@ export interface PatientFriendlyLookupResult extends PatientFriendlyLookupEntry 
 
 export type PatientFriendlyLookup = Partial<Record<PatientFriendlyLookupSystem, Map<string, PatientFriendlyLookupEntry>>>;
 
+// CPT naming stays on the bundled shard (source data display is licensed);
+// the canonical value_sets layer from fhir4ds/terminology publishes a
+// "without-cpt" variant, so CPT never enters the canonical search.
 const SYSTEMS = new Set<PatientFriendlyLookupSystem>([
   "loinc",
   "rxnorm",
@@ -120,6 +124,10 @@ const MATCH_CONFIDENCE: Record<string, number> = {
   // the association bundle — authoritative routing, naming tiers below
   // curated exact matches but above generic fallbacks.
   bundle_card: 0.9,
+  // Canonical value_sets artifact (fhir4ds/terminology): the model team's
+  // adjudicated concept for this exact code — top tier below exact string
+  // identity, above every overlay tier.
+  canonical: 0.95,
   // display_names artifact (Option A): card-name-wins overlay computed
   // at export time — same anchor-level tier as bundle_card.
   card_overlay: 0.9,
@@ -255,12 +263,45 @@ async function loadShardEntries(system: PatientFriendlyLookupSystem): Promise<Ma
       if (!entries.has(code)) entries.set(code, entry);
     }
   }
-  // display_names artifact (Option A, v2026-09-21.1940+): authoritative
-  // naming layer — card-name-wins overlay computed upstream by the model
-  // exporter. Applied on top of shard + bundle overlay so every code the
-  // artifact covers carries its name; structural fields (canonical codes,
-  // TTY, CUI) still come from the shard entries. Offline (artifact null)
-  // keeps the previous naming path intact.
+  // Canonical value_sets artifact (fhir4ds/terminology, runtime): the
+  // model team's adjudicated canonical layer. Applied on top of shard +
+  // bundle overlay — the curated patient_friendly_name is authoritative
+  // wherever the artifact covers the code, so the display_names overlay
+  // below yields to it.
+  try {
+    const { loadValueSets } = await import("../terminology/valueSets");
+    const valueSets = await loadValueSets();
+    const canonicalSystem = valueSets[system as keyof typeof valueSets];
+    if (canonicalSystem) {
+      for (const [code, concept] of canonicalSystem) {
+        const existing = entries.get(code);
+        if (existing) {
+          existing.name = concept.patient_friendly_name;
+          existing.friendlySource = VALUE_SETS_SOURCE;
+          existing.matchType = "canonical";
+          if (concept.cui) existing.cui = concept.cui;
+          if (concept.tty) existing.tty = concept.tty;
+        } else {
+          entries.set(code, {
+            system,
+            code,
+            name: concept.patient_friendly_name,
+            friendlySource: VALUE_SETS_SOURCE,
+            matchType: "canonical",
+            cui: concept.cui,
+            tty: concept.tty
+          });
+        }
+      }
+    }
+  } catch {
+    // Artifact unavailable — shard naming stands.
+  }
+  // display_names artifact (Option A, v2026-09-21.1940+): name layer
+  // computed upstream by the model exporter (card-name-wins overlay).
+  // Applied on top of shard + bundle overlay, but NEVER over value_sets
+  // entries — the canonical layer wins. Offline (artifact null) keeps the
+  // previous naming path intact.
   try {
     const { loadDisplayNames } = await import("../associations/display-names");
     const names = await loadDisplayNames();
@@ -271,6 +312,7 @@ async function loadShardEntries(system: PatientFriendlyLookupSystem): Promise<Ma
       for (const [code, entry] of Object.entries(artifactSystem)) {
         if (!entry || typeof entry.name !== "string") continue;
         const existing = entries.get(code);
+        if (existing?.friendlySource === VALUE_SETS_SOURCE) continue;
         if (existing) {
           existing.name = entry.name;
           existing.matchType = entry.match_type ?? existing.matchType;
