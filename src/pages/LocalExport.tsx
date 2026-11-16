@@ -14,7 +14,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { Download, FileLock2, QrCode, Share2, Upload, UnlockKeyhole } from "lucide-react";
+import { Download, FileLock2, FileText, QrCode, Share2, Upload, UnlockKeyhole } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createLocalReferralBundle, type LocalReferralBundle } from "../lib/fhir/bundle";
 import { filterResourcesByLookback } from "../lib/fhir/filters";
@@ -34,6 +34,8 @@ import {
 import { DEFAULT_FHIR_PAGE_LIMIT, fetchPatientDataset } from "../lib/smart/data";
 import { MVP_RESOURCE_TYPES, type MvpResourceType } from "../lib/smart/scopes";
 import type { SmartSessionInfo, SmartToken } from "../lib/smart/types";
+import { buildIpsBundle } from "../lib/fhir/ips";
+import { printIpsHtml } from "../lib/fhir/ips-html";
 import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 import { localVault } from "../lib/vault/store";
 
@@ -206,6 +208,55 @@ export function LocalExport() {
     }
   }
 
+  async function buildIpsExport(mode: "json" | "print") {
+    setBusy(true);
+    setError(null);
+    setStatus("Building International Patient Summary");
+    try {
+      const key = await getOrCreateSessionVaultKey();
+      const token = await localVault.getJson<SmartToken>(key, { type: "smart-token", id: "current" });
+      const session = await localVault.getJson<SmartSessionInfo>(key, { type: "smart-session", id: "current" });
+      if (!token || !session) throw new Error("No local SMART connection is available");
+
+      const dataset = await fetchPatientDataset(session, token, {
+        resourceTypes: [
+          "Patient",
+          "MedicationRequest",
+          "AllergyIntolerance",
+          "Condition",
+          "Observation",
+          "Immunization",
+          "Procedure",
+          "DiagnosticReport"
+        ],
+        maxPages: DEFAULT_FHIR_PAGE_LIMIT
+      });
+      const resources = filterResourcesByLookback(dataset.resources, lookbackDays);
+      const bundle = buildIpsBundle(resources, { authorLabel: "fhir4px" });
+
+      if (mode === "print") {
+        printIpsHtml(bundle);
+      } else {
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/fhir+json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = `ips-${new Date().toISOString().slice(0, 10)}.json`;
+        anchor.click();
+        globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      }
+      setStatus(
+        `International Patient Summary built — ${resources.length} resources, ${
+          (bundle.entry as unknown[]).length
+        } bundle entries`
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not build the International Patient Summary");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <Card variant="outlined">
       <CardContent>
@@ -267,6 +318,33 @@ export function LocalExport() {
           >
             Build encrypted export
           </Button>
+
+          <Divider />
+          <Stack spacing={1}>
+            <Typography fontWeight={700}>International Patient Summary</Typography>
+            <Typography color="text.secondary" variant="body2">
+              Standards-based summary document (IPS R4): medications, allergies, problem list, procedures,
+              immunizations, and results. Uses the same date range as above.
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button
+                variant="outlined"
+                startIcon={<Download size={18} />}
+                onClick={() => void buildIpsExport("json")}
+                disabled={busy}
+              >
+                Download IPS JSON
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<FileText size={18} />}
+                onClick={() => void buildIpsExport("print")}
+                disabled={busy}
+              >
+                Print IPS (PDF)
+              </Button>
+            </Stack>
+          </Stack>
 
           {exportState && (
             <Stack spacing={2}>
