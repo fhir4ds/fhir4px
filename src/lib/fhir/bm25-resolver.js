@@ -106,6 +106,21 @@ export class BM25Resolver {
     const index = await this.loadCategory(category);
     const queryTokens = tokenize(query);
 
+    // Exact-match fast path: real-world feeds often carry the consumer or
+    // source name verbatim. Short tokens the tokenizer drops (e.g. "A1c")
+    // would otherwise skew BM25 toward wrong same-family terms.
+    const normalized = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const normalizedQuery = normalized(query);
+    if (normalizedQuery) {
+      const exactRid = index.names.findIndex(
+        (name, rid) => normalized(name) === normalizedQuery || normalized(index.rid_to_friendly_name?.[rid]) === normalizedQuery
+      );
+      if (exactRid >= 0) {
+        const candidate = this._candidateForRid(index, exactRid, 50);
+        return { ...candidate, candidates: [candidate] };
+      }
+    }
+
     if (queryTokens.length === 0) {
       return { name: null, score: 0, friendly_name: null, code: null, system: null, canonical_code: null, canonical_system: null, ingredient_codes: [], candidates: [] };
     }
@@ -137,28 +152,11 @@ export class BM25Resolver {
     const seenNames = new Set();
 
     for (const [rid, score] of ranked) {
-      // v2 indexes: names is indexed by rid directly (no rid_to_name intermediate)
-      const name = index.names[rid] ?? null;
-      const friendlyName = index.rid_to_friendly_name?.[rid] ?? name;
-      const code = index.rid_to_code?.[rid] ?? null;
-      const system = index.rid_to_system?.[rid] ?? null;
-      const canonicalCode = index.rid_to_canonical_code?.[rid] ?? null;
-      const canonicalSystem = index.rid_to_canonical_system?.[rid] ?? null;
-      const ingredientCodes = index.rid_to_ingredient_codes?.[rid] ?? [];
-
-      const dedupKey = friendlyName || name;
+      const candidate = this._candidateForRid(index, rid, score);
+      const dedupKey = candidate.friendly_name || candidate.name;
       if (dedupKey && !seenNames.has(dedupKey)) {
         seenNames.add(dedupKey);
-        candidates.push({
-          name,
-          friendly_name: friendlyName,
-          code,
-          system,
-          canonical_code: canonicalCode,
-          canonical_system: canonicalSystem,
-          ingredient_codes: ingredientCodes,
-          score: Math.round(score * 100) / 100
-        });
+        candidates.push(candidate);
       }
     }
 
@@ -176,6 +174,21 @@ export class BM25Resolver {
       canonical_system: best.canonical_system,
       ingredient_codes: best.ingredient_codes,
       candidates
+    };
+  }
+
+  _candidateForRid(index, rid, score) {
+    const name = index.names[rid] ?? null;
+    const friendlyName = index.rid_to_friendly_name?.[rid] ?? name;
+    return {
+      name,
+      friendly_name: friendlyName,
+      code: index.rid_to_code?.[rid] ?? null,
+      system: index.rid_to_system?.[rid] ?? null,
+      canonical_code: index.rid_to_canonical_code?.[rid] ?? null,
+      canonical_system: index.rid_to_canonical_system?.[rid] ?? null,
+      ingredient_codes: index.rid_to_ingredient_codes?.[rid] ?? [],
+      score: Math.round(score * 100) / 100
     };
   }
 

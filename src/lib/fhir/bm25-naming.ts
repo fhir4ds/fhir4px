@@ -38,6 +38,8 @@ export interface Bm25NamingResult {
   patientFriendlyName: string;
   code: string;
   system: string;
+  /** Lexical category the match came from (medication, lab, ...). */
+  category: string | null;
   canonicalCode?: CanonicalCode;
   ingredientCodes?: string[];
   confidence: number;
@@ -70,6 +72,7 @@ export async function resolveBm25Name(
       patientFriendlyName: result.friendly_name || result.name,
       code: result.code,
       system: result.system,
+      category,
       confidence: Math.min(result.score / 20, 0.85),
       score: result.score
     };

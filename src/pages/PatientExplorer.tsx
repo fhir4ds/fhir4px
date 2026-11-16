@@ -582,7 +582,7 @@ function sortRecordsForDisplay(records: GroupableRecord[], type: ExplorerTab): G
 function recordTimestamp(record: GroupableRecord): number | undefined {
   const raw = record.date || record.latestDate;
   if (!raw) return undefined;
-  const parsed = new Date(raw);
+  const parsed = parseFhirDateValue(raw);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed.getTime();
 }
 
@@ -596,24 +596,61 @@ function compareRecordsByDate(left: GroupableRecord, right: GroupableRecord, sor
   return dateOrder || left.sourceLabel.localeCompare(right.sourceLabel);
 }
 
+/**
+ * Parse a FHIR date/datetime for display and sorting. FHIR date-only strings
+ * (and partial dates: "2021", "2021-06") carry no timezone — parsing them as
+ * UTC shifts the local calendar date back a day in the Americas. Parse those
+ * as local midnight instead; datetimes (with 'T') parse natively.
+ */
+function parseFhirDateValue(raw: string): Date {
+  if (/^\d{4}(-\d{2})?(-\d{2})?$/.test(raw)) return new Date(`${raw}T00:00:00`);
+  return new Date(raw);
+}
+
+/** Local calendar date (YYYY-MM-DD) of a timestamp — panel draw anchoring. */
+function localDateKey(timestamp: number): string {
+  const date = new Date(timestamp);
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Display a raw FHIR date at its own precision (year / year-month / day). */
+function displayFhirDatePrecision(raw: string): string | undefined {
+  const yearOnly = /^\d{4}$/.exec(raw);
+  if (yearOnly) return yearOnly[0];
+  const yearMonth = /^(\d{4})-(\d{2})$/.exec(raw);
+  if (yearMonth) {
+    const parsed = new Date(`${yearMonth[0]}-01T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  }
+  return undefined;
+}
+
 function recordDateLabel(record: GroupableRecord): string {
   const raw = record.date || record.latestDate;
   if (!raw) return "No date";
-  const parsed = new Date(raw);
+  const precise = displayFhirDatePrecision(raw);
+  if (precise) return precise;
+  const parsed = parseFhirDateValue(raw);
   return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString();
 }
 
 function recordDateSectionLabel(record: GroupableRecord): string {
   const raw = record.date || record.latestDate;
   if (!raw) return "No date";
-  const parsed = new Date(raw);
+  const precise = displayFhirDatePrecision(raw);
+  if (precise) return precise;
+  const parsed = parseFhirDateValue(raw);
   if (Number.isNaN(parsed.getTime())) return raw;
   return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function displayObservationDate(date?: string): string | undefined {
   if (!date) return undefined;
-  const parsed = new Date(date);
+  const precise = displayFhirDatePrecision(date);
+  if (precise) return precise;
+  const parsed = parseFhirDateValue(date);
   if (Number.isNaN(parsed.getTime())) return date;
   return parsed.toLocaleDateString();
 }
@@ -1518,7 +1555,7 @@ export function PatientExplorer() {
             if (!group.resourceIds.includes(record.id) || record.resourceType !== "Observation" || record.hidden) continue;
             const timestamp = recordTimestamp(record);
             if (timestamp === undefined) continue;
-            const date = new Date(timestamp).toISOString().slice(0, 10);
+            const date = localDateKey(timestamp);
             for (const cid of partCids) {
               const key = `${cid}|${date}`;
               if (!seen.has(key)) {
@@ -1615,6 +1652,22 @@ export function PatientExplorer() {
     [records]
   );
 
+  // Grouping-cache entries are keyed by compact cluster id; raw records map
+  // through memberResourceIds so record-level lookups can reach the bucket
+  // the canonical text search derived.
+  const groupingCacheByRecordId = useMemo(() => {
+    const compactById = groupingCacheByCompactId(groupingCache);
+    const map = new Map<string, GroupingCacheEntry>();
+    for (const compactRecord of compactClassificationRecords.Observation) {
+      const entry = compactById.get(compactRecord.id);
+      if (!entry) continue;
+      for (const rawId of compactRecord.memberResourceIds ?? [compactRecord.id]) {
+        if (!map.has(rawId)) map.set(rawId, entry);
+      }
+    }
+    return map;
+  }, [groupingCache, compactClassificationRecords]);
+
   const allergyClassificationByRecordId = useMemo(() => {
     const map = new Map<string, AllergyClassification>();
     for (const compactRecord of compactClassificationRecords.AllergyIntolerance) {
@@ -1650,6 +1703,7 @@ export function PatientExplorer() {
     }
     return map;
   }, [classificationCache, compactClassificationRecords]);
+
 
   const observationCategoryClassificationByRecordId = useMemo(() => {
     const map = new Map<string, ObservationCategoryClassification>();
@@ -1705,6 +1759,13 @@ export function PatientExplorer() {
     const classification = observationCategoryClassificationByRecordId.get(record.id);
     if (classification?.observationCategory && classification.observationCategory !== "unknown") {
       return classification.observationCategory;
+    }
+    // Feeds that omit the FHIR category default to "other" below — before
+    // letting that happen, honor the bucket the canonical text search
+    // derived (a local-coded lab matched in the lab index is a lab).
+    if (!observation?.category && !record.category && !record.categoryCode) {
+      const cached = groupingCacheByRecordId.get(record.id);
+      if (cached?.observationBucket) return cached.observationBucket;
     }
     return observationBucket(record, observation);
   }
@@ -2532,18 +2593,31 @@ export function PatientExplorer() {
         for (const record of bm25Uncached) {
           const match = await resolveBm25Name(record);
           if (match) {
+            // Tier 1 may have already named this record correctly but left
+            // it "incomplete" for lack of a bucket — keep the deterministic
+            // name and only contribute the bucket.
+            const existing = cacheById.get(record.id);
+            const keepExistingName =
+              existing?.model === PATIENT_FRIENDLY_LOOKUP_MODEL && existing.patientFriendlyName;
             bm25Entries.push({
               compactRecordId: record.id,
               resourceType: record.resourceType,
-              patientFriendlyName: match.patientFriendlyName,
-              observationBucket: observationBucketFromKnownCategory(record),
-              confidence: match.confidence,
+              patientFriendlyName: keepExistingName ? existing.patientFriendlyName : match.patientFriendlyName,
+              // Canonical text-search matches carry their lexical category —
+              // an Observation matched in the lab index is a lab even when the
+              // feed omitted the FHIR category (common in local-coded feeds).
+              // Without this, the name stays buried behind the embedding
+              // classifier, which is slow on WASM fallback.
+              observationBucket:
+                observationBucketFromKnownCategory(record) ??
+                (record.resourceType === "Observation" && match.category === "lab" ? "labs" : undefined),
+              confidence: keepExistingName ? existing.confidence : match.confidence,
               fallback: false,
               model: "bm25",
-              lookupSystem: match.system,
-              lookupCode: match.code,
-              canonicalSystem: match.canonicalCode?.system,
-              canonicalCode: match.canonicalCode?.code,
+              lookupSystem: keepExistingName ? existing.lookupSystem : match.system,
+              lookupCode: keepExistingName ? existing.lookupCode : match.code,
+              canonicalSystem: keepExistingName ? existing.canonicalSystem : match.canonicalCode?.system,
+              canonicalCode: keepExistingName ? existing.canonicalCode : match.canonicalCode?.code,
               updatedAt: now
             });
           }
@@ -4709,6 +4783,14 @@ export function PatientExplorer() {
             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap justifyContent="flex-end">
               {options.groupName && <Chip size="small" variant="outlined" label={options.groupName} />}
               {record.status && <Chip size="small" color={statusChipColor(record.status)} label={record.status} />}
+              {(() => {
+                const timestamp = recordTimestamp(record);
+                // Real-world feeds carry data-entry future dates; surface them
+                // instead of silently letting the result dominate "latest".
+                return timestamp !== undefined && timestamp > Date.now() + 24 * 60 * 60 * 1000 ? (
+                  <Chip size="small" color="warning" variant="outlined" label="Future-dated" />
+                ) : null;
+              })()}
               {!compact && record.portalSourceName && <Chip size="small" variant="outlined" label={record.portalSourceName} />}
               {duplicateLabel && <Chip size="small" color="primary" variant="outlined" label={duplicateLabel} />}
               {record.source === "patient" && <Chip size="small" color="secondary" label="Patient added" />}
@@ -4798,14 +4880,9 @@ export function PatientExplorer() {
     if (observations.length === 0) return null;
 
     const latest = observations[0];
-    const numericObservations = observations.filter((observation) => numericObservationValue(observation) !== undefined);
-    const numericValues = numericObservations.map((observation) => numericObservationValue(observation) as number);
     const categoryLabels = [
       ...new Set(observations.map((observation) => observation.category || observation.categoryCode).filter(Boolean))
     ];
-    const unit = numericObservations.map(numericObservationUnit).find(Boolean);
-    const min = numericValues.length ? Math.min(...numericValues) : undefined;
-    const max = numericValues.length ? Math.max(...numericValues) : undefined;
     const chartPoints = observationEntries
       .filter((entry) => numericObservationValue(entry.observation) !== undefined)
       .flatMap((entry) => {
@@ -4829,6 +4906,13 @@ export function PatientExplorer() {
     const chartUnit = chartUnits.size === 1 ? [...chartUnits][0] : undefined;
     // Trend chart needs a real series — 3+ comparable measurements.
     const canChartObservation = chartPoints.length >= 3 && chartUnits.size === 1;
+    // Range chip is only honest across a single comparable unit — mixed-unit
+    // series (mg/dL merged with mmol/L feeds) would blend scales.
+    const comparableValues =
+      chartUnits.size === 1 ? chartPoints.map((point) => point.value) : undefined;
+    const comparableMin = comparableValues ? Math.min(...comparableValues) : undefined;
+    const comparableMax = comparableValues ? Math.max(...comparableValues) : undefined;
+    const mixedUnits = chartUnits.size > 1;
 
     return (
       <Stack spacing={1}>
@@ -4841,11 +4925,14 @@ export function PatientExplorer() {
             size="small"
             label={`Latest: ${latest.value}${latest.effectiveDate ? ` (${displayObservationDate(latest.effectiveDate)})` : ""}`}
           />
-          {min !== undefined && max !== undefined && (
+          {comparableMin !== undefined && comparableMax !== undefined && (
             <Chip
               size="small"
-              label={`Range: ${min.toFixed(2)}-${max.toFixed(2)}${unit ? ` ${unit}` : ""}`}
+              label={`Range: ${comparableMin.toFixed(2)}-${comparableMax.toFixed(2)}${chartUnit && chartUnit !== "unitless" ? ` ${chartUnit}` : ""}`}
             />
+          )}
+          {mixedUnits && (
+            <Chip size="small" color="warning" variant="outlined" label="Mixed units — no trend" />
           )}
         </Stack>
         {canChartObservation && (
@@ -5030,17 +5117,18 @@ export function PatientExplorer() {
     const canonicalRecords = clusters.map((cluster) => cluster.canonical);
     const duplicateCount = clusters.reduce((total, cluster) => total + cluster.duplicateCount, 0);
 
-    // Trend detection for observation groups
+    // Trend detection for observation groups — meaningless across mixed
+    // units (mg/dL merged with mmol/L feeds), so require one comparable unit.
+    const trendObservations = canonicalRecords
+      .map((r) => {
+        const obs = observationById.get(r.id);
+        return obs ? { normalizedValue: obs.normalizedValue, effectiveDate: obs.effectiveDate } : null;
+      })
+      .filter((v): v is NonNullable<typeof v> => Boolean(v));
+    const trendUnits = new Set(trendObservations.map((v) => v.normalizedValue.canonicalUnit ?? v.normalizedValue.displayUnit ?? "unitless"));
     const trend: TrendResult | null =
-      activeTab === "Observation"
-        ? detectTrend(
-            canonicalRecords
-              .map((r) => {
-                const obs = observationById.get(r.id);
-                return obs ? { normalizedValue: obs.normalizedValue, effectiveDate: obs.effectiveDate } : null;
-              })
-              .filter((v): v is NonNullable<typeof v> => Boolean(v))
-          )
+      activeTab === "Observation" && (trendUnits.size === 1 || trendObservations.length === 0)
+        ? detectTrend(trendObservations)
         : null;
     const expansionKey = groupExpansionKey(group);
     const collapsedLimit = density === "compact" ? 1 : MAX_COLLAPSED_GROUP_RECORDS;
@@ -5481,7 +5569,7 @@ export function PatientExplorer() {
         .filter(
           (item): item is { record: GroupableRecord; timestamp: number } =>
             item.timestamp !== undefined &&
-            new Date(item.timestamp).toISOString().slice(0, 10) === draw.date
+            localDateKey(item.timestamp) === draw.date
         )
         .sort((left, right) => right.timestamp - left.timestamp);
       const latest = dated[0]?.record;
