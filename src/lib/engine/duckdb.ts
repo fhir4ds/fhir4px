@@ -11,6 +11,8 @@
  * (HuggingFace) are unaffected by COEP.
  */
 
+import { registerCQLMacros } from "./cql-macros";
+
 // Served verbatim from public/vendor/fhir4ds/ — vite 8's dev transform of
 // node_modules assets (re-minification) breaks the Emscripten worker, so the
 // worker and wasm must bypass the transform pipeline like the extensions.
@@ -53,5 +55,8 @@ export async function createDuckDBConnection(): Promise<DuckDBConnectionBundle> 
     await db.registerFileURL(file, extensionUrl(file), 4 /* DuckDBDataProtocol.HTTP */, false);
     await conn.query(`LOAD '${file}'`);
   }
+  // CQL macros (fhirpath_text/date/bool/number + clinical macros) that the
+  // pre-translated measure SQL depends on — ported from fhir4ds wasm-demo.
+  await registerCQLMacros(conn);
   return { db, conn };
 }

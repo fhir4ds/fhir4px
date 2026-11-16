@@ -77,7 +77,9 @@ async function loadResources(resources: FhirResource[]): Promise<{ count: number
   for (const resource of resources) {
     const id = typeof resource.id === "string" ? resource.id : crypto.randomUUID();
     const subject = resource.subject as { reference?: string } | undefined;
-    const patientRef = (subject?.reference ?? "").replace(/^Patient\//, "") || null;
+    const patient = resource.patient as { reference?: string } | undefined;
+    const patientRef =
+      (subject?.reference ?? patient?.reference ?? "").replace(/^Patient\//, "") || null;
     await statement.query(id, resource.resourceType, JSON.stringify(resource), patientRef);
   }
   await statement.close();

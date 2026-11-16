@@ -11,11 +11,13 @@ import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
 import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 import { preloadAssociations } from "../../lib/associations/bundle";
+import { Gauge } from "lucide-react";
 
 const navItems = [
   { to: "/providers", label: "Providers", icon: <Search size={18} /> },
   { to: "/connected", label: "Vault", icon: <LockKeyhole size={18} /> },
   { to: "/records", label: "Records", icon: <ClipboardList size={18} /> },
+  { to: "/quality", label: "Quality", icon: <Gauge size={18} /> },
   { to: "/export", label: "Export", icon: <Database size={18} /> },
   { to: "/llm-playground", label: "LLM Lab", icon: <FlaskConical size={18} /> },
   { to: "/settings", label: "Settings", icon: <Settings size={18} /> }

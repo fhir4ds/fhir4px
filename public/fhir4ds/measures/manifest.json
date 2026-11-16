@@ -1,0 +1,54 @@
+{
+ "measures": {
+  "CMS124": {
+   "title": "Cervical Cancer Screening",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms124.sql"
+  },
+  "CMS349": {
+   "title": "HIV Screening",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms349.sql"
+  },
+  "CMS159": {
+   "title": "Depression Remission at Twelve Months",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms159.sql"
+  },
+  "CMS74": {
+   "title": "Primary Caries Prevention as Offered by Dentists",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms74.sql"
+  },
+  "CMS75": {
+   "title": "Children Who Have Dental Decay or Cavities",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms75.sql"
+  }
+ }
+}

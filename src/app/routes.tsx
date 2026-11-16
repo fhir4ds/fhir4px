@@ -6,6 +6,7 @@ import { Landing } from "../pages/Landing";
 import { LocalExport } from "../pages/LocalExport";
 import { LlmPlayground } from "../pages/LlmPlayground";
 import { PatientExplorer } from "../pages/PatientExplorer";
+import QualityPage from "../pages/Quality";
 import { Privacy } from "../pages/Privacy";
 import { ProviderSearch } from "../pages/ProviderSearch";
 import { ReferralBuilder } from "../pages/ReferralBuilder";
@@ -21,6 +22,7 @@ export function AppRoutes() {
       <Route path="/smart/callback" element={<SmartCallback />} />
       <Route path="/connected" element={<ConnectedProvider />} />
       <Route path="/records" element={<PatientExplorer />} />
+      <Route path="/quality" element={<QualityPage />} />
       <Route path="/summary" element={<PatientExplorer />} />
       <Route path="/referral" element={<ReferralBuilder />} />
       <Route path="/export" element={<LocalExport />} />
