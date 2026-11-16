@@ -57,20 +57,33 @@ export class BM25Resolver {
     this.baseUrl = options.baseUrl || "./";
     this.debug = options.debug || false;
     this.cache = new Map();
+    // Optional per-category URL builder (e.g. the fhir4ds/terminology
+    // lexical indexes live at lexical/<release>/<category>.json).
+    this.categoryUrl = options.categoryUrl || null;
+    // Optional async index provider — when set, loadCategory delegates to
+    // it instead of fetching (lets callers share one release-pinned cache).
+    this.loadIndex = options.loadIndex || null;
   }
 
   async loadCategory(category) {
     if (this.cache.has(category)) return this.cache.get(category);
 
-    const url = `${this.baseUrl}/${category}_bm25.json`;
-    this._log(`Loading BM25 index: ${category} from ${url}`);
+    let index;
+    if (this.loadIndex) {
+      index = await this.loadIndex(category);
+    } else {
+      const url = this.categoryUrl
+        ? this.categoryUrl(category)
+        : `${this.baseUrl}/${category}_bm25.json`;
+      this._log(`Loading BM25 index: ${category} from ${url}`);
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to load BM25 index for ${category}: ${response.status}`);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to load BM25 index for ${category}: ${response.status}`);
+      }
+
+      index = await response.json();
     }
-
-    const index = await response.json();
     this._log(`  Loaded: ${index.num_records} records, ${Object.keys(index.idf).length} tokens`);
 
     this.cache.set(category, index);

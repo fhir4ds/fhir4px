@@ -1,28 +1,35 @@
 /**
- * BM25 naming wrapper — Tier 2 fallback for records without a code.
+ * BM25 naming wrapper — Tier 2 canonical text search.
  *
- * Uses pre-built per-category BM25 indexes hosted on HuggingFace
- * (joelmontavon/fhir4px-bm25). Runs after deterministic lookup (Tier 1)
- * misses and before the LLM (Tier 3). ~81% accuracy, ~10ms per query.
+ * Runs against the fhir4ds/terminology lexical indexes (the canonical
+ * layer's synonym-expanded BM25 corpora) after deterministic lookup
+ * (Tier 1) misses and before the LLM (Tier 3). Documents map to their
+ * canonical, so text hits roll up to canonical-friendly names.
  *
- * The updated BM25 indexes return the code, system, friendly name,
- * canonical code (ICD-10 for conditions), and ingredient codes
- * (for medications) alongside the match score.
- *
- * Indexes are lazy-loaded per category and cached for the session.
+ * Indexes are lazy-loaded per category and cached for the session, shared
+ * with the patient-friendly lookup merge.
  */
 
 import { BM25Resolver } from "./bm25-resolver.js";
 import type { GroupableRecord, CanonicalCode } from "./patient-groups";
+import { loadLexicalIndex, type LexicalCategory } from "../terminology/lexical";
 
-const BM25_BASE_URL = "https://huggingface.co/joelmontavon/fhir4px-bm25/resolve/main";
 const SCORE_THRESHOLD = 5.0;
 
 let resolver: BM25Resolver | null = null;
 
+/**
+ * Canonical search (Tier 2) now runs against the fhir4ds/terminology
+ * lexical indexes — the canonical layer's synonym-expanded BM25 corpora.
+ * Indexes are shared with the lookup merge (same loader, same release,
+ * same per-session cache), so text search and code roll-up stay coherent.
+ */
 function getResolver(): BM25Resolver {
   if (!resolver) {
-    resolver = new BM25Resolver({ baseUrl: BM25_BASE_URL, debug: false });
+    resolver = new BM25Resolver({
+      debug: false,
+      loadIndex: (category) => loadLexicalIndex(category as LexicalCategory)
+    });
   }
   return resolver;
 }

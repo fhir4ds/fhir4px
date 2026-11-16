@@ -81,10 +81,10 @@ describe("patient-friendly lookup", () => {
     const lookup = await loadPatientFriendlyLookupForRecords(records);
     const result = lookupPatientFriendlyName(records[0], lookup);
 
-    // Shard fetch + value_sets artifact probe (offline: HF listing fails,
-    // canonical layer falls back) + display_names artifact probe (offline:
-    // {} shape fails the format guard and falls back to shard-only naming).
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    // Shard fetch + value_sets probe + lexical probe (offline: HF listing
+    // fails, canonical layers fall back) + display_names artifact probe
+    // (offline: {} shape fails the format guard, shard-only naming).
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     expect(fetchMock.mock.calls[0][0]).toContain("/terminology/patient_friendly_lnc.json");
     expect(result).toMatchObject({
       patientFriendlyName: "Hemoglobin A1c",
@@ -545,6 +545,67 @@ describe("patient-friendly lookup", () => {
     } finally {
       setDisplayNamesForTest(null);
       setValueSetsForTest(null);
+      resetPatientFriendlyLookupForTest();
+    }
+  });
+
+  it("rolls product codes up to canonical group names via the lexical index (SCD → canonical)", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      return {
+        ok: true,
+        async json() {
+          if (url.includes("patient_friendly_rxnorm.json")) {
+            return { "106892": { name: "Humulin 70/30", friendly_source: "RXNORM", match_type: "original" } };
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { setDisplayNamesForTest } = await import("../../src/lib/associations/display-names");
+    setDisplayNamesForTest({
+      format: "fhir4px_display_names_v1",
+      version: "test",
+      systems: {
+        rxnorm: {
+          // Card overlay previously won here with the lowercase source name.
+          "106892": { name: "insulin, regular, human", match_type: "card_overlay" }
+        }
+      }
+    });
+    const { setLexicalIndexForTest } = await import("../../src/lib/terminology/lexical");
+    setLexicalIndexForTest("medication", {
+      category: "medication",
+      names: ["insulin isophane, human 70 UNT/ML / insulin, regular, human 30 UNT/ML Injectable Suspension [Humulin]"],
+      postings: {},
+      idf: {},
+      doc_lengths: [4],
+      avg_doc_length: 4,
+      rid_to_friendly_name: ["Insulin Isophane / Insulin, Regular, Human Injectable Product"],
+      rid_to_code: ["106892"],
+      rid_to_system: ["rxnorm"],
+      rid_to_canonical_code: ["106892"],
+      rid_to_canonical_system: ["rxnorm"]
+    });
+
+    try {
+      resetPatientFriendlyLookupForTest();
+      const lookup = await loadPatientFriendlyLookupForRecords([
+        record({
+          id: "med-humulin",
+          resourceType: "MedicationRequest",
+          sourceLabel: "Humulin 70/30",
+          codingKeys: ["rxnorm:106892"]
+        })
+      ]);
+      expect(lookup.rxnorm?.get("106892")).toMatchObject({
+        name: "Insulin Isophane / Insulin, Regular, Human Injectable Product",
+        friendlySource: "fhir4ds-lexical-canonical",
+        matchType: "canonical"
+      });
+    } finally {
+      setDisplayNamesForTest(null);
+      setLexicalIndexForTest("medication", null);
       resetPatientFriendlyLookupForTest();
     }
   });

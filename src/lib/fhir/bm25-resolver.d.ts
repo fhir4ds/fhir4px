@@ -22,7 +22,14 @@ export interface BM25Result {
 }
 
 export class BM25Resolver {
-  constructor(options?: { baseUrl?: string; debug?: boolean });
+  constructor(options?: {
+    baseUrl?: string;
+    debug?: boolean;
+    /** Per-category URL builder (overrides baseUrl/<category>_bm25.json). */
+    categoryUrl?: (category: string) => string;
+    /** Async index provider — overrides fetching entirely. */
+    loadIndex?: (category: string) => Promise<unknown>;
+  });
   loadCategory(category: string): Promise<unknown>;
   resolve(query: string, category: string, topK?: number): Promise<BM25Result>;
   static resourceTypeToCategory(resourceType: string): string | null;

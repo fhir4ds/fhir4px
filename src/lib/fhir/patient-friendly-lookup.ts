@@ -13,6 +13,9 @@ export const PATIENT_FRIENDLY_LOOKUP_MODEL = "patient-friendly-lookup-v2";
  */
 export const ICD10CM_BUNDLE_OVERLAY_SOURCE = "fhir4px-associations-card";
 export const VALUE_SETS_SOURCE = "fhir4ds-valuesets";
+export const LEXICAL_SOURCE = "fhir4ds-lexical-canonical";
+/** Canonical sources win over the display_names overlay. */
+const CANONICAL_SOURCES = new Set([VALUE_SETS_SOURCE, LEXICAL_SOURCE]);
 
 export type PatientFriendlyLookupSystem =
   | "loinc"
@@ -105,6 +108,14 @@ const RESOURCE_SYSTEM_PRIORITY: Record<GroupableResourceType, PatientFriendlyLoo
   Encounter: ["snomed", "cpt", "hcpcs"],
   Procedure: ["snomed", "cpt", "hcpcs", "icd10pcs"],
   DiagnosticReport: ["loinc", "snomed", "cpt", "hcpcs"]
+};
+
+/** Shard system → lexical index categories whose code maps feed the merge. */
+const LEXICAL_CATEGORIES_BY_SYSTEM: Partial<Record<PatientFriendlyLookupSystem, Array<"medication" | "lab" | "condition" | "procedure" | "vaccine">>> = {
+  rxnorm: ["medication"],
+  loinc: ["lab"],
+  cvx: ["vaccine"],
+  snomed: ["condition", "procedure"]
 };
 
 const MATCH_CONFIDENCE: Record<string, number> = {
@@ -297,11 +308,47 @@ async function loadShardEntries(system: PatientFriendlyLookupSystem): Promise<Ma
   } catch {
     // Artifact unavailable — shard naming stands.
   }
+  // Lexical canonical indexes (fhir4ds/terminology, runtime): prebuilt BM25
+  // corpora over the canonical synonym expansion. Every coded document —
+  // including RxNorm SCD product strings — carries its canonical-friendly
+  // name, so product codes roll up to their canonical group (SCD →
+  // "Insulin Isophane / Insulin, Regular, Human Injectable Product").
+  // Fills codes the curated value_sets layer doesn't key; value_sets wins.
+  try {
+    const { loadLexicalCodeMap } = await import("../terminology/lexical");
+    const categories = LEXICAL_CATEGORIES_BY_SYSTEM[system];
+    if (categories) {
+      const maps = await Promise.all(categories.map((category) => loadLexicalCodeMap(category)));
+      for (const codeMap of maps) {
+        for (const [key, entry] of codeMap) {
+          const parsed = parseCodingKey(key);
+          if (!parsed || parsed.system !== system) continue;
+          const existing = entries.get(parsed.code);
+          if (existing) {
+            if (existing.friendlySource === VALUE_SETS_SOURCE) continue;
+            existing.name = entry.name;
+            existing.friendlySource = LEXICAL_SOURCE;
+            existing.matchType = "canonical";
+          } else {
+            entries.set(parsed.code, {
+              system,
+              code: parsed.code,
+              name: entry.name,
+              friendlySource: LEXICAL_SOURCE,
+              matchType: "canonical"
+            });
+          }
+        }
+      }
+    }
+  } catch {
+    // Index unavailable — shard naming stands.
+  }
   // display_names artifact (Option A, v2026-09-21.1940+): name layer
   // computed upstream by the model exporter (card-name-wins overlay).
-  // Applied on top of shard + bundle overlay, but NEVER over value_sets
-  // entries — the canonical layer wins. Offline (artifact null) keeps the
-  // previous naming path intact.
+  // Applied on top of shard + bundle overlay, but NEVER over canonical
+  // entries (value_sets / lexical) — the canonical layer wins. Offline
+  // (artifact null) keeps the previous naming path intact.
   try {
     const { loadDisplayNames } = await import("../associations/display-names");
     const names = await loadDisplayNames();
@@ -312,7 +359,7 @@ async function loadShardEntries(system: PatientFriendlyLookupSystem): Promise<Ma
       for (const [code, entry] of Object.entries(artifactSystem)) {
         if (!entry || typeof entry.name !== "string") continue;
         const existing = entries.get(code);
-        if (existing?.friendlySource === VALUE_SETS_SOURCE) continue;
+        if (existing && CANONICAL_SOURCES.has(existing.friendlySource)) continue;
         if (existing) {
           existing.name = entry.name;
           existing.matchType = entry.match_type ?? existing.matchType;
