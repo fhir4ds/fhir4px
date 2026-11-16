@@ -74,7 +74,11 @@ const BUNDLE: AssociationBundle = {
       buckets: {
         lab: [
           { cid: "VAL-LAB-LOINC-LP16413-4", name: "Hemoglobin A1c" },
-          { cid: "VAL-LAB-LOINC-LP9999-9", name: "C Peptide", provenance: "monitoring_recommendation", derivations: [{ path: "ancestor", parent_cid: "VAL-COND-SNOMED-73211009", provenance: "monitoring_recommendation" }] }
+          { cid: "VAL-LAB-LOINC-LP9999-9", name: "C Peptide", provenance: "monitoring_recommendation", derivations: [{ path: "ancestor", parent_cid: "VAL-COND-SNOMED-73211009", provenance: "monitoring_recommendation" }] },
+          { cid: "VAL-LAB-LOINC-LP14635-4", name: "Glucose", provenance: "monitoring_recommendation", derivations: [
+            { path: "direct", distance: 0, provenance: "monitoring_recommendation" },
+            { path: "ancestor", parent_cid: "VAL-COND-SNOMED-73211009", provenance: "monitoring_recommendation" }
+          ] }
         ],
         medication: [
           { cid: "VAL-MED-RXNORM-6809", name: "metformin" },
@@ -396,6 +400,25 @@ describe("association resolution + matching", () => {
     expect(reverse).toEqual([
       expect.objectContaining({ groupId: "cond-t2dm", relationship: "lab", viaHubName: "diabetes mellitus" })
     ]);
+  });
+
+  it("keeps direct members direct even when they also inherit through a hub", async () => {
+    setAssociationsForTest({ bundle: BUNDLE, labParts: LAB_PARTS, icd10: ICD10_XWALK });
+    const matches = await findRelatedGroups(
+      { groupId: "cond-t2dm", resolution: { conceptKey: "type 2 diabetes" } },
+      [
+        { groupId: "lab-glucose", groupName: "Glucose", resourceTypes: ["Observation"], resolution: { labPartCids: ["VAL-LAB-LOINC-LP14635-4"] } },
+        { groupId: "lab-cpep", groupName: "C Peptide", resourceTypes: ["Observation"], resolution: { labPartCids: ["VAL-LAB-LOINC-LP9999-9"] } }
+      ]
+    );
+    // Glucose carries BOTH a direct derivation and an ancestor path; the
+    // direct path is authoritative, so it must not collapse into a
+    // "via diabetes mellitus" hub family.
+    const glucose = matches.find((m) => m.groupId === "lab-glucose");
+    expect(glucose).toMatchObject({ relationship: "lab", matchedMemberName: "Glucose" });
+    expect(glucose?.viaHubName).toBeUndefined();
+    // Ancestor-only members keep hub attribution.
+    expect(matches.find((m) => m.groupId === "lab-cpep")).toMatchObject({ viaHubName: "diabetes mellitus" });
   });
 
   it("resolves combo medications to all ingredient concepts via by_cid_multi", async () => {

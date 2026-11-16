@@ -109,7 +109,20 @@ describe("viaHub family collapse", () => {
     ]);
     const keys = chips.map((c) => c.key);
     expect(new Set(keys).size).toBe(keys.length);
-    expect(keys[0]).toBe(`g1:lab:${CMP}`);
+    // Direct matches (no hub) sort ahead of hub families.
+    expect(keys[0]).toBe("g3:lab");
+  });
+
+  it("direct matches render before collapsed hub families regardless of input order", () => {
+    const { chips } = collapseViaHubFamilies([
+      match({ relationship: "lab", groupId: "g1", matchedMemberName: "Calcium", viaHubName: CMP }),
+      match({ relationship: "lab", groupId: "g2", matchedMemberName: "Sodium", viaHubName: CMP }),
+      match({ relationship: "lab", groupId: "g3", matchedMemberName: "Glucose" }),
+      match({ relationship: "lab", groupId: "g4", matchedMemberName: "Hemoglobin A1c" })
+    ]);
+    // Direct chips first (stable within the tier), then the collapsed family.
+    expect(chips.map((c) => c.match.matchedMemberName)).toEqual(["Glucose", "Hemoglobin A1c", "Calcium"]);
+    expect(chips[2].hidden.map((h) => h.matchedMemberName)).toEqual(["Sodium"]);
   });
 
   it("collapsedFamilyLabel counts hidden members and names the hub", () => {

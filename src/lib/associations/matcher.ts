@@ -134,10 +134,16 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
       if (!includeLoose && member.provenance && LOOSE_PROVENANCE.has(member.provenance)) continue;
       // Attribution: an ancestor path credits the condition hub; a fanned
       // path credits the panel the member rode in on ("Calcium · via
-      // Comprehensive Metabolic Panel"). Direct members carry no via.
-      const attribution = member.derivations?.find(
-        (d) => (d.path === "ancestor" || d.path === "fanned" || d.path === "fanned_hub") && d.parent_cid
-      );
+      // Comprehensive Metabolic Panel"). A direct path is authoritative —
+      // members that are BOTH direct and inherited (e.g. Glucose on
+      // "type 2 diabetes") stay direct so they outrank collapsed hub
+      // families in the related-records display.
+      const isDirect = member.derivations?.some((d) => d.path === "direct");
+      const attribution = isDirect
+        ? undefined
+        : member.derivations?.find(
+            (d) => (d.path === "ancestor" || d.path === "fanned" || d.path === "fanned_hub") && d.parent_cid
+          );
       cidToMember.set(member.cid, {
         name: member.name,
         provenance: member.provenance,

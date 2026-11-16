@@ -114,18 +114,30 @@ export function groupRelatedSections(matches: RelatedMatch[]): RelatedSection[] 
  * Collapse viaHub families within one section's matches.
  *
  * Matches sharing a viaHubName in a collapsible bucket merge into the first
- * occurrence ("Calcium · via CMP" absorbs "Sodium · via CMP"). Returns chips
- * plus the set of hub names that actually hid members, so the UI can render
- * "+N via <hub>" affordances and expand state stays keyed on stable strings.
+ * occurrence ("Calcium · via CMP" absorbs "Sodium · via CMP"). Direct
+ * matches (no hub attribution) sort ahead of hub-attributed ones — stable
+ * within each tier — so they render first and survive the caller's chip
+ * cap; only genuinely indirect relationships collapse behind "+N more".
+ * Returns chips plus the set of hub names that actually hid members, so
+ * the UI can render "+N via <hub>" affordances and expand state stays
+ * keyed on stable strings.
  */
 export function collapseViaHubFamilies(
   matches: RelatedMatch[]
 ): { chips: RelatedChip[]; collapsedHubNames: Set<string> } {
+  const ordered = matches
+    .map((match, index) => ({ match, index }))
+    .sort(
+      (left, right) =>
+        Number(left.match.viaHubName !== undefined) - Number(right.match.viaHubName !== undefined) ||
+        left.index - right.index
+    )
+    .map(({ match }) => match);
   const chips: RelatedChip[] = [];
   const hubHolders = new Map<string, RelatedChip>();
   const collapsedHubNames = new Set<string>();
 
-  for (const match of matches) {
+  for (const match of ordered) {
     const collapsible =
       match.viaHubName !== undefined &&
       COLLAPSIBLE_BUCKETS.has(match.relationship);

@@ -108,6 +108,8 @@ export interface AssociationMemberDerivation {
   child_cid?: string;
   /** Tier carried by the specific derivation path. */
   provenance?: MemberProvenance;
+  /** Graph hops for this path; 0 = direct member of the concept. */
+  distance?: number;
 }
 
 /** VAL-LAB-LOINC-{test code} → part CIDs (VAL-LAB-LOINC-LP…). */
