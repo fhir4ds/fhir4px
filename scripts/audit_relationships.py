@@ -21,7 +21,16 @@ import sys
 import urllib.request
 
 BUNDLE_DIR = "/tmp/cid-assoc"
-BASE = "https://huggingface.co/fhir4ds/fhir4px/resolve/main/associations"
+BASE = "https://huggingface.co/fhir4ds/associations/resolve/main"
+
+
+def current_release():
+    with urllib.request.urlopen(f"{BASE}/manifest.json") as r:
+        manifest = json.load(r)
+    release = manifest.get("release")
+    if not release:
+        raise SystemExit("associations manifest missing release")
+    return release
 RXNORM_INGREDIENTS = os.path.join(os.path.dirname(__file__), "..", "public", "terminology", "rxnorm-ingredients.json")
 
 LOOSE = {"population_context", "comorbidity_section", "panel_cooccurrence"}
@@ -32,24 +41,27 @@ BUCKETS = ["lab", "vital", "procedure", "medication", "vaccine", "condition", "t
            "causes_abnormality", "screens_before", "antidote_for"]
 
 
-def ensure_file(name):
-    path = os.path.join(BUNDLE_DIR, name)
+def ensure_file(kind, name):
+    # Versioned path under the release directory; always re-fetch because
+    # a new release changes the URL and a cached copy silently audits the
+    # wrong release.
+    release = current_release()
+    rel_path = os.path.join(kind, release, name)
+    path = os.path.join(BUNDLE_DIR, rel_path)
     os.makedirs(os.path.dirname(path) or BUNDLE_DIR, exist_ok=True)
-    # Always re-fetch: the corpus updates in place (same URL, new version
-    # field) and a cached copy silently audits the wrong release.
     gz_path = path + ".gz"
-    urllib.request.urlretrieve(f"{BASE}/{name}.gz", gz_path)
+    urllib.request.urlretrieve(f"{BASE}/{rel_path}.gz", gz_path)
     with gzip.open(gz_path, "rb") as f_in, open(path, "wb") as f_out:
         f_out.write(f_in.read())
     return path
 
 
 def load_bundle():
-    with open(ensure_file("associations.json")) as f:
+    with open(ensure_file("graph", "associations.json")) as f:
         bundle = json.load(f)
-    with open(ensure_file("crosswalks/loinc_test_to_part.json")) as f:
+    with open(ensure_file("crosswalks", "loinc_test_to_part.json")) as f:
         lab_parts = json.load(f)
-    with open(ensure_file("crosswalks/icd10_to_snomed.json")) as f:
+    with open(ensure_file("crosswalks", "icd10_to_snomed.json")) as f:
         icd_xwalk = json.load(f)
     with open(RXNORM_INGREDIENTS) as f:
         raw = json.load(f)
@@ -424,19 +436,25 @@ def main():
     if args.bundle_dir:
         BUNDLE_DIR = args.bundle_dir
         def load_bundle():
-            def read(name):
+            def find_artifact(kind, name):
+                import glob as _glob
+                for pattern in (os.path.join(BUNDLE_DIR, kind, "*", name),
+                                os.path.join(BUNDLE_DIR, kind, "*", name + ".gz"),
+                                os.path.join(BUNDLE_DIR, name)):
+                    hits = sorted(_glob.glob(pattern))
+                    if hits:
+                        return hits[-1]
+                raise SystemExit(f"missing {kind}/{name} under {BUNDLE_DIR}")
+            def read(path):
                 import gzip as _gz
-                path = os.path.join(BUNDLE_DIR, name)
                 if path.endswith(".gz"):
                     with _gz.open(path, "rb") as f:
                         return json.loads(f.read().decode("utf8"))
                 with open(path, "rb") as f:
                     return json.loads(f.read().decode("utf8"))
-            bundle = read("associations.json" + ("" if os.path.exists(os.path.join(BUNDLE_DIR, "associations.json")) else ".gz"))
-            with open(os.path.join(BUNDLE_DIR, "crosswalks", "loinc_test_to_part.json")) as f:
-                lab_parts = json.load(f)
-            with open(os.path.join(BUNDLE_DIR, "crosswalks", "icd10_to_snomed.json")) as f:
-                icd_xwalk = json.load(f)
+            bundle = read(find_artifact("graph", "associations.json"))
+            lab_parts = read(find_artifact("crosswalks", "loinc_test_to_part.json"))
+            icd_xwalk = read(find_artifact("crosswalks", "icd10_to_snomed.json"))
             with open(RXNORM_INGREDIENTS) as f:
                 raw = json.load(f)
                 ingredients = {k: v for k, v in raw.items() if k != "_meta"}

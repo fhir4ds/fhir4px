@@ -32,7 +32,15 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 
-const HF_BASE = "https://huggingface.co/fhir4ds/fhir4px/resolve/main/associations";
+const HF_BASE = "https://huggingface.co/fhir4ds/associations/resolve/main";
+
+async function wireBundleUrl() {
+  const res = await fetch(`${HF_BASE}/manifest.json`, { redirect: "follow" });
+  if (!res.ok) throw new Error(`manifest HTTP ${res.status}`);
+  const manifest = await res.json();
+  if (!manifest.release) throw new Error("manifest missing release");
+  return `${HF_BASE}/graph/${manifest.release}/associations.json.gz`;
+}
 
 function usageAndExit(code = 0) {
   console.log(`usage:
@@ -76,7 +84,7 @@ function readBundleGz(path) {
 async function fetchWire() {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await fetch(`${HF_BASE}/associations.json.gz`, { redirect: "follow" });
+      const res = await fetch(await wireBundleUrl(), { redirect: "follow" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const buf = Buffer.from(await res.arrayBuffer());
       gunzipSync(buf); // integrity check before parsing
@@ -267,7 +275,7 @@ async function main() {
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     const out = resolve(dir, `${newSnap.bundle.version}.json.gz`);
     // fetch again to persist the exact bytes we hashed
-    const res = await fetch(`${HF_BASE}/associations.json.gz`, { redirect: "follow" });
+    const res = await fetch(await wireBundleUrl(), { redirect: "follow" });
     const buf = Buffer.from(await res.arrayBuffer());
     const md5 = createHash("md5").update(buf).digest("hex");
     if (md5 !== newSnap.md5gz) {

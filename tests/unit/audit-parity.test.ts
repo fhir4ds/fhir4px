@@ -14,14 +14,48 @@
  */
 import { execFile } from "node:child_process";
 import { gunzipSync } from "node:zlib";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve as pathResolve } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { setAssociationsForTest } from "../../src/lib/associations/bundle";
+import type { AssociationBundle, Icd10Crosswalk, LabPartCrosswalk } from "../../src/lib/associations/types";
 import { setRxnormDecompositionForTest } from "../../src/lib/fhir/rxnorm-decomposition";
 import { findRelatedGroups } from "../../src/lib/associations/matcher";
 import type { GroupableRecord, GroupableResourceType } from "../../src/lib/fhir/patient-groups";
+
+function bundleArtifact(kind: "graph" | "crosswalks", name: string): string {
+  // Versioned layout: <kind>/<release>/<name>(.gz); falls back to the
+  // legacy flat layout at the bundle dir root.
+  const kindDir = pathResolve(bundleDir, kind);
+  const release = readdirSync(kindDir).sort().at(-1);
+  if (release) {
+    for (const file of [name, `${name}.gz`]) {
+      const candidate = pathResolve(kindDir, release, file);
+      try {
+        readFileSync(candidate);
+        return candidate;
+      } catch {
+        // try next
+      }
+    }
+  }
+  for (const file of [name, `${name}.gz`]) {
+    const candidate = pathResolve(bundleDir, file);
+    try {
+      readFileSync(candidate);
+      return candidate;
+    } catch {
+      // try next
+    }
+  }
+  throw new Error(`missing ${kind}/${name} under ${bundleDir}`);
+}
+
+function readBundleJson<T>(path: string): T {
+  const raw = readFileSync(path);
+  return JSON.parse((path.endsWith(".gz") ? gunzipSync(raw) : raw).toString("utf8")) as T;
+}
 
 const run = promisify(execFile);
 const enabled = process.env.AUDIT_PARITY === "1";
@@ -151,9 +185,9 @@ describe.skipIf(!enabled)("audit script parity (python vs matcher.ts)", () => {
     const pyRows: PyRow[] = JSON.parse(stdout);
 
     // --- TypeScript side: same fixture, same bundle ---
-    const bundle = JSON.parse(gunzipSync(readFileSync(`${bundleDir}/associations.json.gz`)).toString("utf8"));
-    const labParts = JSON.parse(readFileSync(`${bundleDir}/crosswalks/loinc_test_to_part.json`, "utf8"));
-    const icd10 = JSON.parse(readFileSync(`${bundleDir}/crosswalks/icd10_to_snomed.json`, "utf8"));
+    const bundle = readBundleJson<AssociationBundle>(bundleArtifact("graph", "associations.json"));
+    const labParts = readBundleJson<LabPartCrosswalk>(bundleArtifact("crosswalks", "loinc_test_to_part.json"));
+    const icd10 = readBundleJson<Icd10Crosswalk>(bundleArtifact("crosswalks", "icd10_to_snomed.json"));
     setAssociationsForTest({ bundle, labParts, icd10 });
     setRxnormDecompositionForTest(
       JSON.parse(readFileSync(pathResolve(__dirname, "../../public/terminology/rxnorm-ingredients.json"), "utf8"))

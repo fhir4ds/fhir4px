@@ -2,7 +2,8 @@
  * Loader for the display_names sibling artifact (Option A, v2026-09-21.1940+).
  *
  * Hosted alongside the associations bundle on HuggingFace at
- * fhir4ds/fhir4px/associations/display_names.json.gz. Carries the merged
+ * fhir4ds/associations under naming/<release>/display_names.json.gz.
+ * Carries the merged
  * patient-friendly naming layer: full shard bases with bundle card names
  * overlaid on resolved codes (overlay_rule: card-name-wins) and AMA CPT
  * originals excluded. Per-system code -> {name, match_type}.
@@ -11,6 +12,8 @@
  * CUI) still come from the bundled terminology shards, which also remain
  * the offline fallback while the dual-publish window is open.
  */
+
+import { associationsArtifactUrl, resolveRelease } from "./manifest";
 
 export type DisplayNamesSystem =
   | "cpt"
@@ -33,20 +36,17 @@ export interface DisplayNamesBundle {
   systems: Partial<Record<DisplayNamesSystem, Record<string, DisplayNamesEntry>>>;
 }
 
-const ASSOC_BASE = "https://huggingface.co/fhir4ds/fhir4px/resolve/main/associations";
 const DISPLAY_NAMES_FORMAT = "fhir4px_display_names_v1";
 
 let namesPromise: Promise<DisplayNamesBundle | null> | null = null;
 
-async function fetchGzJson(gzUrl: string, plainUrl: string): Promise<DisplayNamesBundle> {
+async function fetchGzJson(gzUrl: string): Promise<DisplayNamesBundle> {
   const response = await fetch(gzUrl);
   if (!response.ok || !response.body) {
     throw new Error(`Display names unavailable: ${response.status} ${gzUrl}`);
   }
   if (typeof DecompressionStream === "undefined") {
-    const plain = await fetch(plainUrl);
-    if (!plain.ok) throw new Error(`Display names unavailable: ${plain.status} ${plainUrl}`);
-    return (await plain.json()) as DisplayNamesBundle;
+    throw new Error(`Display names unavailable: no gzip support for ${gzUrl}`);
   }
   const stream = response.body.pipeThrough(new DecompressionStream("gzip"));
   const text = await new Response(stream).text();
@@ -60,10 +60,8 @@ async function fetchGzJson(gzUrl: string, plainUrl: string): Promise<DisplayName
  */
 export function loadDisplayNames(): Promise<DisplayNamesBundle | null> {
   if (namesPromise) return namesPromise;
-  namesPromise = fetchGzJson(
-    `${ASSOC_BASE}/display_names.json.gz`,
-    `${ASSOC_BASE}/display_names.json`
-  )
+  namesPromise = resolveRelease()
+    .then((release) => fetchGzJson(associationsArtifactUrl("naming", release, "display_names.json.gz")))
     .then((bundle) => {
       if (bundle?.format !== DISPLAY_NAMES_FORMAT) {
         throw new Error(`Unexpected display_names format: ${bundle?.format}`);
