@@ -249,6 +249,11 @@ type ExplorerGroupingSource = PatientGroupingResult["source"];
 type ObservationBucket = PatientObservationBucket;
 type LocalGroupingMode = "one-b-batch" | "one-b-single" | "three-b-batch" | "custom-single";
 type ExplorerViewMode = "summary" | "grouped" | "date";
+/** Per-tab default view modes (user choices override). */
+const DEFAULT_VIEW_MODE_BY_TAB: Partial<Record<ExplorerTab, ExplorerViewMode>> = {
+  Encounter: "date",
+  Procedure: "date"
+};
 type ExplorerDensity = "comfortable" | "compact";
 type GroupSortMode = "group-name" | "newest" | "oldest" | "most-records";
 type DateSortMode = "newest" | "oldest";
@@ -1316,7 +1321,15 @@ export function PatientExplorer() {
   const [activeObservationBucket, setActiveObservationBucket] = useState<ObservationBucket>("labs");
   const [resourceStatusFilter, setResourceStatusFilter] = useState<ResourceStatusFilter>("active");
   const [visitClassFilter, setVisitClassFilter] = useState<VisitClassFilter>("all");
-  const [viewMode, setViewMode] = useState<ExplorerViewMode>("grouped");
+  // View mode is remembered per tab. Visits and Procedures read best as a
+  // timeline; everything else defaults to grouped cards.
+  const [viewModeByTab, setViewModeByTab] = useState<Partial<Record<ExplorerTab, ExplorerViewMode>>>({});
+  const viewMode: ExplorerViewMode =
+    viewModeByTab[activeTab] ?? DEFAULT_VIEW_MODE_BY_TAB[activeTab] ?? "grouped";
+
+  function setViewModeForTab(tab: ExplorerTab, mode: ExplorerViewMode) {
+    setViewModeByTab((current) => ({ ...current, [tab]: mode }));
+  }
   const [groupSort, setGroupSort] = useState<GroupSortMode>("group-name");
   const [groupSortUserSet, setGroupSortUserSet] = useState(false);
   // Medications read best newest-first (current regimen on top) — default
@@ -3400,7 +3413,7 @@ export function PatientExplorer() {
     setSelectedMatchingRecordKeys([]);
     setSelectedMatchReason(null);
     setActiveTab(tab);
-    setViewMode("grouped");
+    setViewModeForTab(tab, "grouped");
     setExpandedGroupKeys((current) => new Set([...current, groupExpansionKey(group, tab)]));
     // The target card renders after the state updates — scroll it into
     // view so navigation is visible even when the card is below the fold.
@@ -5737,7 +5750,7 @@ export function PatientExplorer() {
           <Button
             size="small"
             variant="outlined"
-            onClick={() => setViewMode("grouped")}
+            onClick={() => setViewModeForTab(activeTab, "grouped")}
             sx={{ alignSelf: "flex-start" }}
           >
             Show all {scored.length}
@@ -5927,7 +5940,7 @@ export function PatientExplorer() {
                   size="small"
                   value={effectiveViewMode}
                   onChange={(_event, value: ExplorerViewMode | null) => {
-                    if (value) setViewMode(value);
+                    if (value) setViewModeForTab(activeTab, value);
                   }}
                   aria-label="Record view"
                   sx={{
