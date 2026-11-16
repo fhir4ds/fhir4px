@@ -4618,7 +4618,8 @@ export function PatientExplorer() {
       .sort((left, right) => left.date.getTime() - right.date.getTime());
     const chartUnits = new Set(chartPoints.map((point) => point.comparableUnit));
     const chartUnit = chartUnits.size === 1 ? [...chartUnits][0] : undefined;
-    const canChartObservation = chartPoints.length >= 2 && chartUnits.size === 1;
+    // Trend chart needs a real series — 3+ comparable measurements.
+    const canChartObservation = chartPoints.length >= 3 && chartUnits.size === 1;
 
     return (
       <Stack spacing={1}>
@@ -4690,16 +4691,18 @@ export function PatientExplorer() {
             />
           </Box>
         )}
-        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-          {observations.slice(0, 8).map((observation) => (
-            <Chip
-              key={`${observation.id}:trend`}
-              size="small"
-              variant="outlined"
-              label={`${displayObservationDate(observation.effectiveDate) || "No date"}: ${observation.value}`}
-            />
-          ))}
-        </Stack>
+        {!canChartObservation && (
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+            {observations.slice(0, 8).map((observation) => (
+              <Chip
+                key={`${observation.id}:trend`}
+                size="small"
+                variant="outlined"
+                label={`${displayObservationDate(observation.effectiveDate) || "No date"}: ${observation.value}`}
+              />
+            ))}
+          </Stack>
+        )}
       </Stack>
     );
   }
