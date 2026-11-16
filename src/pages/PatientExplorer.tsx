@@ -1306,6 +1306,11 @@ export function PatientExplorer() {
   const [visitClassFilter, setVisitClassFilter] = useState<VisitClassFilter>("all");
   const [viewMode, setViewMode] = useState<ExplorerViewMode>("grouped");
   const [groupSort, setGroupSort] = useState<GroupSortMode>("group-name");
+  const [groupSortUserSet, setGroupSortUserSet] = useState(false);
+  // Medications read best newest-first (current regimen on top) — default
+  // to that until the user picks a sort explicitly.
+  const effectiveGroupSort: GroupSortMode =
+    !groupSortUserSet && activeTab === "MedicationRequest" ? "newest" : groupSort;
   const [dateSort, setDateSort] = useState<DateSortMode>("newest");
   const [density, setDensity] = useState<ExplorerDensity>("comfortable");
   const [dataMenuAnchorEl, setDataMenuAnchorEl] = useState<HTMLElement | null>(null);
@@ -3442,10 +3447,10 @@ export function PatientExplorer() {
 
   function sortedRecordsForGroup(group: PatientFriendlyGroup): GroupableRecord[] {
     const groupRecords = recordsForGroup(group);
-    return groupSort === "group-name"
+    return effectiveGroupSort === "group-name"
       ? sortRecordsForDisplay(groupRecords, activeTab)
       : [...groupRecords].sort((left, right) =>
-          compareRecordsByDate(left, right, groupSort === "oldest" ? "oldest" : "newest")
+          compareRecordsByDate(left, right, effectiveGroupSort === "oldest" ? "oldest" : "newest")
         );
   }
 
@@ -3462,10 +3467,10 @@ export function PatientExplorer() {
 
   function sortGroupsForDisplay(nextGroups: PatientFriendlyGroup[]): PatientFriendlyGroup[] {
     return [...nextGroups].sort((left, right) => {
-      if (groupSort === "group-name") {
+      if (effectiveGroupSort === "group-name") {
         return left.patientFriendlyName.localeCompare(right.patientFriendlyName);
       }
-      if (groupSort === "most-records") {
+      if (effectiveGroupSort === "most-records") {
         const countOrder = groupRecordCount(right) - groupRecordCount(left);
         return countOrder || left.patientFriendlyName.localeCompare(right.patientFriendlyName);
       }
@@ -3477,7 +3482,7 @@ export function PatientExplorer() {
       }
       if (leftTime === undefined) return 1;
       if (rightTime === undefined) return -1;
-      const dateOrder = groupSort === "newest" ? rightTime - leftTime : leftTime - rightTime;
+      const dateOrder = effectiveGroupSort === "newest" ? rightTime - leftTime : leftTime - rightTime;
       return dateOrder || left.patientFriendlyName.localeCompare(right.patientFriendlyName);
     });
   }
@@ -5967,10 +5972,12 @@ export function PatientExplorer() {
                   select
                   size="small"
                   label="Sort by"
-                  value={effectiveViewMode === "grouped" ? groupSort : dateSort}
+                  value={effectiveViewMode === "grouped" ? effectiveGroupSort : dateSort}
                   onChange={(event) => {
-                    if (effectiveViewMode === "grouped") setGroupSort(event.target.value as GroupSortMode);
-                    else setDateSort(event.target.value as DateSortMode);
+                    if (effectiveViewMode === "grouped") {
+                      setGroupSort(event.target.value as GroupSortMode);
+                      setGroupSortUserSet(true);
+                    } else setDateSort(event.target.value as DateSortMode);
                   }}
                   sx={{ minWidth: { xs: 150, sm: 174 } }}
                 >
