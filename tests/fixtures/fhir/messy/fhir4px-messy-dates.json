@@ -1,0 +1,253 @@
+{
+ "resourceType": "Bundle",
+ "type": "transaction",
+ "entry": [
+  {
+   "fullUrl": "urn:uuid:fhir4px-messy-dates",
+   "request": {
+    "method": "POST",
+    "url": "Patient"
+   },
+   "resource": {
+    "resourceType": "Patient",
+    "id": "fhir4px-messy-dates",
+    "name": [
+     {
+      "use": "official",
+      "family": "Datum",
+      "given": [
+       "Ivy"
+      ]
+     }
+    ],
+    "gender": "female",
+    "birthDate": "1970"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:md-g1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "md-g1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-dates"
+    },
+    "effectiveDateTime": "2019",
+    "valueQuantity": {
+     "value": 110.0,
+     "unit": "mg/dL",
+     "code": "mg/dL",
+     "system": "http://unitsofmeasure.org"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:md-g2",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "md-g2",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-dates"
+    },
+    "effectiveDateTime": "2020-06",
+    "valueQuantity": {
+     "value": 118.0,
+     "unit": "mg/dL",
+     "code": "mg/dL"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:md-g3",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "md-g3",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-dates"
+    },
+    "effectiveDateTime": "2021-06-21",
+    "valueQuantity": {
+     "value": 132.0,
+     "unit": "mg/dL",
+     "code": "mg/dL"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:md-g4",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "md-g4",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-dates"
+    },
+    "issued": "2022-02-02T08:00:00Z",
+    "valueQuantity": {
+     "value": 126.0,
+     "unit": "mg/dL",
+     "code": "mg/dL"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:md-g5",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "md-g5",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-dates"
+    },
+    "effectiveDateTime": "2030-01-15",
+    "valueQuantity": {
+     "value": 121.0,
+     "unit": "mg/dL",
+     "code": "mg/dL"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:md-a1c",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "md-a1c",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "4548-4",
+       "display": "Hemoglobin A1c/Hemoglobin.total in Blood"
+      }
+     ],
+     "text": "Hemoglobin A1c/Hemoglobin.total in Blood"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-dates"
+    },
+    "effectiveDateTime": "2021-07-01T23:30:00+13:00",
+    "valueQuantity": {
+     "value": 7.8,
+     "unit": "%"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:md-c1",
+   "request": {
+    "method": "POST",
+    "url": "Condition"
+   },
+   "resource": {
+    "resourceType": "Condition",
+    "id": "md-c1",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "125658006",
+       "display": "Diabetes mellitus (disorder)"
+      }
+     ],
+     "text": "Diabetes mellitus (disorder)"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-dates"
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "code": "confirmed"
+      }
+     ]
+    },
+    "onsetDateTime": "2018"
+   }
+  }
+ ]
+}

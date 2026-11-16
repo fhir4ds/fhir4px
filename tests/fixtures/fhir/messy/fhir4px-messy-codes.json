@@ -1,0 +1,236 @@
+{
+ "resourceType": "Bundle",
+ "type": "transaction",
+ "entry": [
+  {
+   "fullUrl": "urn:uuid:fhir4px-messy-codes",
+   "request": {
+    "method": "POST",
+    "url": "Patient"
+   },
+   "resource": {
+    "resourceType": "Patient",
+    "id": "fhir4px-messy-codes",
+    "name": [
+     {
+      "use": "official",
+      "family": "Koder",
+      "given": [
+       "Casey"
+      ]
+     }
+    ],
+    "gender": "female",
+    "birthDate": "1970"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mc-lab1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mc-lab1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://example.org/hospital/labs",
+       "code": "GLU-123",
+       "display": "Blood Sugar"
+      }
+     ],
+     "text": "Blood Sugar"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-codes"
+    },
+    "effectiveDateTime": "2021-03-01",
+    "valueQuantity": {
+     "value": 143.0,
+     "unit": "mg/dL"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mc-lab2",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mc-lab2",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "code": "4548-4",
+       "display": "Hemoglobin A1c"
+      }
+     ],
+     "text": "Hemoglobin A1c"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-codes"
+    },
+    "effectiveDateTime": "2021-03-01",
+    "valueQuantity": {
+     "value": 8.2,
+     "unit": "%"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mc-lab3",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mc-lab3",
+    "status": "final",
+    "code": {
+     "text": "Cholesterol total"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-codes"
+    },
+    "effectiveDateTime": "2021-03-01",
+    "valueQuantity": {
+     "value": 210.0,
+     "unit": "mg/dL"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mc-lab4",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mc-lab4",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2951-2",
+       "display": "Sodium [Moles/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Sodium [Moles/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-codes"
+    },
+    "effectiveDateTime": "2021-03-01",
+    "dataAbsentReason": {
+     "coding": [
+      {
+       "code": "not-performed",
+       "display": "Not performed"
+      }
+     ],
+     "text": "Not performed"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mc-c1",
+   "request": {
+    "method": "POST",
+    "url": "Condition"
+   },
+   "resource": {
+    "resourceType": "Condition",
+    "id": "mc-c1",
+    "code": {
+     "coding": [
+      {
+       "system": "http://example.org/hospital/problems",
+       "code": "DM-II",
+       "display": "Diabetes Type 2"
+      }
+     ],
+     "text": "Diabetes Type 2"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-codes"
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "active"
+      }
+     ]
+    },
+    "recordedDate": "2021-02-01"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mc-c2",
+   "request": {
+    "method": "POST",
+    "url": "Condition"
+   },
+   "resource": {
+    "resourceType": "Condition",
+    "id": "mc-c2",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "195967001",
+       "display": "Asthma"
+      }
+     ],
+     "text": "Asthma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-codes"
+    },
+    "clinicalStatus": {
+     "coding": [
+      {
+       "code": "inactive"
+      }
+     ]
+    },
+    "verificationStatus": {
+     "coding": [
+      {
+       "code": "refuted"
+      }
+     ]
+    },
+    "recordedDate": "2020-01-01"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mc-m1",
+   "request": {
+    "method": "POST",
+    "url": "MedicationRequest"
+   },
+   "resource": {
+    "resourceType": "MedicationRequest",
+    "id": "mc-m1",
+    "status": "active",
+    "intent": "order",
+    "medicationCodeableConcept": {
+     "text": "metformin 500 MG oral tablet"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-codes"
+    },
+    "authoredOn": "2021-02-01"
+   }
+  }
+ ]
+}

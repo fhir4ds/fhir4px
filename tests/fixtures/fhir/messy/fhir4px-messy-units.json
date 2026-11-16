@@ -1,0 +1,396 @@
+{
+ "resourceType": "Bundle",
+ "type": "transaction",
+ "entry": [
+  {
+   "fullUrl": "urn:uuid:fhir4px-messy-units",
+   "request": {
+    "method": "POST",
+    "url": "Patient"
+   },
+   "resource": {
+    "resourceType": "Patient",
+    "id": "fhir4px-messy-units",
+    "name": [
+     {
+      "use": "official",
+      "family": "Units",
+      "given": [
+       "Ulysses"
+      ]
+     }
+    ],
+    "gender": "male",
+    "birthDate": "1970"
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-g0",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-g0",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-01-05",
+    "valueQuantity": {
+     "value": 105.0,
+     "unit": "mg/dL",
+     "code": "mg/dL",
+     "system": "http://unitsofmeasure.org"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-g1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-g1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-04-06",
+    "valueQuantity": {
+     "value": 112.0,
+     "unit": "mg/dL",
+     "code": "mg/dL",
+     "system": "http://unitsofmeasure.org"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-g2",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-g2",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-07-08",
+    "valueQuantity": {
+     "value": 119.0,
+     "unit": "mg/dL",
+     "code": "mg/dL",
+     "system": "http://unitsofmeasure.org"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-g3",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-g3",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-10-10",
+    "valueQuantity": {
+     "value": 124.0,
+     "unit": "mg/dL",
+     "code": "mg/dL",
+     "system": "http://unitsofmeasure.org"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-gm0",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-gm0",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2022-01-11",
+    "valueQuantity": {
+     "value": 5.8,
+     "unit": "mmol/L",
+     "code": "mmol/L",
+     "system": "http://unitsofmeasure.org"
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.9,
+       "unit": "mmol/L"
+      },
+      "high": {
+       "value": 5.5,
+       "unit": "mmol/L"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-gm1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-gm1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2339-0",
+       "display": "Glucose"
+      }
+     ],
+     "text": "Glucose"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2022-04-12",
+    "valueQuantity": {
+     "value": 6.4,
+     "unit": "mmol/L",
+     "code": "mmol/L",
+     "system": "http://unitsofmeasure.org"
+    },
+    "referenceRange": [
+     {
+      "low": {
+       "value": 3.9,
+       "unit": "mmol/L"
+      },
+      "high": {
+       "value": 5.5,
+       "unit": "mmol/L"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-k1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-k1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2823-2",
+       "display": "Potassium [Moles/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Potassium [Moles/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-05-01",
+    "valueQuantity": {
+     "value": 4.2,
+     "code": "mmol/L",
+     "system": "http://unitsofmeasure.org"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-c1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-c1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2093-3",
+       "display": "Cholesterol [Mass/volume] in Serum or Plasma"
+      }
+     ],
+     "text": "Cholesterol [Mass/volume] in Serum or Plasma"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-05-01",
+    "valueQuantity": {
+     "value": 192.0,
+     "unit": "mg/dl"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-cr1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-cr1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "2160-0",
+       "display": "Creatinine [Mass/volume] in Serum"
+      }
+     ],
+     "text": "Creatinine [Mass/volume] in Serum"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-05-01",
+    "valueQuantity": {
+     "value": 1.9,
+     "comparator": ">",
+     "unit": "mg/dL"
+    }
+   }
+  },
+  {
+   "fullUrl": "urn:uuid:mu-bp1",
+   "request": {
+    "method": "POST",
+    "url": "Observation"
+   },
+   "resource": {
+    "resourceType": "Observation",
+    "id": "mu-bp1",
+    "status": "final",
+    "code": {
+     "coding": [
+      {
+       "system": "http://loinc.org",
+       "code": "85354-9",
+       "display": "Blood Pressure Panel"
+      }
+     ],
+     "text": "Blood Pressure Panel"
+    },
+    "subject": {
+     "reference": "Patient/fhir4px-messy-units"
+    },
+    "effectiveDateTime": "2021-05-01",
+    "component": [
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8480-6",
+         "display": "Systolic blood pressure"
+        }
+       ],
+       "text": "Systolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 138,
+       "unit": "mmHg"
+      }
+     },
+     {
+      "code": {
+       "coding": [
+        {
+         "system": "http://loinc.org",
+         "code": "8462-4",
+         "display": "Diastolic blood pressure"
+        }
+       ],
+       "text": "Diastolic blood pressure"
+      },
+      "valueQuantity": {
+       "value": 86,
+       "unit": "mmHg"
+      }
+     }
+    ]
+   }
+  }
+ ]
+}
