@@ -9,6 +9,7 @@ import {
   Card,
   CardContent,
   Chip,
+  Collapse,
   Divider,
   Dialog,
   DialogActions,
@@ -230,7 +231,6 @@ import { localVault } from "../lib/vault/store";
 
 type ExplorerTab =
   | "PatientSummary"
-  | "Panel"
   | "MedicationRequest"
   | "AllergyIntolerance"
   | "Condition"
@@ -260,7 +260,6 @@ interface GroupStatusRollup {
 
 const RESOURCE_LABELS: Record<ExplorerTab, string> = {
   PatientSummary: "Summary",
-  Panel: "Panels",
   MedicationRequest: "Medications",
   AllergyIntolerance: "Allergies",
   Condition: "Conditions",
@@ -277,8 +276,6 @@ function resourceTypeIcon(type: ExplorerTab, size = 20) {
   switch (type) {
     case "PatientSummary":
       return <LayoutDashboard size={size} />;
-    case "Panel":
-      return <Layers size={size} />;
     case "MedicationRequest":
       return <Pill size={size} />;
     case "AllergyIntolerance":
@@ -479,7 +476,7 @@ function recordsByType(records: GroupableRecord[], type: ExplorerTab): Groupable
 }
 
 function groupsByType(groups: PatientFriendlyGroup[], type: ExplorerTab): PatientFriendlyGroup[] {
-  if (type === "PatientSummary" || type === "Panel") return groups;
+  if (type === "PatientSummary") return groups;
   return groups.filter((group) => group.resourceTypes.includes(type));
 }
 
@@ -1319,6 +1316,7 @@ export function PatientExplorer() {
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<Set<string>>(new Set());
   const [groupConceptResolutions, setGroupConceptResolutions] = useState<Record<string, GroupConceptResolution>>({});
   const [labPartCrosswalk, setLabPartCrosswalk] = useState<Record<string, string[]> | null>(null);
+  const [panelsSectionExpanded, setPanelsSectionExpanded] = useState(true);
   const [relatedMatchesByGroupId, setRelatedMatchesByGroupId] = useState<Record<string, RelatedMatch[]>>({});
   const conceptResolutionSignatureRef = useRef("");
   const [addRecordDialogOpen, setAddRecordDialogOpen] = useState(false);
@@ -3547,11 +3545,7 @@ export function PatientExplorer() {
             value={type}
             icon={resourceTypeIcon(type, isVertical ? 22 : 20)}
             iconPosition="top"
-            label={
-              type === "Panel"
-                ? `Panels (${matchedPanels.length})`
-                : `${RESOURCE_LABELS[type]} (${recordsByType(records, type).length})`
-            }
+            label={`${RESOURCE_LABELS[type]} (${recordsByType(records, type).length})`}
           />
         ))}
       </Tabs>
@@ -5314,20 +5308,33 @@ export function PatientExplorer() {
     );
   }
 
-  function renderPanelsView() {
-    if (matchedPanels.length === 0) {
-      return (
-        <Alert severity="info">
-          No panels detected. Panels appear when several related labs were drawn on the same date (e.g. a
-          metabolic panel or complete blood count), or when panel observations like blood pressure carry
-          component results.
-        </Alert>
-      );
-    }
+  function renderPanelsSection() {
+    const expanded = panelsSectionExpanded;
     const sorted = [...matchedPanels].sort((left, right) =>
       left.draws[0].date < right.draws[0].date ? 1 : left.draws[0].date > right.draws[0].date ? -1 : 0
     );
-    return <Stack spacing={density === "compact" ? 1 : 2}>{sorted.map(renderPanelCard)}</Stack>;
+    return (
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Layers size={16} />
+          <Typography fontWeight={700}>Panels</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {sorted.length} panel{sorted.length === 1 ? "" : "s"} — labs drawn together
+          </Typography>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => setPanelsSectionExpanded((current) => !current)}
+            sx={{ p: 0, minWidth: 0, textTransform: "none" }}
+          >
+            {expanded ? "Hide" : "Show"}
+          </Button>
+        </Stack>
+        <Collapse in={expanded}>
+          <Stack spacing={density === "compact" ? 1 : 2}>{sorted.map(renderPanelCard)}</Stack>
+        </Collapse>
+      </Stack>
+    );
   }
 
   function renderSummaryView(tabGroups: PatientFriendlyGroup[]) {
@@ -5939,11 +5946,14 @@ export function PatientExplorer() {
               <Stack spacing={2.25} minWidth={0}>
                 <Box sx={{ display: { xs: "block", md: "none" } }}>{renderResourceNavigation("horizontal")}</Box>
 
-                {activeTab !== "Panel" && renderRecordViewToolbar()}
+                {renderRecordViewToolbar()}
 
-            {activeTab === "Panel" ? (
-              renderPanelsView()
-            ) : visibleTabRecords.length === 0 ? (
+                {activeTab === "Observation" &&
+                  activeObservationBucket === "labs" &&
+                  matchedPanels.length > 0 &&
+                  renderPanelsSection()}
+
+            {visibleTabRecords.length === 0 ? (
               <Alert severity="info">
                 No {statusFilterEnabled && resourceStatusFilter === "active" ? "active " : ""}
                 {isCrossDomainSummary ? "records" : `${RESOURCE_LABELS[activeTab].toLowerCase()} `}available.
