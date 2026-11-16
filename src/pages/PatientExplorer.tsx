@@ -130,6 +130,8 @@ import { preloadAssociations } from "../lib/associations/bundle";
 import { resolveGroupConcept, type GroupConceptResolution } from "../lib/associations/resolve";
 import { enrichMedicationIngredients } from "../lib/fhir/rxnorm-decomposition";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
+import { loadLabPartCrosswalk } from "../lib/associations/bundle";
+import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
 import {
   collapsedFamilyLabel,
   groupRelatedSections,
@@ -228,6 +230,7 @@ import { localVault } from "../lib/vault/store";
 
 type ExplorerTab =
   | "PatientSummary"
+  | "Panel"
   | "MedicationRequest"
   | "AllergyIntolerance"
   | "Condition"
@@ -257,6 +260,7 @@ interface GroupStatusRollup {
 
 const RESOURCE_LABELS: Record<ExplorerTab, string> = {
   PatientSummary: "Summary",
+  Panel: "Panels",
   MedicationRequest: "Medications",
   AllergyIntolerance: "Allergies",
   Condition: "Conditions",
@@ -273,6 +277,8 @@ function resourceTypeIcon(type: ExplorerTab, size = 20) {
   switch (type) {
     case "PatientSummary":
       return <LayoutDashboard size={size} />;
+    case "Panel":
+      return <Layers size={size} />;
     case "MedicationRequest":
       return <Pill size={size} />;
     case "AllergyIntolerance":
@@ -473,7 +479,7 @@ function recordsByType(records: GroupableRecord[], type: ExplorerTab): Groupable
 }
 
 function groupsByType(groups: PatientFriendlyGroup[], type: ExplorerTab): PatientFriendlyGroup[] {
-  if (type === "PatientSummary") return groups;
+  if (type === "PatientSummary" || type === "Panel") return groups;
   return groups.filter((group) => group.resourceTypes.includes(type));
 }
 
@@ -1312,6 +1318,7 @@ export function PatientExplorer() {
   // Per-section chip cap ("Show all N" per section), keyed group+section.
   const [expandedSectionKeys, setExpandedSectionKeys] = useState<Set<string>>(new Set());
   const [groupConceptResolutions, setGroupConceptResolutions] = useState<Record<string, GroupConceptResolution>>({});
+  const [labPartCrosswalk, setLabPartCrosswalk] = useState<Record<string, string[]> | null>(null);
   const [relatedMatchesByGroupId, setRelatedMatchesByGroupId] = useState<Record<string, RelatedMatch[]>>({});
   const conceptResolutionSignatureRef = useRef("");
   const [addRecordDialogOpen, setAddRecordDialogOpen] = useState(false);
@@ -1401,6 +1408,51 @@ export function PatientExplorer() {
     for (const observation of summary?.observations ?? []) map.set(observation.id, observation);
     return map;
   }, [summary]);
+
+  // Panel detection needs the associations lab-part crosswalk (panel code →
+  // expected component parts). Loaded once; panels recompute per grouping.
+  useEffect(() => {
+    let cancelled = false;
+    void loadLabPartCrosswalk()
+      .then((crosswalk) => {
+        if (!cancelled) setLabPartCrosswalk(crosswalk);
+      })
+      .catch(() => {
+        // Crosswalk unavailable — Panels tab shows the empty state.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const matchedPanels = useMemo<MatchedPanel[]>(() => {
+    if (!labPartCrosswalk) return [];
+    const candidates = groups
+      .filter((group) => group.resourceTypes.includes("Observation"))
+      .map((group) => {
+        const partCids = groupConceptResolutions[group.groupId]?.labPartCids ?? [];
+        const seen = new Set<string>();
+        const parts: Array<{ cid: string; date: string }> = [];
+        if (partCids.length > 0) {
+          for (const record of records) {
+            if (!group.resourceIds.includes(record.id) || record.resourceType !== "Observation" || record.hidden) continue;
+            const timestamp = recordTimestamp(record);
+            if (timestamp === undefined) continue;
+            const date = new Date(timestamp).toISOString().slice(0, 10);
+            for (const cid of partCids) {
+              const key = `${cid}|${date}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                parts.push({ cid, date });
+              }
+            }
+          }
+        }
+        return { groupId: group.groupId, parts };
+      })
+      .filter((candidate) => candidate.parts.length > 0);
+    return matchPanels(labPartCrosswalk, candidates);
+  }, [labPartCrosswalk, groups, groupConceptResolutions, records]);
 
   const resourceByKey = useMemo(() => {
     const map = new Map<string, FhirResource>();
@@ -3495,7 +3547,11 @@ export function PatientExplorer() {
             value={type}
             icon={resourceTypeIcon(type, isVertical ? 22 : 20)}
             iconPosition="top"
-            label={`${RESOURCE_LABELS[type]} (${recordsByType(records, type).length})`}
+            label={
+              type === "Panel"
+                ? `Panels (${matchedPanels.length})`
+                : `${RESOURCE_LABELS[type]} (${recordsByType(records, type).length})`
+            }
           />
         ))}
       </Tabs>
@@ -5121,6 +5177,159 @@ export function PatientExplorer() {
     );
   }
 
+  function formatPanelDrawDate(date: string): string {
+    const parsed = new Date(`${date}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString();
+  }
+
+  /** Patient-facing label + value for one observation component. */
+  function panelComponentEntry(component: Record<string, unknown>, index: number): { key: string; label: string; value?: string } | null {
+    const concept = component.code as { text?: string; coding?: Array<{ display?: string; code?: string }> } | undefined;
+    const label =
+      concept?.text ??
+      concept?.coding?.find((coding) => coding.display)?.display ??
+      concept?.coding?.[0]?.code;
+    const quantity = component.valueQuantity as { value?: number; unit?: string; code?: string; comparator?: string } | undefined;
+    if (quantity && typeof quantity.value === "number") {
+      const prefix = quantity.comparator ? `${quantity.comparator} ` : "";
+      return { key: `component:${index}`, label: label ?? "Result", value: [`${prefix}${quantity.value}`, quantity.unit ?? quantity.code].filter(Boolean).join(" ") };
+    }
+    const codeable = component.valueCodeableConcept as { text?: string; coding?: Array<{ display?: string }> } | undefined;
+    const codeableDisplay = codeable?.text ?? codeable?.coding?.find((coding) => coding.display)?.display;
+    if (codeableDisplay) return { key: `component:${index}`, label: label ?? "Result", value: codeableDisplay };
+    if (typeof component.valueString === "string") {
+      return { key: `component:${index}`, label: label ?? "Result", value: component.valueString };
+    }
+    if (label) return { key: `component:${index}`, label };
+    return null;
+  }
+
+  interface PanelMemberEntry {
+    key: string;
+    label: string;
+    value?: string;
+    abnormal?: boolean;
+    group: PatientFriendlyGroup;
+  }
+
+  /**
+   * Member entries for one panel draw. Regular member labs contribute
+   * their latest value recorded on the draw date; a group carrying the
+   * panel code itself (e.g. Blood Pressure 85354-9) contributes the
+   * components of its panel observation on that date instead.
+   */
+  function panelMemberEntries(panel: MatchedPanel, draw: { date: string; memberGroupIds: string[] }): PanelMemberEntry[] {
+    const panelKey = `loinc:${panel.code}`;
+    const entries: PanelMemberEntry[] = [];
+    for (const groupId of draw.memberGroupIds) {
+      const group = groups.find((candidate) => candidate.groupId === groupId);
+      if (!group) continue;
+      const dated = records
+        .filter(
+          (record) =>
+            group.resourceIds.includes(record.id) &&
+            record.resourceType === "Observation" &&
+            !record.hidden
+        )
+        .map((record) => ({ record, timestamp: recordTimestamp(record) }))
+        .filter(
+          (item): item is { record: GroupableRecord; timestamp: number } =>
+            item.timestamp !== undefined &&
+            new Date(item.timestamp).toISOString().slice(0, 10) === draw.date
+        )
+        .sort((left, right) => right.timestamp - left.timestamp);
+      const latest = dated[0]?.record;
+      if (!latest) continue;
+
+      const isPanelRecord = (latest.codingKeys ?? []).includes(panelKey);
+      if (isPanelRecord) {
+        const raw = resourceByKey.get(recordKey(latest));
+        const components = Array.isArray((raw as unknown as { component?: unknown } | undefined)?.component)
+          ? ((raw as unknown as { component: Record<string, unknown>[] }).component)
+          : [];
+        const componentEntries = components
+          .map((component, index) => panelComponentEntry(component, index))
+          .filter((entry): entry is { key: string; label: string; value?: string } => entry !== null);
+        for (const componentEntry of componentEntries) {
+          entries.push({ ...componentEntry, group });
+        }
+        if (componentEntries.length > 0) continue;
+      }
+
+      const observation = observationById.get(latest.id);
+      entries.push({
+        key: `${groupId}:${latest.id}`,
+        label: group.patientFriendlyName,
+        value: observation?.value,
+        abnormal: observation?.abnormal,
+        group
+      });
+    }
+    return entries;
+  }
+
+  function renderPanelCard(panel: MatchedPanel) {
+    const draw = panel.draws[0];
+    const members = panelMemberEntries(panel, draw);
+    return (
+      <Box key={panel.code} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 2 }}>
+        <Stack spacing={1.25}>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Layers size={18} />
+            <Typography variant="h3" fontWeight={700}>
+              {panel.name}
+            </Typography>
+            <Chip size="small" variant="outlined" label={`Drawn ${formatPanelDrawDate(draw.date)}`} />
+            <Chip
+              size="small"
+              color={draw.coverage >= 0.99 ? "success" : "default"}
+              label={`${draw.coveredPartCids.length} of ${panel.partCids.length} labs (${Math.round(draw.coverage * 100)}%)`}
+            />
+            {panel.draws.length > 1 && (
+              <Chip size="small" variant="outlined" label={`${panel.draws.length} draws — showing latest`} />
+            )}
+          </Stack>
+          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+            {members.map((member) => (
+              <Chip
+                key={member.key}
+                size="small"
+                clickable
+                variant="outlined"
+                color={member.abnormal ? "error" : "default"}
+                onClick={() => navigateToGroup(member.group)}
+                label={
+                  member.value
+                    ? `${member.label}: ${member.value}`
+                    : member.label
+                }
+              />
+            ))}
+          </Stack>
+          <Typography variant="caption" color="text.secondary">
+            Select a lab to open its full history on the Labs &amp; Vitals tab.
+          </Typography>
+        </Stack>
+      </Box>
+    );
+  }
+
+  function renderPanelsView() {
+    if (matchedPanels.length === 0) {
+      return (
+        <Alert severity="info">
+          No panels detected. Panels appear when several related labs were drawn on the same date (e.g. a
+          metabolic panel or complete blood count), or when panel observations like blood pressure carry
+          component results.
+        </Alert>
+      );
+    }
+    const sorted = [...matchedPanels].sort((left, right) =>
+      left.draws[0].date < right.draws[0].date ? 1 : left.draws[0].date > right.draws[0].date ? -1 : 0
+    );
+    return <Stack spacing={density === "compact" ? 1 : 2}>{sorted.map(renderPanelCard)}</Stack>;
+  }
+
   function renderSummaryView(tabGroups: PatientFriendlyGroup[]) {
     const SUMMARY_CAP = 8;
     const scored = tabGroups
@@ -5730,9 +5939,11 @@ export function PatientExplorer() {
               <Stack spacing={2.25} minWidth={0}>
                 <Box sx={{ display: { xs: "block", md: "none" } }}>{renderResourceNavigation("horizontal")}</Box>
 
-                {renderRecordViewToolbar()}
+                {activeTab !== "Panel" && renderRecordViewToolbar()}
 
-            {visibleTabRecords.length === 0 ? (
+            {activeTab === "Panel" ? (
+              renderPanelsView()
+            ) : visibleTabRecords.length === 0 ? (
               <Alert severity="info">
                 No {statusFilterEnabled && resourceStatusFilter === "active" ? "active " : ""}
                 {isCrossDomainSummary ? "records" : `${RESOURCE_LABELS[activeTab].toLowerCase()} `}available.
