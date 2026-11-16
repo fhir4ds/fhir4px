@@ -1390,7 +1390,7 @@ export function PatientExplorer() {
   const [groupConceptResolutions, setGroupConceptResolutions] = useState<Record<string, GroupConceptResolution>>({});
   const [labPartCrosswalk, setLabPartCrosswalk] = useState<Record<string, string[]> | null>(null);
   const [panelsSectionExpanded, setPanelsSectionExpanded] = useState(true);
-  const [viewerDocument, setViewerDocument] = useState<{ resource: FhirResource; label: string } | null>(null);
+  const [viewerDocument, setViewerDocument] = useState<{ resource: FhirResource; label: string; sourceBaseUrl?: string } | null>(null);
   const [viewerBlob, setViewerBlob] = useState<Blob | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [viewerObjectUrl, setViewerObjectUrl] = useState<string | null>(null);
@@ -1492,7 +1492,7 @@ export function PatientExplorer() {
     setViewerBlob(null);
     setViewerError(null);
     setViewerText(null);
-    void loadDocumentBlob(viewerDocument.resource)
+    void loadDocumentBlob(viewerDocument.resource, { baseUrl: viewerDocument.sourceBaseUrl })
       .then(async (blob) => {
         if (cancelled) return;
         setViewerBlob(blob);
@@ -3514,7 +3514,11 @@ export function PatientExplorer() {
     if (record.resourceType === "DocumentReference") {
       const raw = resourceByKey.get(recordKey(record));
       if (raw && documentAttachment(raw)) {
-        setViewerDocument({ resource: raw, label: record.sourceLabel });
+        // Relative attachment URLs (Binary/…) resolve against the record's
+        // FHIR source, never the app origin (the SPA fallback would happily
+        // serve index.html as a 200 text/html "document").
+        const sourceBaseUrl = sources.find((source) => source.id === record.portalSourceId)?.fhirBaseUrl;
+        setViewerDocument({ resource: raw, label: record.sourceLabel, sourceBaseUrl });
         return;
       }
     }

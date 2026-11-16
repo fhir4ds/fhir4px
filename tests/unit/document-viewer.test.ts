@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   base64ToBlob,
+  resolveAttachmentUrl,
   documentAttachment,
   downloadFilename,
   loadDocumentBlob,
@@ -99,21 +100,45 @@ describe("loadDocumentBlob", () => {
       expect(url).toBe("https://fhir.example/Binary/7");
       return jsonResponse({ resourceType: "Binary", contentType: "application/pdf", data: base64("%PDF-1.4") });
     });
-    const blob = await loadDocumentBlob(documentReference({ url: "https://fhir.example/Binary/7" }), fetchMock as unknown as typeof fetch);
+    const blob = await loadDocumentBlob(documentReference({ url: "https://fhir.example/Binary/7" }), { fetcher: fetchMock as unknown as typeof fetch });
     expect(blob.type).toBe("application/pdf");
     expect(await blob.text()).toBe("%PDF-1.4");
   });
 
   it("takes non-FHIR responses as raw bytes", async () => {
     const fetchMock = vi.fn(async () => jsonResponse("raw", "image/png"));
-    const blob = await loadDocumentBlob(documentReference({ url: "https://fhir.example/img" }), fetchMock as unknown as typeof fetch);
+    const blob = await loadDocumentBlob(documentReference({ url: "https://fhir.example/img" }), { fetcher: fetchMock as unknown as typeof fetch });
     expect(blob.type).toBe("image/png");
   });
 
   it("surfaces fetch failures", async () => {
     const fetchMock = vi.fn(async () => ({ ok: false, status: 401, headers: { get: () => null } }));
     await expect(
-      loadDocumentBlob(documentReference({ url: "https://fhir.example/x" }), fetchMock as unknown as typeof fetch)
+      loadDocumentBlob(documentReference({ url: "https://fhir.example/x" }), { fetcher: fetchMock as unknown as typeof fetch })
     ).rejects.toThrow(/sign-in may be required/);
+  });
+});
+
+describe("resolveAttachmentUrl", () => {
+  it("keeps absolute URLs and joins relative ones against the FHIR base", () => {
+    expect(resolveAttachmentUrl("https://fhir.example/Binary/7")).toBe("https://fhir.example/Binary/7");
+    expect(resolveAttachmentUrl("Binary/7", "http://localhost:4004/hapi-fhir-jpaserver/fhir")).toBe(
+      "http://localhost:4004/hapi-fhir-jpaserver/fhir/Binary/7"
+    );
+    expect(() => resolveAttachmentUrl("Binary/7")).toThrow(/no FHIR base URL/);
+  });
+});
+
+describe("loadDocumentBlob with relative URLs", () => {
+  it("fetches relative attachment URLs against the provided base", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      expect(url).toBe("https://fhir.example/base/Binary/9");
+      return jsonResponse({ resourceType: "Binary", contentType: "text/plain", data: base64("via base") });
+    });
+    const blob = await loadDocumentBlob(documentReference({ url: "Binary/9" }), {
+      fetcher: fetchMock as unknown as typeof fetch,
+      baseUrl: "https://fhir.example/base"
+    });
+    expect(await blob.text()).toBe("via base");
   });
 });

@@ -105,6 +105,19 @@ export function viewKindForContent(mimeType: string | undefined, text: string | 
   return declared;
 }
 
+/**
+ * Resolve an attachment URL. Real feeds use relative references
+ * ("Binary/123") that must resolve against the FHIR server base — fetching
+ * them against the app origin silently hits the SPA fallback (an HTML 200).
+ */
+export function resolveAttachmentUrl(url: string, baseUrl?: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  if (!baseUrl) {
+    throw new Error("Attachment URL is relative and no FHIR base URL is available");
+  }
+  return new URL(url, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`).toString();
+}
+
 function isFhirJson(contentType: string | null | undefined): boolean {
   return Boolean(contentType && (contentType.includes("fhir+json") || contentType.includes("application/json")));
 }
@@ -114,7 +127,11 @@ function isFhirJson(contentType: string | null | undefined): boolean {
  * URL attachments are fetched — FHIR Binary responses (JSON) are unwrapped,
  * anything else is taken as raw bytes.
  */
-export async function loadDocumentBlob(resource: FhirResource, fetcher: typeof fetch = fetch): Promise<Blob> {
+export async function loadDocumentBlob(
+  resource: FhirResource,
+  options: { fetcher?: typeof fetch; baseUrl?: string } = {}
+): Promise<Blob> {
+  const fetcher = options.fetcher ?? fetch;
   const attachment = documentAttachment(resource);
   if (!attachment) throw new Error("Document has no attachment content");
   if (attachment.data) {
@@ -122,7 +139,7 @@ export async function loadDocumentBlob(resource: FhirResource, fetcher: typeof f
   }
   if (!attachment.url) throw new Error("Document attachment has neither data nor url");
 
-  const response = await fetcher(attachment.url, {
+  const response = await fetcher(resolveAttachmentUrl(attachment.url, options.baseUrl), {
     headers: { Accept: "application/fhir+json, */*" },
     cache: "no-store"
   });
