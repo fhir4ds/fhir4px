@@ -23,6 +23,7 @@
     "prompts:fetch": "curl -sL https://huggingface.co/joelmontavon/fhir4px-model-webllm/resolve/main/prompts.json -o src/lib/llm/prompts.json"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "1.33.1-dev64.0",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
     "@huggingface/transformers": "^4.2.0",

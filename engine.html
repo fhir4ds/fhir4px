@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>fhir4px engine</title>
+    <!-- Cross-origin-isolated engine document (headers applied by the
+         server for /engine.html only): boots DuckDB-WASM + fhir4ds
+         extensions and serves an RPC protocol over postMessage. The main
+         app document stays unisolated so cross-origin terminology fetches
+         are unaffected by COEP. -->
+  </head>
+  <body>
+    <script type="module" src="/src/lib/engine/frame-host.ts"></script>
+  </body>
+</html>
