@@ -138,6 +138,7 @@ import { enrichMedicationIngredients } from "../lib/fhir/rxnorm-decomposition";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
 import { loadLabPartCrosswalk } from "../lib/associations/bundle";
 import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
+import { documentAttachment, loadDocumentBlob, mimeExtension, viewKindFor } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
   groupRelatedSections,
@@ -1352,6 +1353,11 @@ export function PatientExplorer() {
   const [groupConceptResolutions, setGroupConceptResolutions] = useState<Record<string, GroupConceptResolution>>({});
   const [labPartCrosswalk, setLabPartCrosswalk] = useState<Record<string, string[]> | null>(null);
   const [panelsSectionExpanded, setPanelsSectionExpanded] = useState(true);
+  const [viewerDocument, setViewerDocument] = useState<{ resource: FhirResource; label: string } | null>(null);
+  const [viewerBlob, setViewerBlob] = useState<Blob | null>(null);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const [viewerObjectUrl, setViewerObjectUrl] = useState<string | null>(null);
+  const [viewerText, setViewerText] = useState<string | null>(null);
   const [relatedMatchesByGroupId, setRelatedMatchesByGroupId] = useState<Record<string, RelatedMatch[]>>({});
   const conceptResolutionSignatureRef = useRef("");
   const [addRecordDialogOpen, setAddRecordDialogOpen] = useState(false);
@@ -1435,6 +1441,47 @@ export function PatientExplorer() {
 
   const displayGroups = groupingSource === "source" ? sourceGroups : groups;
   const selectedLocalModelId = TRANSFORMERS_LLM_MODEL_ID;
+
+  // Document viewer: attachment content loads only on explicit selection
+  // (metadata-first policy).
+  useEffect(() => {
+    if (!viewerDocument) {
+      setViewerBlob(null);
+      setViewerError(null);
+      setViewerText(null);
+      return;
+    }
+    let cancelled = false;
+    setViewerBlob(null);
+    setViewerError(null);
+    setViewerText(null);
+    void loadDocumentBlob(viewerDocument.resource)
+      .then(async (blob) => {
+        if (cancelled) return;
+        setViewerBlob(blob);
+        if (viewKindFor(blob.type) === "text") {
+          setViewerText(await blob.text());
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) setViewerError(error instanceof Error ? error.message : String(error));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewerDocument]);
+
+  useEffect(() => {
+    if (!viewerBlob) {
+      setViewerObjectUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(viewerBlob);
+    setViewerObjectUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [viewerBlob]);
 
   const observationById = useMemo(() => {
     const map = new Map<string, ReferralSummary["observations"][number]>();
@@ -3389,6 +3436,115 @@ export function PatientExplorer() {
     showSourceRecords("Patient record added locally");
   }
 
+  function openRecordOrDocument(record: GroupableRecord, cluster?: DedupedRecordCluster) {
+    if (record.resourceType === "DocumentReference") {
+      const raw = resourceByKey.get(recordKey(record));
+      if (raw && documentAttachment(raw)) {
+        setViewerDocument({ resource: raw, label: record.sourceLabel });
+        return;
+      }
+    }
+    openDetails(record, cluster);
+  }
+
+  function renderDocumentViewerDialog() {
+    if (!viewerDocument) return null;
+    const attachment = documentAttachment(viewerDocument.resource);
+    const mimeType = viewerBlob?.type || attachment?.contentType || "";
+    const kind = viewKindFor(mimeType);
+    const title = attachment?.title || viewerDocument.label;
+    return (
+      <Dialog
+        open
+        onClose={() => setViewerDocument(null)}
+        maxWidth="lg"
+        fullWidth
+        aria-label={`Document viewer: ${viewerDocument.label}`}
+      >
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+            <Stack minWidth={0}>
+              <Typography variant="h3" fontWeight={700} noWrap>
+                {viewerDocument.label}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {title !== viewerDocument.label ? `${title} · ` : ""}
+                {mimeType || "unknown type"}
+                {attachment?.size ? ` · ${(attachment.size / 1024).toFixed(1)} KB` : ""}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              {viewerObjectUrl && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  component="a"
+                  href={viewerObjectUrl}
+                  download={`${title}.${mimeExtension(mimeType)}`}
+                >
+                  Download
+                </Button>
+              )}
+              <Button size="small" onClick={() => setViewerDocument(null)}>
+                Close
+              </Button>
+            </Stack>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          {viewerError && <Alert severity="warning">{viewerError}</Alert>}
+          {!viewerError && !viewerObjectUrl && <Typography color="text.secondary">Loading document…</Typography>}
+          {viewerObjectUrl && kind === "text" && (
+            <Box
+              component="pre"
+              sx={{
+                whiteSpace: "pre-wrap",
+                overflowWrap: "anywhere",
+                fontFamily: "monospace",
+                fontSize: 13,
+                m: 0,
+                maxHeight: "70vh",
+                overflow: "auto"
+              }}
+            >
+              {viewerText}
+            </Box>
+          )}
+          {viewerObjectUrl && kind === "html" && (
+            <iframe
+              title={viewerDocument.label}
+              src={viewerObjectUrl}
+              sandbox=""
+              style={{ width: "100%", height: "70vh", border: "1px solid", borderColor: "divider", borderRadius: 4 }}
+            />
+          )}
+          {viewerObjectUrl && kind === "pdf" && (
+            <iframe
+              title={viewerDocument.label}
+              src={viewerObjectUrl}
+              style={{ width: "100%", height: "70vh", border: "1px solid", borderColor: "divider", borderRadius: 4 }}
+            />
+          )}
+          {viewerObjectUrl && kind === "image" && (
+            <Box sx={{ display: "flex", justifyContent: "center", bgcolor: "action.hover", borderRadius: 1, p: 2 }}>
+              <Box component="img" src={viewerObjectUrl} alt={viewerDocument.label} sx={{ maxWidth: "100%", maxHeight: "70vh" }} />
+            </Box>
+          )}
+          {viewerObjectUrl && kind === "download" && (
+            <Stack spacing={1} alignItems="flex-start">
+              <Typography>
+                This document type ({mimeType || "unknown"}) can&apos;t be displayed inline.
+              </Typography>
+              <Button variant="contained" component="a" href={viewerObjectUrl} download={`${title}.${mimeExtension(mimeType)}`}>
+                Download file
+              </Button>
+            </Stack>
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   function openDetails(record: GroupableRecord, cluster?: DedupedRecordCluster) {
     setSelectedRecordKey(recordKey(record));
     setSelectedMatchingRecordKeys((cluster?.records ?? [record]).map(recordKey));
@@ -4505,11 +4661,11 @@ export function PatientExplorer() {
         key={`${record.resourceType}:${record.id}`}
         role="button"
         tabIndex={0}
-        onClick={() => openDetails(record, cluster)}
+        onClick={() => openRecordOrDocument(record, cluster)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            openDetails(record, cluster);
+            openRecordOrDocument(record, cluster);
           }
         }}
         sx={{
@@ -6147,6 +6303,7 @@ export function PatientExplorer() {
       </Card>
       {renderAddRecordDialog()}
       {renderDetailDrawer()}
+      {renderDocumentViewerDialog()}
     </>
   );
 }
