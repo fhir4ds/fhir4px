@@ -4786,7 +4786,9 @@ export function PatientExplorer() {
     const sections = groupRelatedSections(matches);
     // Safety section never truncates; other sections cap at 8 chips with a
     // "Show all N" toggle. Collapsed families count as one chip.
-    const SECTION_CHIP_CAP = 8;
+    // Keep related-records sections scannable — 5 visible chips per section,
+    // "Show all N" expands. Safety sections never truncate.
+    const SECTION_CHIP_CAP = 5;
 
     return (
       <Stack spacing={0.75}>
