@@ -61,6 +61,13 @@ export function mimeExtension(mimeType: string | undefined): string {
   return subtype === "plain" ? "txt" : subtype.replace(/[^a-z0-9]/gi, "");
 }
 
+/** Download filename: appends the extension unless the title already has it. */
+export function downloadFilename(title: string, mimeType: string | undefined): string {
+  const extension = mimeExtension(mimeType);
+  if (title.toLowerCase().endsWith(`.${extension.toLowerCase()}`)) return title;
+  return `${title}.${extension}`;
+}
+
 export type DocumentViewKind = "text" | "html" | "pdf" | "image" | "download";
 
 export function viewKindFor(mimeType: string | undefined): DocumentViewKind {

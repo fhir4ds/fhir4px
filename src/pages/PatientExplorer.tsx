@@ -138,7 +138,7 @@ import { enrichMedicationIngredients } from "../lib/fhir/rxnorm-decomposition";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
 import { loadLabPartCrosswalk } from "../lib/associations/bundle";
 import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
-import { documentAttachment, loadDocumentBlob, mimeExtension, viewKindFor } from "../lib/fhir/document-viewer";
+import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
   groupRelatedSections,
@@ -3554,7 +3554,7 @@ export function PatientExplorer() {
                   variant="outlined"
                   component="a"
                   href={viewerObjectUrl}
-                  download={`${title}.${mimeExtension(mimeType)}`}
+                  download={downloadFilename(title, mimeType)}
                 >
                   Download
                 </Button>
@@ -3609,7 +3609,7 @@ export function PatientExplorer() {
               <Typography>
                 This document type ({mimeType || "unknown"}) can&apos;t be displayed inline.
               </Typography>
-              <Button variant="contained" component="a" href={viewerObjectUrl} download={`${title}.${mimeExtension(mimeType)}`}>
+              <Button variant="contained" component="a" href={viewerObjectUrl} download={downloadFilename(title, mimeType)}>
                 Download file
               </Button>
             </Stack>

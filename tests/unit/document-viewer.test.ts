@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   base64ToBlob,
   documentAttachment,
+  downloadFilename,
   loadDocumentBlob,
   mimeExtension,
   viewKindFor
@@ -52,6 +53,15 @@ describe("base64ToBlob / mimeExtension", () => {
     expect(mimeExtension("text/plain")).toBe("txt");
     expect(mimeExtension("application/pdf")).toBe("pdf");
     expect(mimeExtension(undefined)).toBe("octetstream");
+  });
+});
+
+describe("downloadFilename", () => {
+  it("appends the extension unless the title already carries it", () => {
+    expect(downloadFilename("Nephrology consult", "application/pdf")).toBe("Nephrology consult.pdf");
+    expect(downloadFilename("wound-photo.png", "image/png")).toBe("wound-photo.png");
+    expect(downloadFilename("Report.PDF", "application/pdf")).toBe("Report.PDF");
+    expect(downloadFilename("Hospital course summary", "text/plain")).toBe("Hospital course summary.txt");
   });
 });
 
