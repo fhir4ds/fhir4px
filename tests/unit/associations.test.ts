@@ -80,6 +80,14 @@ const BUNDLE: AssociationBundle = {
             { path: "ancestor", parent_cid: "VAL-COND-SNOMED-73211009", provenance: "monitoring_recommendation" }
           ] }
         ],
+        vital: [
+          { cid: "VAL-VIT-LOINC-85354-9", name: "Blood Pressure", provenance: "monitoring_recommendation", derivations: [
+            { path: "direct", distance: 0, provenance: "monitoring_recommendation" },
+            { path: "ancestor", parent_cid: "VAL-COND-SNOMED-73211009", provenance: "monitoring_recommendation" }
+          ] },
+          { cid: "VAL-VIT-LOINC-8462-4", name: "Diastolic Blood Pressure", provenance: "monitoring_recommendation", derivations: [{ path: "fanned", parent_cid: "VAL-VIT-LOINC-85354-9", provenance: "monitoring_recommendation" }] },
+          { cid: "VAL-VIT-LOINC-8480-6", name: "Systolic Blood Pressure", provenance: "monitoring_recommendation", derivations: [{ path: "fanned", parent_cid: "VAL-VIT-LOINC-85354-9", provenance: "monitoring_recommendation" }] }
+        ],
         medication: [
           { cid: "VAL-MED-RXNORM-6809", name: "metformin" },
           { cid: "VAL-MED-RXNORM-83367", name: "Atorvastatin" }
@@ -419,6 +427,32 @@ describe("association resolution + matching", () => {
     expect(glucose?.viaHubName).toBeUndefined();
     // Ancestor-only members keep hub attribution.
     expect(matches.find((m) => m.groupId === "lab-cpep")).toMatchObject({ viaHubName: "diabetes mellitus" });
+  });
+
+  it("labels merged multi-part groups with the direct member, not the first component", async () => {
+    setAssociationsForTest({ bundle: BUNDLE, labParts: LAB_PARTS, icd10: ICD10_XWALK });
+    // A Blood Pressure panel group resolves to the panel cid plus every
+    // component (crosswalk fan-out); diastolic sorts before the panel in
+    // part order. The match must label the DIRECT panel member.
+    const matches = await findRelatedGroups(
+      { groupId: "cond-t2dm", resolution: { conceptKey: "type 2 diabetes" } },
+      [
+        {
+          groupId: "vit-bp",
+          groupName: "blood pressure",
+          resourceTypes: ["Observation"],
+          resolution: { labPartCids: ["VAL-VIT-LOINC-8462-4", "VAL-VIT-LOINC-8480-6", "VAL-VIT-LOINC-85354-9"] }
+        }
+      ]
+    );
+    expect(matches).toEqual([
+      expect.objectContaining({
+        groupId: "vit-bp",
+        relationship: "vital",
+        matchedMemberName: "Blood Pressure",
+        viaHubName: undefined
+      })
+    ]);
   });
 
   it("resolves combo medications to all ingredient concepts via by_cid_multi", async () => {

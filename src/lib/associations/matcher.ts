@@ -62,6 +62,8 @@ interface IndexedMember {
   name: string;
   provenance?: MemberProvenance;
   viaHub?: string;
+  /** True when the member carries a direct derivation path. */
+  direct?: boolean;
   age_min?: number;
   age_max?: number;
   threshold?: MemberThreshold;
@@ -147,6 +149,7 @@ function indexConcept(bundle: AssociationBundle, conceptKey: string, includeLoos
       cidToMember.set(member.cid, {
         name: member.name,
         provenance: member.provenance,
+        direct: isDirect,
         age_min: member.age_min,
         age_max: member.age_max,
         threshold: member.threshold,
@@ -202,23 +205,35 @@ function matchAgainstConcept(
           };
     }
     if (candidateParts?.length && (bucket === "lab" || bucket === "vital")) {
+      // A candidate's parts can hit several members of the same bucket —
+      // e.g. a merged Blood Pressure group resolves to the panel plus every
+      // component. Prefer the DIRECT member as the label (the panel is a
+      // direct member of the concept; components fan in via the panel hub),
+      // falling back to the first hit for stable behavior.
+      let selected: IndexedMember | undefined;
       for (const part of candidateParts) {
         const member = members.get(part);
-        if (member) {
-          return {
-            groupId: candidate.groupId,
-            groupName: candidate.groupName,
-            relationship: bucket,
-            matchedMemberName: member.name,
-            provenance: member.provenance,
-            viaHubName: member.viaHub,
-            matchedMemberAgeMin: member.age_min,
-            matchedMemberAgeMax: member.age_max,
-            matchedMemberThreshold: member.threshold,
-            matchedMemberSynonyms: member.synonyms,
-            matchedMemberDirection: member.direction
-          };
+        if (!member) continue;
+        if (!selected) selected = member;
+        if (member.direct) {
+          selected = member;
+          break;
         }
+      }
+      if (selected) {
+        return {
+          groupId: candidate.groupId,
+          groupName: candidate.groupName,
+          relationship: bucket,
+          matchedMemberName: selected.name,
+          provenance: selected.provenance,
+          viaHubName: selected.viaHub,
+          matchedMemberAgeMin: selected.age_min,
+          matchedMemberAgeMax: selected.age_max,
+          matchedMemberThreshold: selected.threshold,
+          matchedMemberSynonyms: selected.synonyms,
+          matchedMemberDirection: selected.direction
+        };
       }
     }
   }
