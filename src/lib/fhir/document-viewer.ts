@@ -68,14 +68,41 @@ export function downloadFilename(title: string, mimeType: string | undefined): s
   return `${title}.${extension}`;
 }
 
-export type DocumentViewKind = "text" | "html" | "pdf" | "image" | "download";
+export type DocumentViewKind = "text" | "markdown" | "html" | "pdf" | "image" | "download";
 
 export function viewKindFor(mimeType: string | undefined): DocumentViewKind {
   const type = (mimeType || "").toLowerCase();
+  if (type === "text/markdown" || type === "text/x-markdown") return "markdown";
   if (type.startsWith("text/")) return type === "text/html" ? "html" : "text";
   if (type === "application/pdf") return "pdf";
   if (type.startsWith("image/")) return "image";
   return "download";
+}
+
+/**
+ * Sniff markdown in text/plain attachments (Synthea-style notes carry real
+ * markdown with a plain content type). Requires a heading or several list
+ * lines so plain prose with a stray dash doesn't trigger it.
+ */
+export function looksLikeMarkdown(text: string): boolean {
+  const lines = text.split(/\r?\n/);
+  let headings = 0;
+  let listLines = 0;
+  for (const line of lines) {
+    if (/^#{1,6}\s+\S/.test(line)) headings += 1;
+    if (/^\s*[-*]\s+\S/.test(line)) listLines += 1;
+  }
+  return headings >= 1 || listLines >= 3;
+}
+
+/**
+ * Effective view kind for a loaded attachment: honors declared mime types
+ * and sniffs markdown in text/plain content.
+ */
+export function viewKindForContent(mimeType: string | undefined, text: string | undefined): DocumentViewKind {
+  const declared = viewKindFor(mimeType);
+  if (declared === "text" && text !== undefined && looksLikeMarkdown(text)) return "markdown";
+  return declared;
 }
 
 function isFhirJson(contentType: string | null | undefined): boolean {

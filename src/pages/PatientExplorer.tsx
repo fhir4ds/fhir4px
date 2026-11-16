@@ -138,7 +138,7 @@ import { enrichMedicationIngredients } from "../lib/fhir/rxnorm-decomposition";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
 import { loadLabPartCrosswalk } from "../lib/associations/bundle";
 import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
-import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor } from "../lib/fhir/document-viewer";
+import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
   groupRelatedSections,
@@ -1496,7 +1496,7 @@ export function PatientExplorer() {
       .then(async (blob) => {
         if (cancelled) return;
         setViewerBlob(blob);
-        if (viewKindFor(blob.type) === "text") {
+        if (viewKindFor(blob.type).startsWith("text")) {
           setViewerText(await blob.text());
         }
       })
@@ -3521,11 +3521,79 @@ export function PatientExplorer() {
     openDetails(record, cluster);
   }
 
+  /**
+   * Minimal safe markdown renderer — a subset (headings, lists, bold,
+   * italic, paragraphs) rendered as React elements, never raw HTML, since
+   * document content is untrusted feed data.
+   */
+  function renderMarkdown(text: string) {
+    const blocks: React.ReactNode[] = [];
+    const lines = text.split(/\r?\n/);
+    let index = 0;
+    let key = 0;
+    const inline = (value: string): React.ReactNode[] => {
+      const parts: React.ReactNode[] = [];
+      const pattern = /\*\*([^*]+)\*\*|\*([^*]+)\*|`([^`]+)`/g;
+      let last = 0;
+      let match: RegExpExecArray | null;
+      while ((match = pattern.exec(value)) !== null) {
+        if (match.index > last) parts.push(value.slice(last, match.index));
+        if (match[1]) parts.push(<strong key={`b${key++}`}>{match[1]}</strong>);
+        else if (match[2]) parts.push(<em key={`i${key++}`}>{match[2]}</em>);
+        else if (match[3]) parts.push(<code key={`c${key++}`}>{match[3]}</code>);
+        last = match.index + match[0].length;
+      }
+      if (last < value.length) parts.push(value.slice(last));
+      return parts;
+    };
+    while (index < lines.length) {
+      const line = lines[index];
+      const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+      if (heading) {
+        const level = Math.min(heading[1].length, 4);
+        const Tag = (`h${level + 2}` as "h3" | "h4" | "h5" | "h6");
+        blocks.push(<Tag key={key++}>{inline(heading[2])}</Tag>);
+        index += 1;
+        continue;
+      }
+      if (/^\s*[-*]\s+\S/.test(line)) {
+        const items: string[] = [];
+        while (index < lines.length && /^\s*[-*]\s+\S/.test(lines[index])) {
+          items.push(lines[index].replace(/^\s*[-*]\s+/, ""));
+          index += 1;
+        }
+        blocks.push(
+          <Box component="ul" key={key++} sx={{ pl: 3, my: 0.5 }}>
+            {items.map((item, itemIndex) => (
+              <li key={itemIndex}>{inline(item)}</li>
+            ))}
+          </Box>
+        );
+        continue;
+      }
+      if (!line.trim()) {
+        index += 1;
+        continue;
+      }
+      const paragraph: string[] = [];
+      while (index < lines.length && lines[index].trim() && !/^(#{1,6})\s|^\s*[-*]\s/.test(lines[index])) {
+        paragraph.push(lines[index]);
+        index += 1;
+      }
+      blocks.push(
+        <Typography key={key++} sx={{ mb: 1 }}>
+          {inline(paragraph.join(" "))}
+        </Typography>
+      );
+    }
+    return blocks;
+  }
+
   function renderDocumentViewerDialog() {
     if (!viewerDocument) return null;
     const attachment = documentAttachment(viewerDocument.resource);
     const mimeType = viewerBlob?.type || attachment?.contentType || "";
-    const kind = viewKindFor(mimeType);
+    const kind = viewKindForContent(mimeType, viewerText ?? undefined);
     const title = attachment?.title || viewerDocument.label;
     return (
       <Dialog
@@ -3583,6 +3651,9 @@ export function PatientExplorer() {
             >
               {viewerText}
             </Box>
+          )}
+          {viewerObjectUrl && kind === "markdown" && viewerText !== null && (
+            <Box sx={{ maxHeight: "70vh", overflow: "auto" }}>{renderMarkdown(viewerText)}</Box>
           )}
           {viewerObjectUrl && kind === "html" && (
             <iframe

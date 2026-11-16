@@ -5,7 +5,8 @@ import {
   downloadFilename,
   loadDocumentBlob,
   mimeExtension,
-  viewKindFor
+  viewKindFor,
+  viewKindForContent
 } from "../../src/lib/fhir/document-viewer";
 import type { FhirResource } from "../../src/lib/smart/data";
 
@@ -68,11 +69,22 @@ describe("downloadFilename", () => {
 describe("viewKindFor", () => {
   it("classifies by mime type", () => {
     expect(viewKindFor("text/plain")).toBe("text");
+    expect(viewKindFor("text/markdown")).toBe("markdown");
     expect(viewKindFor("text/html")).toBe("html");
     expect(viewKindFor("application/pdf")).toBe("pdf");
     expect(viewKindFor("image/png")).toBe("image");
     expect(viewKindFor("application/octet-stream")).toBe("download");
     expect(viewKindFor(undefined)).toBe("download");
+  });
+
+  it("sniffs markdown in text/plain content", () => {
+    const note = "# Chief Complaint\n- Fatigue\n- Confusion\n\n## Plan\nContinue insulin.";
+    expect(viewKindForContent("text/plain", note)).toBe("markdown");
+    expect(viewKindForContent("text/plain", "Just a plain paragraph of prose.")).toBe("text");
+    // A single stray bullet is not markdown
+    expect(viewKindForContent("text/plain", "Value - measured today\nNothing else here.")).toBe("text");
+    expect(viewKindForContent("text/html", note)).toBe("html");
+    expect(viewKindForContent("text/plain", undefined)).toBe("text");
   });
 });
 
