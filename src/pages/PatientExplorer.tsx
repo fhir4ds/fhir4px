@@ -3380,6 +3380,12 @@ export function PatientExplorer() {
     setActiveTab(tab);
     setViewMode("grouped");
     setExpandedGroupKeys((current) => new Set([...current, groupExpansionKey(group, tab)]));
+    // The target card renders after the state updates — scroll it into
+    // view so navigation is visible even when the card is below the fold.
+    const domId = `group-card-${group.groupId.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+    window.setTimeout(() => {
+      document.getElementById(domId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
   }
 
   function toggleGroupExpanded(key: string) {
@@ -4835,6 +4841,7 @@ export function PatientExplorer() {
     return (
       <Box
         key={expansionKey}
+        id={`group-card-${group.groupId.replace(/[^a-zA-Z0-9_-]/g, "-")}`}
         sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: density === "compact" ? 1.25 : 2 }}
       >
         <Stack spacing={density === "compact" ? 1 : 1.5}>
