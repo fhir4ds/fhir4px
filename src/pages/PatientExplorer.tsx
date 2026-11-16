@@ -11,6 +11,11 @@ import {
   Chip,
   Collapse,
   Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
   Dialog,
   DialogActions,
   DialogContent,
@@ -3927,24 +3932,42 @@ export function PatientExplorer() {
   function renderExplicitGroupLinks(group: PatientFriendlyGroup) {
     const links = explicitGroupLinks(group);
     if (links.length === 0) return null;
+    // Mostly mechanical FHIR-reference links — collapsed by default so the
+    // card surface stays focused; expandable when wanted.
+    const sectionKey = `explicit-links:${group.groupId}`;
+    const expanded = expandedSectionKeys.has(sectionKey);
     return (
       <Stack spacing={0.75}>
-        <Typography variant="body2" color="text.secondary" fontWeight={700}>
-          Linked in medical record
-        </Typography>
-        <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-          {links.slice(0, 6).map(({ relationship, relatedRecord, relatedGroup }) => (
-            <Chip
-              key={`${relationship.id}:${recordKey(relatedRecord)}`}
-              size="small"
-              variant="outlined"
-              label={`${RESOURCE_LABELS[relatedRecord.resourceType]}: ${
-                relatedGroup?.patientFriendlyName ?? relatedRecord.sourceLabel
-              }`}
-              onClick={() => (relatedGroup ? navigateToGroup(relatedGroup) : openDetails(relatedRecord))}
-            />
-          ))}
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="body2" color="text.secondary" fontWeight={700}>
+            Linked in medical record
+          </Typography>
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => toggleSectionExpanded(sectionKey)}
+            sx={{ p: 0, minWidth: 0, textTransform: "none" }}
+          >
+            {expanded ? "Hide" : `Show (${links.length})`}
+          </Button>
         </Stack>
+        <Collapse in={expanded}>
+          <Stack spacing={0.75}>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+              {links.slice(0, 6).map(({ relationship, relatedRecord, relatedGroup }) => (
+                <Chip
+                  key={`${relationship.id}:${recordKey(relatedRecord)}`}
+                  size="small"
+                  variant="outlined"
+                  label={`${RESOURCE_LABELS[relatedRecord.resourceType]}: ${
+                    relatedGroup?.patientFriendlyName ?? relatedRecord.sourceLabel
+                  }`}
+                  onClick={() => (relatedGroup ? navigateToGroup(relatedGroup) : openDetails(relatedRecord))}
+                />
+              ))}
+            </Stack>
+          </Stack>
+        </Collapse>
       </Stack>
     );
   }
@@ -5186,33 +5209,64 @@ export function PatientExplorer() {
     return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString();
   }
 
-  /** Patient-facing label + value for one observation component. */
-  function panelComponentEntry(component: Record<string, unknown>, index: number): { key: string; label: string; value?: string } | null {
+  /** Patient-facing label + value + range for one observation component. */
+  function panelComponentEntry(
+    component: Record<string, unknown>,
+    index: number
+  ): { key: string; label: string; value?: string; numericValue?: number; low?: number; high?: number; unit?: string } | null {
     const concept = component.code as { text?: string; coding?: Array<{ display?: string; code?: string }> } | undefined;
     const label =
       concept?.text ??
       concept?.coding?.find((coding) => coding.display)?.display ??
       concept?.coding?.[0]?.code;
     const quantity = component.valueQuantity as { value?: number; unit?: string; code?: string; comparator?: string } | undefined;
+    const range = extractPanelRange(component.referenceRange);
     if (quantity && typeof quantity.value === "number") {
       const prefix = quantity.comparator ? `${quantity.comparator} ` : "";
-      return { key: `component:${index}`, label: label ?? "Result", value: [`${prefix}${quantity.value}`, quantity.unit ?? quantity.code].filter(Boolean).join(" ") };
+      return {
+        key: `component:${index}`,
+        label: label ?? "Result",
+        value: [`${prefix}${quantity.value}`, quantity.unit ?? quantity.code].filter(Boolean).join(" "),
+        numericValue: quantity.value,
+        ...range
+      };
     }
     const codeable = component.valueCodeableConcept as { text?: string; coding?: Array<{ display?: string }> } | undefined;
     const codeableDisplay = codeable?.text ?? codeable?.coding?.find((coding) => coding.display)?.display;
-    if (codeableDisplay) return { key: `component:${index}`, label: label ?? "Result", value: codeableDisplay };
+    if (codeableDisplay) return { key: `component:${index}`, label: label ?? "Result", value: codeableDisplay, ...range };
     if (typeof component.valueString === "string") {
-      return { key: `component:${index}`, label: label ?? "Result", value: component.valueString };
+      return { key: `component:${index}`, label: label ?? "Result", value: component.valueString, ...range };
     }
-    if (label) return { key: `component:${index}`, label };
+    if (label) return { key: `component:${index}`, label, ...range };
     return null;
+  }
+
+  function extractPanelRange(referenceRange: unknown): { low?: number; high?: number; unit?: string } {
+    const first = Array.isArray(referenceRange) ? (referenceRange[0] as Record<string, unknown> | undefined) : undefined;
+    if (!first) return {};
+    const low = (first.low as { value?: number } | undefined)?.value;
+    const high = (first.high as { value?: number } | undefined)?.value;
+    const unit = ((first.low as { unit?: string } | undefined)?.unit ?? (first.high as { unit?: string } | undefined)?.unit) as string | undefined;
+    return {
+      ...(typeof low === "number" ? { low } : {}),
+      ...(typeof high === "number" ? { high } : {}),
+      ...(unit ? { unit } : {})
+    };
   }
 
   interface PanelMemberEntry {
     key: string;
     label: string;
     value?: string;
+    numericValue?: number;
+    low?: number;
+    high?: number;
+    unit?: string;
     abnormal?: boolean;
+    interpretation?: string;
+    /** Unit-aware out-of-range signal from the group range resolver. */
+    outOfRangeFlag?: boolean;
+    hasRangeFlag?: boolean;
     group: PatientFriendlyGroup;
   }
 
@@ -5261,15 +5315,104 @@ export function PatientExplorer() {
       }
 
       const observation = observationById.get(latest.id);
+      const obsRange = observation?.referenceRange;
+      const groupRange = groupReferenceRanges[groupId] ?? undefined;
+      const rangeSource =
+        typeof obsRange?.low === "number" || typeof obsRange?.high === "number"
+          ? { low: obsRange?.low, high: obsRange?.high, unit: obsRange?.unit }
+          : groupRange
+            ? { low: groupRange.low, high: groupRange.high, unit: groupRange.unit }
+            : {};
       entries.push({
         key: `${groupId}:${latest.id}`,
         label: group.patientFriendlyName,
         value: observation?.value,
+        numericValue: observation?.normalizedValue.numericValue,
+        ...(typeof rangeSource.low === "number" ? { low: rangeSource.low } : {}),
+        ...(typeof rangeSource.high === "number" ? { high: rangeSource.high } : {}),
+        ...(rangeSource.unit ? { unit: rangeSource.unit } : {}),
         abnormal: observation?.abnormal,
+        interpretation: observation?.interpretation,
+        outOfRangeFlag: groupOutOfRangeFlags[groupId] ?? undefined,
+        hasRangeFlag: groupId in groupOutOfRangeFlags,
         group
       });
     }
     return entries;
+  }
+
+  function panelMemberStatus(member: PanelMemberEntry): { label: string; level: "high" | "low" | "normal" | "unknown" } {
+    if (member.abnormal) {
+      const interpretation = member.interpretation?.toLowerCase();
+      if (interpretation?.includes("low")) return { label: "Below range", level: "low" };
+      if (interpretation?.includes("high")) return { label: "Above range", level: "high" };
+      return { label: member.interpretation || "Flagged", level: "high" };
+    }
+    // Prefer the unit-aware group range resolver when it has ruled.
+    if (member.hasRangeFlag) {
+      return member.outOfRangeFlag ? { label: "Out of range", level: "high" } : { label: "In range", level: "normal" };
+    }
+    if (member.numericValue !== undefined && (member.low !== undefined || member.high !== undefined)) {
+      if (member.high !== undefined && member.numericValue > member.high) return { label: "Above range", level: "high" };
+      if (member.low !== undefined && member.numericValue < member.low) return { label: "Below range", level: "low" };
+      return { label: "In range", level: "normal" };
+    }
+    return { label: "—", level: "unknown" };
+  }
+
+  function panelMemberRangeText(member: PanelMemberEntry): string | undefined {
+    if (member.low !== undefined && member.high !== undefined) {
+      return `${member.low}–${member.high}${member.unit ? ` ${member.unit}` : ""}`;
+    }
+    if (member.low !== undefined) return `≥ ${member.low}${member.unit ? ` ${member.unit}` : ""}`;
+    if (member.high !== undefined) return `≤ ${member.high}${member.unit ? ` ${member.unit}` : ""}`;
+    return undefined;
+  }
+
+  function renderPanelMembersTable(members: PanelMemberEntry[]) {
+    return (
+      <Table size="small" aria-label="Panel members">
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 700 }}>Lab</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 700 }}>
+              Value
+            </TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>Normal range</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {members.map((member) => {
+            const status = panelMemberStatus(member);
+            const statusColor =
+              status.level === "normal" ? "success.main" : status.level === "unknown" ? "text.secondary" : "error.main";
+            return (
+              <TableRow
+                key={member.key}
+                hover
+                onClick={() => navigateToGroup(member.group)}
+                sx={{ cursor: "pointer", "&:last-child td, &:last-child th": { border: 0 } }}
+              >
+                <TableCell>{member.label}</TableCell>
+                <TableCell
+                  align="right"
+                  sx={{
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                    color: status.level === "normal" || status.level === "unknown" ? undefined : "error.main"
+                  }}
+                >
+                  {member.value ?? "—"}
+                </TableCell>
+                <TableCell color="text.secondary">{panelMemberRangeText(member) ?? "—"}</TableCell>
+                <TableCell sx={{ color: statusColor, whiteSpace: "nowrap" }}>{status.label}</TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    );
   }
 
   function renderPanelCard(panel: MatchedPanel) {
@@ -5293,22 +5436,8 @@ export function PatientExplorer() {
               <Chip size="small" variant="outlined" label={`${panel.draws.length} draws — showing latest`} />
             )}
           </Stack>
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-            {members.map((member) => (
-              <Chip
-                key={member.key}
-                size="small"
-                clickable
-                variant="outlined"
-                color={member.abnormal ? "error" : "default"}
-                onClick={() => navigateToGroup(member.group)}
-                label={
-                  member.value
-                    ? `${member.label}: ${member.value}`
-                    : member.label
-                }
-              />
-            ))}
+          <Stack spacing={0.75}>
+            {renderPanelMembersTable(members)}
           </Stack>
           <Typography variant="caption" color="text.secondary">
             Select a lab to open its full history on the Labs &amp; Vitals tab.
