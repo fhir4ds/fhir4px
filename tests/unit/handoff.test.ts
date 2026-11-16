@@ -62,6 +62,7 @@ describe("handoff artifacts", () => {
       immunizations: [],
       encounters: [],
       procedures: [],
+      documents: [],
       diagnosticReports: [],
       generatedAt: "2026-05-25T00:00:00.000Z"
     });

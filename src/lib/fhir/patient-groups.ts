@@ -27,7 +27,8 @@ export type GroupableResourceType =
   | "Immunization"
   | "Encounter"
   | "Procedure"
-  | "DiagnosticReport";
+  | "DiagnosticReport"
+  | "DocumentReference";
 export type PatientObservationBucket = "labs" | "vitals" | "other";
 
 export interface GroupableRecord {
@@ -311,7 +312,8 @@ const TARGET_CODING_PREFIXES: Record<GroupableResourceType, string[]> = {
   Immunization: ["cvx"],
   Encounter: ["snomed", "cpt"],
   Procedure: ["snomed", "cpt"],
-  DiagnosticReport: ["loinc", "snomed", "cpt"]
+  DiagnosticReport: ["loinc", "snomed", "cpt"],
+  DocumentReference: ["loinc", "snomed", "cpt"]
 };
 
 function codingPrefix(key: string): string {
@@ -749,6 +751,27 @@ export function buildGroupableRecords(
       portalSourceId: report.portalSourceId,
       portalSourceName: report.portalSourceName,
       source: report.source
+    });
+  }
+
+  for (const document of summary.documents ?? []) {
+    add({
+      id: document.id,
+      resourceType: "DocumentReference",
+      sourceLabel: document.label,
+      status: document.status,
+      category: document.docType,
+      codingKeys: document.codingKeys,
+      codeTexts: uniqueSorted([document.codeSummary?.text, document.label, document.docType]),
+      codeCodings: document.codeSummary?.codings,
+      groupingText: [document.label, document.docType, document.custodian, ...(document.codingKeys ?? [])]
+        .filter(Boolean)
+        .join(" "),
+      date: document.docDate,
+      displayValue: [document.format, document.attachmentTitle].filter(Boolean).join(" · ") || undefined,
+      portalSourceId: document.portalSourceId,
+      portalSourceName: document.portalSourceName,
+      source: document.source
     });
   }
 

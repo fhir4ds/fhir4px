@@ -243,7 +243,8 @@ type ExplorerTab =
   | "Immunization"
   | "Encounter"
   | "Procedure"
-  | "DiagnosticReport";
+  | "DiagnosticReport"
+  | "DocumentReference";
 type ExplorerGroupingSource = PatientGroupingResult["source"];
 type ObservationBucket = PatientObservationBucket;
 type LocalGroupingMode = "one-b-batch" | "one-b-single" | "three-b-batch" | "custom-single";
@@ -272,7 +273,8 @@ const RESOURCE_LABELS: Record<ExplorerTab, string> = {
   Immunization: "Vaccines",
   Encounter: "Visits",
   Procedure: "Procedures",
-  DiagnosticReport: "Reports"
+  DiagnosticReport: "Reports",
+  DocumentReference: "Documents"
 };
 
 const EXPLORER_TABS = (Object.keys(RESOURCE_LABELS) as ExplorerTab[]).filter((t) => t !== "PatientSummary");
@@ -296,6 +298,8 @@ function resourceTypeIcon(type: ExplorerTab, size = 20) {
     case "Procedure":
       return <Stethoscope size={size} />;
     case "DiagnosticReport":
+      return <FileText size={size} />;
+    case "DocumentReference":
       return <FileText size={size} />;
   }
 }
@@ -399,6 +403,7 @@ function emptyReferralSummary(): ReferralSummary {
     encounters: [],
     procedures: [],
     diagnosticReports: [],
+    documents: [],
     generatedAt: new Date().toISOString()
   };
 }
@@ -857,6 +862,12 @@ function sourceScopedSummary(source: ConnectedSource, dataset: FhirDataset): Ref
       portalSourceId: source.id,
       portalSourceName
     })),
+    documents: (summary.documents ?? []).map((document) => ({
+      ...document,
+      id: `${source.id}:${document.id}`,
+      portalSourceId: source.id,
+      portalSourceName
+    })),
     generatedAt: summary.generatedAt
   };
 }
@@ -873,6 +884,7 @@ function mergeSourceSummaries(sourceSummaries: ReferralSummary[]): ReferralSumma
     encounters: sourceSummaries.flatMap((summary) => summary.encounters),
     procedures: sourceSummaries.flatMap((summary) => summary.procedures),
     diagnosticReports: sourceSummaries.flatMap((summary) => summary.diagnosticReports),
+    documents: sourceSummaries.flatMap((summary) => summary.documents ?? []),
     generatedAt: new Date().toISOString()
   };
 }

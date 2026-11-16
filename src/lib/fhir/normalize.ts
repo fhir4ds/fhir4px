@@ -5,6 +5,7 @@ import type {
   DisplayAllergy,
   DisplayCondition,
   DisplayDiagnosticReport,
+  DisplayDocument,
   DisplayEncounter,
   DisplayImmunization,
   DisplayMedication,
@@ -462,6 +463,37 @@ export function normalizeDiagnosticReport(resource: FhirResource): DisplayDiagno
   };
 }
 
+export function normalizeDocumentReference(resource: FhirResource): DisplayDocument {
+  const content = Array.isArray(resource.content)
+    ? ((resource.content as Array<Record<string, unknown>>) .find((entry) => entry?.attachment) ?? (resource.content as Array<Record<string, unknown>>)[0])
+    : undefined;
+  const attachment = content?.attachment as
+    | { url?: string; title?: string; size?: number; contentType?: string }
+    | undefined;
+  const format = content?.format as { display?: string; code?: string } | undefined;
+  const docType = firstConceptText(resource.type) || codingText(resource, ["type"]);
+  return {
+    id: resource.id || crypto.randomUUID(),
+    label:
+      (typeof resource.description === "string" && resource.description.trim()) ||
+      docType ||
+      resource.id ||
+      "Document",
+    status: typeof resource.docStatus === "string" ? resource.docStatus : undefined,
+    docType,
+    codingKeys: codingKeys(resource, ["type"]),
+    codeSummary: summarizeCode(resource, ["type"]),
+    docDate: typeof resource.date === "string" ? resource.date : undefined,
+    custodian: (resource.custodian as { display?: string } | undefined)?.display,
+    format: format?.display ?? attachment?.contentType,
+    attachmentUrl: attachment?.url,
+    attachmentTitle: attachment?.title,
+    attachmentSize: typeof attachment?.size === "number" ? attachment.size : undefined,
+    attachmentContentType: attachment?.contentType,
+    source: "provider"
+  };
+}
+
 export function buildReferralSummary(resources: FhirResource[]): ReferralSummary {
   const index = createResourceIndex(resources);
   return {
@@ -495,6 +527,10 @@ export function buildReferralSummary(resources: FhirResource[]): ReferralSummary
       .filter((resource) => resource.resourceType === "DiagnosticReport")
       .map(normalizeDiagnosticReport)
       .sort((left, right) => (right.effectiveDate || right.issued || "").localeCompare(left.effectiveDate || left.issued || "")),
+    documents: resources
+      .filter((resource) => resource.resourceType === "DocumentReference")
+      .map(normalizeDocumentReference)
+      .sort((left, right) => (right.docDate || "").localeCompare(left.docDate || "")),
     generatedAt: new Date().toISOString()
   };
 }

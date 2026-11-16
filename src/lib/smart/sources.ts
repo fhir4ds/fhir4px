@@ -257,6 +257,7 @@ export async function fetchAndStoreSourceDataset(
         "Condition",
         "Observation",
         "DiagnosticReport",
+        "DocumentReference",
         "Encounter",
         "Procedure",
         "Immunization"

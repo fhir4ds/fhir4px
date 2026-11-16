@@ -107,7 +107,8 @@ const RESOURCE_SYSTEM_PRIORITY: Record<GroupableResourceType, PatientFriendlyLoo
   Immunization: ["cvx"],
   Encounter: ["snomed", "cpt", "hcpcs"],
   Procedure: ["snomed", "cpt", "hcpcs", "icd10pcs"],
-  DiagnosticReport: ["loinc", "snomed", "cpt", "hcpcs"]
+  DiagnosticReport: ["loinc", "snomed", "cpt", "hcpcs"],
+  DocumentReference: ["loinc", "snomed", "cpt", "hcpcs"]
 };
 
 /** Shard system → lexical index categories whose code maps feed the merge. */

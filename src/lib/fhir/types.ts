@@ -131,6 +131,30 @@ export interface DisplayDiagnosticReport {
   portalSourceName?: string;
 }
 
+export interface DisplayDocument {
+  id: string;
+  label: string;
+  status?: string;
+  /** Document type (type coding text, e.g. "Summary of episode note"). */
+  docType?: string;
+  category?: string;
+  categoryCode?: string;
+  codeSummary?: DisplayCodeSummary;
+  codingKeys?: string[];
+  docDate?: string;
+  custodian?: string;
+  /** Format of the first content element (format.display or contentType). */
+  format?: string;
+  /** First content attachment — metadata only; fetched on explicit selection. */
+  attachmentUrl?: string;
+  attachmentTitle?: string;
+  attachmentSize?: number;
+  attachmentContentType?: string;
+  source: "provider" | "patient";
+  portalSourceId?: string;
+  portalSourceName?: string;
+}
+
 export interface DisplayCodingSummary {
   code?: string;
   display?: string;
@@ -151,5 +175,6 @@ export interface ReferralSummary {
   encounters: DisplayEncounter[];
   procedures: DisplayProcedure[];
   diagnosticReports: DisplayDiagnosticReport[];
+  documents: DisplayDocument[];
   generatedAt: string;
 }
