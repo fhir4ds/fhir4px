@@ -7,6 +7,7 @@ import { LocalExport } from "../pages/LocalExport";
 import { LlmPlayground } from "../pages/LlmPlayground";
 import { PatientExplorer } from "../pages/PatientExplorer";
 import QualityPage from "../pages/Quality";
+import CohortsPage from "../pages/Cohorts";
 import { Privacy } from "../pages/Privacy";
 import { ProviderSearch } from "../pages/ProviderSearch";
 import { ReferralBuilder } from "../pages/ReferralBuilder";
@@ -23,6 +24,7 @@ export function AppRoutes() {
       <Route path="/connected" element={<ConnectedProvider />} />
       <Route path="/records" element={<PatientExplorer />} />
       <Route path="/quality" element={<QualityPage />} />
+      <Route path="/cohorts" element={<CohortsPage />} />
       <Route path="/summary" element={<PatientExplorer />} />
       <Route path="/referral" element={<ReferralBuilder />} />
       <Route path="/export" element={<LocalExport />} />

@@ -3,12 +3,7 @@ import { Alert, Box, Button, Card, CardContent, Chip, Divider, LinearProgress, S
 import { Activity, ClipboardCheck, Play } from "lucide-react";
 import { engineLoadResources, engineQuery } from "../lib/engine/engine-client";
 import { US_CORE_CHECKS, type UsCoreCheck } from "../lib/fhir/uscore-checks";
-import { DEFAULT_FHIR_PAGE_LIMIT, fetchPatientDataset } from "../lib/smart/data";
-import type { MvpResourceType } from "../lib/smart/scopes";
-import type { SmartSessionInfo, SmartToken } from "../lib/smart/types";
-import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
-import { localVault } from "../lib/vault/store";
-import type { FhirResource } from "../lib/smart/data";
+import { loadSessionResources } from "../lib/engine/session-data";
 
 interface CheckResult {
   check: UsCoreCheck;
@@ -30,19 +25,6 @@ interface MeasureResult {
   executionMs: number;
 }
 
-const FETCH_TYPES: readonly MvpResourceType[] = [
-  "Patient",
-  "MedicationRequest",
-  "AllergyIntolerance",
-  "Condition",
-  "Observation",
-  "Immunization",
-  "Procedure",
-  "Encounter",
-  "DiagnosticReport",
-  "DocumentReference"
-];
-
 function terminologyBaseUrl(): string {
   const base = import.meta.env.BASE_URL || "/";
   return `${base.replace(/\/?$/, "/")}fhir4ds/measures`;
@@ -55,18 +37,6 @@ export default function QualityPage() {
   const [checks, setChecks] = useState<CheckResult[]>([]);
   const [measures, setMeasures] = useState<MeasureResult[]>([]);
   const [resourceCount, setResourceCount] = useState<number | null>(null);
-
-  async function loadSessionResources(): Promise<FhirResource[]> {
-    const key = await getOrCreateSessionVaultKey();
-    const token = await localVault.getJson<SmartToken>(key, { type: "smart-token", id: "current" });
-    const session = await localVault.getJson<SmartSessionInfo>(key, { type: "smart-session", id: "current" });
-    if (!token || !session) throw new Error("No local SMART connection is available — connect a source first");
-    const dataset = await fetchPatientDataset(session, token, {
-      resourceTypes: FETCH_TYPES,
-      maxPages: DEFAULT_FHIR_PAGE_LIMIT
-    });
-    return dataset.resources;
-  }
 
   async function runChecks() {
     setBusy(true);
