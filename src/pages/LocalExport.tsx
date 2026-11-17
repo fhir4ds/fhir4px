@@ -14,7 +14,7 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { Download, FileLock2, FileText, QrCode, Share2, Upload, UnlockKeyhole } from "lucide-react";
+import { Database, Download, FileLock2, FileText, QrCode, Share2, Upload, UnlockKeyhole } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createLocalReferralBundle, type LocalReferralBundle } from "../lib/fhir/bundle";
 import { filterResourcesByLookback } from "../lib/fhir/filters";
@@ -36,6 +36,10 @@ import { MVP_RESOURCE_TYPES, type MvpResourceType } from "../lib/smart/scopes";
 import type { SmartSessionInfo, SmartToken } from "../lib/smart/types";
 import { buildIpsBundle } from "../lib/fhir/ips";
 import { printIpsHtml } from "../lib/fhir/ips-html";
+import { extractDistinctCodes, resolveOmopConcepts } from "../lib/fhir/omop-concepts";
+import { omopResultToCsv, runOmopExport, type OmopExportResult } from "../lib/fhir/omop-tables";
+import { engineLoadResources } from "../lib/engine/engine-client";
+import { loadSessionResources } from "../lib/engine/session-data";
 import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 import { localVault } from "../lib/vault/store";
 
@@ -257,6 +261,53 @@ export function LocalExport() {
     }
   }
 
+  const [omopState, setOmopState] = useState<{ results: OmopExportResult[]; resolved: number; unmatched: number; mapUnavailable: boolean } | null>(null);
+
+  async function buildOmopExport() {
+    setBusy(true);
+    setError(null);
+    setOmopState(null);
+    try {
+      setStatus("OMOP: loading patient data into the engine…");
+      const resources = await loadSessionResources();
+      await engineLoadResources(resources);
+
+      setStatus("OMOP: resolving concepts against the terminology server…");
+      const distinct = extractDistinctCodes(resources);
+      const resolution = await resolveOmopConcepts(distinct, {
+        onProgress: (done, total) => setStatus(`OMOP: resolving concepts… ${done}/${total}`)
+      });
+
+      setStatus("OMOP: extracting CDM tables…");
+      const results = await runOmopExport(engineLoadResources, resolution.mappings);
+      setOmopState({
+        results,
+        resolved: resolution.resolved,
+        unmatched: resolution.unmatched,
+        mapUnavailable: resolution.mapUnavailable
+      });
+      setStatus(
+        `OMOP export ready — ${results.filter((r) => !r.error).length}/${results.length} tables, ` +
+          `${resolution.resolved}/${distinct.length} concepts resolved` +
+          (resolution.mapUnavailable ? " (athena map unavailable — concept_id 0)" : "")
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "OMOP export failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function downloadOmopCsv(table: OmopExportResult["table"], csv: string) {
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `omop_${table.name}.csv`;
+    anchor.click();
+    globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
   return (
     <Card variant="outlined">
       <CardContent>
@@ -344,6 +395,55 @@ export function LocalExport() {
                 Print IPS (PDF)
               </Button>
             </Stack>
+          </Stack>
+
+          <Divider />
+          <Stack spacing={1}>
+            <Typography fontWeight={700}>OMOP CDM export</Typography>
+            <Typography color="text.secondary" variant="body2">
+              OMOP CDM v5.5 tables extracted locally. Concepts resolve in batch against the medterm4ds
+              terminology server (cached in the browser); unmapped codes keep OMOP concept_id 0 with
+              source values preserved.
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<Database size={18} />}
+              onClick={() => void buildOmopExport()}
+              disabled={busy}
+            >
+              Build OMOP export
+            </Button>
+            {omopState && (
+              <Stack spacing={1}>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Chip label={`${omopState.resolved} concepts resolved`} color={omopState.resolved > 0 ? "success" : "default"} />
+                  {omopState.unmatched > 0 && <Chip label={`${omopState.unmatched} unmapped → concept_id 0`} variant="outlined" />}
+                  {omopState.mapUnavailable && (
+                    <Chip label="athena map unavailable on server" color="warning" variant="outlined" />
+                  )}
+                </Stack>
+                {omopState.results.map((entry) => (
+                  <Stack key={entry.table.name} direction="row" spacing={1} alignItems="center">
+                    <Typography variant="body2" sx={{ minWidth: 180 }}>
+                      {entry.table.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
+                      {entry.error ?? `${entry.result.rows.length} rows · ${entry.table.description}`}
+                    </Typography>
+                    {!entry.error && entry.result.rows.length > 0 && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Download size={14} />}
+                        onClick={() => downloadOmopCsv(entry.table, omopResultToCsv(entry.result))}
+                      >
+                        CSV
+                      </Button>
+                    )}
+                  </Stack>
+                ))}
+              </Stack>
+            )}
           </Stack>
 
           {exportState && (
