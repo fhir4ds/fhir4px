@@ -138,6 +138,7 @@ import { enrichMedicationIngredients } from "../lib/fhir/rxnorm-decomposition";
 import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/associations/matcher";
 import { loadLabPartCrosswalk } from "../lib/associations/bundle";
 import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
+import { runImmunizationForecast, type ImmunizationForecastItem } from "../lib/fhir/immunization-forecast";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
@@ -1390,6 +1391,7 @@ export function PatientExplorer() {
   const [groupConceptResolutions, setGroupConceptResolutions] = useState<Record<string, GroupConceptResolution>>({});
   const [labPartCrosswalk, setLabPartCrosswalk] = useState<Record<string, string[]> | null>(null);
   const [panelsSectionExpanded, setPanelsSectionExpanded] = useState(true);
+  const [immunizationForecast, setImmunizationForecast] = useState<ImmunizationForecastItem[] | null>(null);
   const [viewerDocument, setViewerDocument] = useState<{ resource: FhirResource; label: string; sourceBaseUrl?: string } | null>(null);
   const [viewerBlob, setViewerBlob] = useState<Blob | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
@@ -4151,6 +4153,93 @@ export function PatientExplorer() {
     );
   }
 
+  // CDC CDSi immunization forecast (cicada engine, local-only): runs once
+  // per patient dataset load; failures keep the section hidden. Uses raw
+  // FHIR resources (the engine needs full resource shapes, not the
+  // normalized display summaries).
+  useEffect(() => {
+    if (!summary) return;
+    let cancelled = false;
+    const rawOf = (type: string): FhirResource[] => {
+      const out: FhirResource[] = [];
+      for (const [key, resource] of resourceByKey) {
+        if (key.startsWith(`${type}/`)) out.push(resource);
+      }
+      return out;
+    };
+    const patient = rawOf("Patient")[0] ?? summary.patient;
+    void runImmunizationForecast(
+      patient,
+      rawOf("Immunization"),
+      rawOf("Condition"),
+      rawOf("AllergyIntolerance")
+    )
+      .then((items) => {
+        if (!cancelled) setImmunizationForecast(items);
+      })
+      .catch(() => {
+        if (!cancelled) setImmunizationForecast(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary, resourceByKey]);
+
+  function forecastStatusColor(status: string): "success" | "warning" | "error" | "default" {
+    if (status === "complete" || status === "immune") return "success";
+    if (status === "notComplete" || status === "due") return "warning";
+    if (status === "contraindicated" || status === "pastDue") return "error";
+    return "default";
+  }
+
+  function renderImmunizationForecast() {
+    if (!immunizationForecast || immunizationForecast.length === 0) return null;
+    // Hide fully inapplicable output (all agedOut/complete with no dates) to
+    // keep the card meaningful — show when anything is due or actionable.
+    const actionable = immunizationForecast.filter(
+      (item) => item.status !== "agedOut" && !(item.status === "complete" && !item.recommendedDate)
+    );
+    if (actionable.length === 0) return null;
+    return (
+      <Stack spacing={1}>
+        <Typography fontWeight={700}>Immunization forecast</Typography>
+        <Typography variant="caption" color="text.secondary">
+          CDC adult schedule (CDSi) — evaluated locally; dates are earliest / recommended / past-due.
+        </Typography>
+        <Table size="small" aria-label="Immunization forecast">
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ fontWeight: 700 }}>Vaccine</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Recommended date</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {actionable.map((item, index) => (
+              <TableRow key={`${item.vaccineCodes.join(",")}:${index}`} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
+                <TableCell>{item.vaccineLabel}</TableCell>
+                <TableCell>
+                  <Chip
+                    size="small"
+                    color={forecastStatusColor(item.status)}
+                    label={item.statusDisplay ?? item.status}
+                    title={item.reason ?? item.description}
+                  />
+                </TableCell>
+                <TableCell>
+                  {item.recommendedDate
+                    ? new Date(`${item.recommendedDate.slice(0, 10)}T00:00:00`).toLocaleDateString()
+                    : "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Stack>
+    );
+  }
+
   function renderPatientProfile() {
     const primary = patientProfiles[0]?.patient ?? summary?.patient;
     if (!primary) return null;
@@ -6420,6 +6509,7 @@ export function PatientExplorer() {
           <Stack spacing={2.5}>
             {renderDataStatusBar()}
             {renderPatientProfile()}
+            {activeTab === "PatientSummary" && renderImmunizationForecast()}
             {error && <Alert severity="warning">{error}</Alert>}
 
             <Divider />
