@@ -14,7 +14,8 @@
 
 import type { FhirResource } from "../smart/data";
 
-export const TERMINOLOGY_SERVER_BASE = "https://fhir4ds-terminology-demo-server.hf.space";
+export const TERMINOLOGY_SERVER_BASE: string =
+  import.meta.env.VITE_TERMINOLOGY_SERVER_URL ?? "https://fhir4ds-terminology-demo-server.hf.space";
 export const ATHENA_CONCEPT_MAP_URL = "urn:medterm4ds:athena-conceptmap";
 export const ATHENA_TARGET_SYSTEM = "urn:athena:concept-id";
 

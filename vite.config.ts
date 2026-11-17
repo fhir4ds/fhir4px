@@ -46,6 +46,58 @@ function engineIsolationHeaders(): Plugin {
   };
 }
 
+/**
+ * Dev-only reverse proxy for the medterm4ds terminology server
+ * (<base>/terminology-proxy/* -> Space). The Space's origin allow-list
+ * gates browser Origin headers; server-side forwards carry none and pass
+ * unfettered (rate-limited only). This is the interim workaround while the
+ * Space's 10-origin image fails to deploy — the app points its terminology
+ * base at the proxy in dev (VITE_TERMINOLOGY_SERVER_URL).
+ */
+function terminologyProxy(): Plugin {
+  const upstream = "https://fhir4ds-terminology-demo-server.hf.space";
+  const prefix = "/terminology-proxy/";
+  return {
+    name: "fhir4px-terminology-proxy",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.startsWith(prefix)) {
+          next();
+          return;
+        }
+        const path = req.url.slice(prefix.length - 1);
+        const chunks: Buffer[] = [];
+        req.on("data", (chunk: Buffer) => chunks.push(chunk));
+        req.on("end", () => {
+          const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined;
+          void fetch(`${upstream}${path}`, {
+            method: req.method,
+            headers: {
+              "Content-Type": req.headers["content-type"] ?? "application/fhir+json",
+              Accept: req.headers.accept ?? "application/fhir+json"
+              // No Origin header — server-side calls bypass the allow-list.
+            },
+            body: body
+          })
+            .then(async (upstreamResponse) => {
+              res.statusCode = upstreamResponse.status;
+              res.setHeader("Content-Type", upstreamResponse.headers.get("content-type") ?? "application/fhir+json");
+              res.setHeader("Access-Control-Allow-Origin", "*");
+              const retryAfter = upstreamResponse.headers.get("retry-after");
+              if (retryAfter) res.setHeader("Retry-After", retryAfter);
+              res.end(Buffer.from(await upstreamResponse.arrayBuffer()));
+            })
+            .catch((error) => {
+              res.statusCode = 502;
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify({ detail: `terminology proxy failed: ${String(error)}` }));
+            });
+        });
+      });
+    }
+  };
+}
+
 const localhostCert =
   existsSync(".cert/localhost-key.pem") && existsSync(".cert/localhost-cert.pem")
     ? {
@@ -97,6 +149,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       engineIsolationHeaders(),
+      terminologyProxy(),
       VitePWA({
         registerType: "prompt",
         strategies: "generateSW",
