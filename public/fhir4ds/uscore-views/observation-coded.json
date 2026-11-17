@@ -1,0 +1,18 @@
+{
+ "resource": "Observation",
+ "name": "USCoreObservationCoded",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "code",
+     "path": "code.coding.code.first()"
+    },
+    {
+     "name": "system",
+     "path": "code.coding.system.first()"
+    }
+   ]
+  }
+ ]
+}

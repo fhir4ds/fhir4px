@@ -1,0 +1,22 @@
+{
+ "resource": "DocumentReference",
+ "name": "USCoreDocumentReference",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "status",
+     "path": "status"
+    },
+    {
+     "name": "type",
+     "path": "type.coding.code.first()"
+    },
+    {
+     "name": "content_type",
+     "path": "content.attachment.contentType.first()"
+    }
+   ]
+  }
+ ]
+}

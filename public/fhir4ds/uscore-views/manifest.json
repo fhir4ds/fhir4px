@@ -1,0 +1,52 @@
+{
+ "views": [
+  {
+   "id": "patient-identity",
+   "name": "USCorePatientIdentity",
+   "resource": "Patient",
+   "description": "name, gender, birthDate"
+  },
+  {
+   "id": "condition-status",
+   "name": "USCoreConditionStatus",
+   "resource": "Condition",
+   "description": "clinicalStatus, verificationStatus, code"
+  },
+  {
+   "id": "medication-request-core",
+   "name": "USCoreMedicationRequest",
+   "resource": "MedicationRequest",
+   "description": "status, intent, medication, authoredOn"
+  },
+  {
+   "id": "allergy-core",
+   "name": "USCoreAllergy",
+   "resource": "AllergyIntolerance",
+   "description": "clinicalStatus, code"
+  },
+  {
+   "id": "immunization-core",
+   "name": "USCoreImmunization",
+   "resource": "Immunization",
+   "description": "status, vaccineCode, occurrence"
+  },
+  {
+   "id": "procedure-core",
+   "name": "USCoreProcedure",
+   "resource": "Procedure",
+   "description": "status, code"
+  },
+  {
+   "id": "document-core",
+   "name": "USCoreDocumentReference",
+   "resource": "DocumentReference",
+   "description": "status, type, content"
+  },
+  {
+   "id": "observation-coded",
+   "name": "USCoreObservationCoded",
+   "resource": "Observation",
+   "description": "code with system+code coding"
+  }
+ ]
+}

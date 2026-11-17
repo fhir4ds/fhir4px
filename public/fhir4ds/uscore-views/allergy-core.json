@@ -1,0 +1,18 @@
+{
+ "resource": "AllergyIntolerance",
+ "name": "USCoreAllergy",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "clinical_status",
+     "path": "clinicalStatus.coding.code.first()"
+    },
+    {
+     "name": "code",
+     "path": "code.coding.code.first()"
+    }
+   ]
+  }
+ ]
+}

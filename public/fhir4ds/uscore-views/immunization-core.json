@@ -1,0 +1,22 @@
+{
+ "resource": "Immunization",
+ "name": "USCoreImmunization",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "status",
+     "path": "status"
+    },
+    {
+     "name": "vaccine_code",
+     "path": "vaccineCode.coding.code.first()"
+    },
+    {
+     "name": "occurrence",
+     "path": "occurrence.ofType(dateTime)"
+    }
+   ]
+  }
+ ]
+}

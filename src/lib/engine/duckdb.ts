@@ -44,7 +44,11 @@ export async function createDuckDBConnection(): Promise<DuckDBConnectionBundle> 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (db.open as any)({
     path: ":memory:",
-    query: { castBigIntToDouble: true },
+    // BIGINT stays BIGINT (viewing-room executor doctrine): OMOP surrogate
+    // keys are 63-bit hashes — casting to doubles rounds past 2^53. The
+    // frame host's arrowToPlain keeps safe ints numeric and unsafe ones as
+    // exact digit strings.
+    query: { castBigIntToDouble: false },
     allowUnsignedExtensions: true,
     autoInstallExtensions: false,
     autoLoadExtensions: false

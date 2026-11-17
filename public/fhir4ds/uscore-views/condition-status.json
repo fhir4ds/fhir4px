@@ -1,0 +1,22 @@
+{
+ "resource": "Condition",
+ "name": "USCoreConditionStatus",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "clinical_status",
+     "path": "clinicalStatus.coding.code.first()"
+    },
+    {
+     "name": "verification_status",
+     "path": "verificationStatus.coding.code.first()"
+    },
+    {
+     "name": "code",
+     "path": "code.coding.code.first()"
+    }
+   ]
+  }
+ ]
+}

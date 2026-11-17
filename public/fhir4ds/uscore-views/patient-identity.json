@@ -1,0 +1,26 @@
+{
+ "resource": "Patient",
+ "name": "USCorePatientIdentity",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "name_given",
+     "path": "name.given.first()"
+    },
+    {
+     "name": "family",
+     "path": "name.family.first()"
+    },
+    {
+     "name": "gender",
+     "path": "gender"
+    },
+    {
+     "name": "birth_date",
+     "path": "birthDate"
+    }
+   ]
+  }
+ ]
+}

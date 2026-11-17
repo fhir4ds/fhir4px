@@ -2,14 +2,10 @@ import { useEffect, useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { Activity, ClipboardCheck, Play } from "lucide-react";
 import { engineLoadResources, engineQuery } from "../lib/engine/engine-client";
-import { US_CORE_CHECKS, type UsCoreCheck } from "../lib/fhir/uscore-checks";
+import { runUsCoreChecks, type UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { loadSessionResources } from "../lib/engine/session-data";
 
-interface CheckResult {
-  check: UsCoreCheck;
-  rows: Array<{ patientId: string; total: number; conforming: number }>;
-  error?: string;
-}
+
 
 interface MeasureManifest {
   measures: Record<string, { title: string; populations: string[]; sql: string }>;
@@ -34,7 +30,7 @@ export default function QualityPage() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("Connect a source on the Records page, then run quality checks here");
   const [error, setError] = useState<string | null>(null);
-  const [checks, setChecks] = useState<CheckResult[]>([]);
+  const [checks, setChecks] = useState<UsCoreCheckResult[]>([]);
   const [measures, setMeasures] = useState<MeasureResult[]>([]);
   const [resourceCount, setResourceCount] = useState<number | null>(null);
 
@@ -49,19 +45,8 @@ export default function QualityPage() {
       await engineLoadResources(resources);
       setResourceCount(resources.length);
 
-      setStatus("Running US Core data-presence checks…");
-      const results: CheckResult[] = [];
-      for (const check of US_CORE_CHECKS) {
-        try {
-          const result = await engineQuery(check.sql);
-          results.push({
-            check,
-            rows: result.rows.map((row) => ({ patientId: String(row[0]), total: Number(row[1]), conforming: Number(row[2]) }))
-          });
-        } catch (caught) {
-          results.push({ check, rows: [], error: caught instanceof Error ? caught.message : String(caught) });
-        }
-      }
+      setStatus("Running US Core checks via the fhir4ds view engine…");
+      const results = await runUsCoreChecks(resources);
       setChecks(results);
 
       setStatus("Running quality measures…");
@@ -107,10 +92,10 @@ export default function QualityPage() {
     };
   }, []);
 
-  function conformanceChip(result: CheckResult): React.ReactNode {
+  function conformanceChip(result: UsCoreCheckResult): React.ReactNode {
     if (result.error) return <Chip size="small" color="error" label="error" />;
-    const total = result.rows.reduce((sum, row) => sum + row.total, 0);
-    const conforming = result.rows.reduce((sum, row) => sum + row.conforming, 0);
+    const total = result.total;
+    const conforming = result.conforming;
     if (total === 0) return <Chip size="small" variant="outlined" label="no data" />;
     const share = conforming / total;
     return (
@@ -147,7 +132,7 @@ export default function QualityPage() {
                 <Typography fontWeight={700}>US Core data presence</Typography>
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                Profile enforcement off — these report required-element presence per resource type.
+                Profile enforcement off — fhir4ds ViewDefinitions report required-element presence per resource type.
               </Typography>
               <Table size="small">
                 <TableHead>
@@ -160,7 +145,7 @@ export default function QualityPage() {
                 <TableBody>
                   {checks.map((result) => (
                     <TableRow key={result.check.id}>
-                      <TableCell>{result.check.title}</TableCell>
+                      <TableCell>{result.check.name}</TableCell>
                       <TableCell color="text.secondary">{result.error ?? result.check.description}</TableCell>
                       <TableCell>{conformanceChip(result)}</TableCell>
                     </TableRow>

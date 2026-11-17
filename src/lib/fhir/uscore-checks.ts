@@ -1,90 +1,100 @@
 /**
- * US Core data-presence conformance checks — SQL evaluated against the
- * engine's resources table (id, resourceType, resource JSON, patient_ref).
- *
- * Profile *enforcement* is intentionally OFF (decision 2026-11-16): these
- * checks report whether required elements are present and populated, not
- * full profile validation. Each check returns one row per patient with the
- * number of resources of the type and how many satisfy the element
- * requirement.
+ * US Core data-presence conformance — evaluated as fhir4ds
+ * ViewDefinitions (public/fhir4ds/uscore-views/): each view selects the
+ * profile's required elements via FHIRPath; the fhir4ds viewdef engine
+ * (Pyodide) generates the SQL and DuckDB-WASM executes it verbatim. A row
+ * with a null required element is non-conformant. Profile *enforcement*
+ * remains off (2026-11-16 decision) — these report element presence.
  */
+
+import { engineFlattenView, type EngineQueryResult } from "../engine/engine-client";
+import type { FhirResource } from "../smart/data";
 
 export interface UsCoreCheck {
   id: string;
-  title: string;
+  name: string;
+  resource: string;
   description: string;
-  resourceType: string;
-  /** SQL returning (patient_id, total, conforming) rows. */
-  sql: string;
 }
 
-const REQUIRED_ELEMENT_CHECKS: Array<{
-  id: string;
-  title: string;
-  description: string;
-  resourceType: string;
-  element: string;
-}> = [
-  { id: "patient-identity", title: "Patient identity", description: "name, gender, and birthDate present", resourceType: "Patient", element: "name, gender, birthDate" },
-  { id: "condition-status", title: "Condition status", description: "clinicalStatus and verificationStatus present", resourceType: "Condition", element: "clinicalStatus, verificationStatus" },
-  { id: "medication-request-core", title: "MedicationRequest core", description: "status, intent, medication, and authoredOn present", resourceType: "MedicationRequest", element: "status, intent, medication[x], authoredOn" },
-  { id: "allergy-core", title: "Allergy core", description: "clinicalStatus and code present", resourceType: "AllergyIntolerance", element: "clinicalStatus, code" },
-  { id: "immunization-core", title: "Immunization core", description: "status, vaccineCode, and occurrence present", resourceType: "Immunization", element: "status, vaccineCode, occurrence[x]" },
-  { id: "procedure-core", title: "Procedure core", description: "status, code, and subject present", resourceType: "Procedure", element: "status, code, subject" },
-  { id: "document-core", title: "DocumentReference core", description: "status, type, and content present", resourceType: "DocumentReference", element: "status, type, content" }
-];
+interface ViewManifest {
+  views: UsCoreCheck[];
+}
 
-export const US_CORE_CHECKS: readonly UsCoreCheck[] = [
-  {
-    id: "patient-identity",
-    title: "Patient identity",
-    description: "name, gender, and birthDate present",
-    resourceType: "Patient",
-    sql: `
-      SELECT id AS patient_id,
-             COUNT(*) OVER () AS total,
-             COUNT(*) FILTER (WHERE json_type(resource, '$.name') IS NOT NULL
-                              AND json_type(resource, '$.gender') IS NOT NULL
-                              AND json_type(resource, '$.birthDate') IS NOT NULL) OVER () AS conforming
-      FROM resources
-      WHERE resourceType = 'Patient'`
-  },
-  ...REQUIRED_ELEMENT_CHECKS.filter((check) => check.id !== "patient-identity").map((check) => ({
-    ...check,
-    sql: `
-      SELECT patient_ref AS patient_id,
-             COUNT(*) AS total,
-             COUNT(*) FILTER (WHERE ${requiredElementsPredicate(check.element, check.resourceType)}) AS conforming
-      FROM resources
-      WHERE resourceType = '${check.resourceType}' AND patient_ref IS NOT NULL
-      GROUP BY 1`
-  })),
-  {
-    id: "observation-coded",
-    title: "Observations coded",
-    description: "code with at least one system+code coding present (labs, vitals, results)",
-    resourceType: "Observation",
-    sql: `
-      SELECT patient_ref AS patient_id,
-             COUNT(*) AS total,
-             COUNT(*) FILTER (WHERE json_array_length(json_extract(resource, '$.code.coding')) > 0
-                              AND json_extract_string(resource, '$.code.coding[0].system') IS NOT NULL
-                              AND json_extract_string(resource, '$.code.coding[0].code') IS NOT NULL) AS conforming
-      FROM resources
-      WHERE resourceType = 'Observation' AND patient_ref IS NOT NULL
-      GROUP BY 1`
+let manifestPromise: Promise<ViewManifest> | null = null;
+
+function uscoreBaseUrl(): string {
+  const base = import.meta.env.BASE_URL || "/";
+  return `${base.replace(/\/?$/, "/")}fhir4ds/uscore-views`;
+}
+
+async function loadManifest(options: { fetcher?: typeof fetch } = {}): Promise<ViewManifest> {
+  if (manifestPromise) return manifestPromise;
+  const fetcher = options.fetcher ?? fetch;
+  manifestPromise = fetcher(`${uscoreBaseUrl()}/manifest.json`, { cache: "force-cache" })
+    .then((response) => {
+      if (!response.ok) throw new Error(`US Core view manifest unavailable: ${response.status}`);
+      return response.json() as Promise<ViewManifest>;
+    })
+    .catch((error) => {
+      manifestPromise = null;
+      throw error;
+    });
+  return manifestPromise;
+}
+
+export interface UsCoreCheckResult {
+  check: UsCoreCheck;
+  total: number;
+  conforming: number;
+  error?: string;
+}
+
+/**
+ * Run every US Core check: fetch its ViewDefinition, execute via the
+ * fhir4ds engine, count rows where all required columns are non-null.
+ * The required columns are every column the view selects (by design).
+ */
+export async function runUsCoreChecks(
+  resources: FhirResource[],
+  options: { fetcher?: typeof fetch } = {}
+): Promise<UsCoreCheckResult[]> {
+  const fetcher = options.fetcher ?? fetch;
+  const manifest = await loadManifest(options);
+  const byType = new Map<string, FhirResource[]>();
+  for (const resource of resources) {
+    const list = byType.get(resource.resourceType) ?? [];
+    list.push(resource);
+    byType.set(resource.resourceType, list);
   }
-];
 
-function requiredElementsPredicate(element: string, _resourceType: string): string {
-  const parts = element.split(", ").map((raw) => raw.trim());
-  const conditions = parts.map((part) => {
-    if (part.endsWith("[x]")) {
-      const base = part.slice(0, -3);
-      // any[x]-style choice: any property starting with the base name
-      return `(EXISTS (SELECT 1 FROM json_each(json_extract(resource, '$')) AS _props WHERE starts_with(_props.key, '${base}')))`;
+  const results: UsCoreCheckResult[] = [];
+  for (const check of manifest.views) {
+    const candidates = byType.get(check.resource) ?? [];
+    if (candidates.length === 0) {
+      results.push({ check, total: 0, conforming: 0 });
+      continue;
     }
-    return `json_type(resource, '$.${part}') IS NOT NULL`;
-  });
-  return conditions.join(" AND ");
+    try {
+      const response = await fetcher(`${uscoreBaseUrl()}/${check.id}.json`, { cache: "force-cache" });
+      if (!response.ok) throw new Error(`view unavailable (${response.status})`);
+      const viewDefinition = (await response.json()) as Record<string, unknown>;
+      const result = (await engineFlattenView(viewDefinition, candidates)) as EngineQueryResult;
+      // Every selected column is a required element: conforming rows have no nulls.
+      const requiredCount = result.columns.length;
+      const conforming = result.rows.filter((row) => {
+        // column 0 is the row key in our views? No — views select only required
+        // elements; all columns count.
+        for (let index = 0; index < requiredCount; index += 1) {
+          const value = row[index];
+          if (value === null || value === undefined) return false;
+        }
+        return true;
+      }).length;
+      results.push({ check, total: result.rows.length, conforming });
+    } catch (error) {
+      results.push({ check, total: candidates.length, conforming: 0, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+  return results;
 }

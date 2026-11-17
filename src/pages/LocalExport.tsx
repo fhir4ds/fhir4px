@@ -37,7 +37,7 @@ import type { SmartSessionInfo, SmartToken } from "../lib/smart/types";
 import { buildIpsBundle } from "../lib/fhir/ips";
 import { printIpsHtml } from "../lib/fhir/ips-html";
 import { extractDistinctCodes, resolveOmopConcepts } from "../lib/fhir/omop-concepts";
-import { omopResultToCsv, runOmopExport, type OmopExportResult } from "../lib/fhir/omop-tables";
+import { omopResultToCsv, runOmopExport, type OmopTableResult } from "../lib/fhir/omop-tables";
 import { engineLoadResources } from "../lib/engine/engine-client";
 import { loadSessionResources } from "../lib/engine/session-data";
 import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
@@ -261,7 +261,7 @@ export function LocalExport() {
     }
   }
 
-  const [omopState, setOmopState] = useState<{ results: OmopExportResult[]; resolved: number; unmatched: number; mapUnavailable: boolean } | null>(null);
+  const [omopState, setOmopState] = useState<{ results: OmopTableResult[]; resolved: number; unmatched: number; mapUnavailable: boolean } | null>(null);
 
   async function buildOmopExport() {
     setBusy(true);
@@ -278,18 +278,19 @@ export function LocalExport() {
         onProgress: (done, total) => setStatus(`OMOP: resolving concepts… ${done}/${total}`)
       });
 
-      setStatus("OMOP: extracting CDM tables…");
-      const results = await runOmopExport(engineLoadResources, resolution.mappings);
+      setStatus("OMOP: extracting CDM tables via the fhir4ds view engine…");
+      const outcome = await runOmopExport(resources, resolution);
+      const okTables = outcome.results.filter((r) => !r.error).length;
       setOmopState({
-        results,
-        resolved: resolution.resolved,
-        unmatched: resolution.unmatched,
-        mapUnavailable: resolution.mapUnavailable
+        results: outcome.results,
+        resolved: outcome.resolved,
+        unmatched: outcome.unmatched,
+        mapUnavailable: outcome.mapUnavailable
       });
       setStatus(
-        `OMOP export ready — ${results.filter((r) => !r.error).length}/${results.length} tables, ` +
-          `${resolution.resolved}/${distinct.length} concepts resolved` +
-          (resolution.mapUnavailable ? " (athena map unavailable — concept_id 0)" : "")
+        `OMOP export ready — ${okTables}/${outcome.results.length} tables (fhir4ds ViewDefinition libraries), ` +
+          `${outcome.resolved}/${distinct.length} concepts resolved` +
+          (outcome.mapUnavailable ? " (athena map unavailable — concept_id 0)" : "")
       );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "OMOP export failed");
@@ -298,12 +299,12 @@ export function LocalExport() {
     }
   }
 
-  function downloadOmopCsv(table: OmopExportResult["table"], csv: string) {
+  function downloadOmopCsv(table: { id: string }, csv: string) {
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `omop_${table.name}.csv`;
+    anchor.download = `omop_${table.id.replace('-omop', '')}.csv`;
     anchor.click();
     globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
@@ -423,19 +424,19 @@ export function LocalExport() {
                   )}
                 </Stack>
                 {omopState.results.map((entry) => (
-                  <Stack key={entry.table.name} direction="row" spacing={1} alignItems="center">
+                  <Stack key={entry.id} direction="row" spacing={1} alignItems="center">
                     <Typography variant="body2" sx={{ minWidth: 180 }}>
-                      {entry.table.name}
+                      {entry.id.replace("-omop", "")}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
-                      {entry.error ?? `${entry.result.rows.length} rows · ${entry.table.description}`}
+                      {entry.error ?? `${entry.rows.length} rows`}
                     </Typography>
-                    {!entry.error && entry.result.rows.length > 0 && (
+                    {!entry.error && entry.rows.length > 0 && (
                       <Button
                         size="small"
                         variant="outlined"
                         startIcon={<Download size={14} />}
-                        onClick={() => downloadOmopCsv(entry.table, omopResultToCsv(entry.result))}
+                        onClick={() => downloadOmopCsv(entry, omopResultToCsv(entry))}
                       >
                         CSV
                       </Button>

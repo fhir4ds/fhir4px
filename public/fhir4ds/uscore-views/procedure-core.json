@@ -1,0 +1,18 @@
+{
+ "resource": "Procedure",
+ "name": "USCoreProcedure",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "status",
+     "path": "status"
+    },
+    {
+     "name": "code",
+     "path": "code.coding.code.first()"
+    }
+   ]
+  }
+ ]
+}

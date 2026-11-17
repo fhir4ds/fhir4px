@@ -1,0 +1,26 @@
+{
+ "resource": "MedicationRequest",
+ "name": "USCoreMedicationRequest",
+ "select": [
+  {
+   "column": [
+    {
+     "name": "status",
+     "path": "status"
+    },
+    {
+     "name": "intent",
+     "path": "intent"
+    },
+    {
+     "name": "medication",
+     "path": "medication.ofType(CodeableConcept).coding.code.first()"
+    },
+    {
+     "name": "authored_on",
+     "path": "authoredOn"
+    }
+   ]
+  }
+ ]
+}

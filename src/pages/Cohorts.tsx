@@ -1,18 +1,8 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { Play, Users } from "lucide-react";
-import { engineLoadResources, engineQuery } from "../lib/engine/engine-client";
 import { loadSessionResources } from "../lib/engine/session-data";
-import { COHORT_DEFINITIONS, type CohortDefinition } from "../lib/fhir/cohorts";
-
-interface CohortResult {
-  definition: CohortDefinition;
-  columns: string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rows: any[][];
-  error?: string;
-  executionMs: number;
-}
+import { executeAllCohorts, type CohortDefinition, type CohortResult } from "../lib/fhir/cohorts-runner";
 
 export default function CohortsPage() {
   const [busy, setBusy] = useState(false);
@@ -28,26 +18,10 @@ export default function CohortsPage() {
     try {
       setStatus("Loading patient data into the analysis engine…");
       const resources = await loadSessionResources();
-      await engineLoadResources(resources);
       setResourceCount(resources.length);
 
-      const next: CohortResult[] = [];
-      for (const definition of COHORT_DEFINITIONS) {
-        setStatus(`Evaluating cohort: ${definition.title}…`);
-        const started = performance.now();
-        try {
-          const result = await engineQuery(definition.sql);
-          next.push({ definition, columns: result.columns, rows: result.rows, executionMs: Math.round(performance.now() - started) });
-        } catch (caught) {
-          next.push({
-            definition,
-            columns: [],
-            rows: [],
-            error: caught instanceof Error ? caught.message : String(caught),
-            executionMs: Math.round(performance.now() - started)
-          });
-        }
-      }
+      setStatus("Translating cohort CQL via the fhir4ds translator and executing…");
+      const next = await executeAllCohorts(resources);
       setResults(next);
       const matched = next.filter((r) => !r.error && r.rows.length > 0).length;
       setStatus(`Completed — ${matched}/${next.length} cohorts matched over ${resources.length} resources`);
@@ -81,7 +55,7 @@ export default function CohortsPage() {
             <Stack spacing={1.5}>
               <Divider />
               <Typography variant="body2" color="text.secondary">
-                Static definitions (curated criteria). A builder UI can author definitions against the same execution path later.
+                Authored CQL, translated by the fhir4ds CQL translator (in-browser), executed on DuckDB-WASM. A builder UI can author definitions against the same pipeline later.
               </Typography>
               {results.map((result) => (
                 <Stack key={result.definition.id} spacing={0.75} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1.5 }}>

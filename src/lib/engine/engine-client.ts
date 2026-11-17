@@ -19,6 +19,9 @@ interface EngineMessage {
   kind: string;
   sql?: string;
   resources?: FhirResource[];
+  viewDefinition?: Record<string, unknown>;
+  library?: Record<string, unknown>;
+  composeOmop?: boolean;
 }
 
 let frame: HTMLIFrameElement | null = null;
@@ -101,4 +104,21 @@ export function engineQuery(sql: string): Promise<EngineQueryResult> {
 
 export function engineLoadResources(resources: FhirResource[]): Promise<{ count: number }> {
   return post({ id: 0, kind: "loadResources", resources });
+}
+
+/** flatten_view: run a ViewDefinition (fhir4ds viewdef engine, SQL verbatim). */
+export function engineFlattenView(
+  viewDefinition: Record<string, unknown>,
+  resources: FhirResource[]
+): Promise<EngineQueryResult> {
+  return post({ id: 0, kind: "flattenView", viewDefinition, resources });
+}
+
+/** SQLQuery Library execution with live OMOP composition (their pipeline). */
+export function engineRunLibrary(
+  library: Record<string, unknown>,
+  resources: FhirResource[],
+  options: { composeOmop?: boolean } = {}
+): Promise<EngineQueryResult> {
+  return post({ id: 0, kind: "runLibrary", library, resources, composeOmop: options.composeOmop });
 }
