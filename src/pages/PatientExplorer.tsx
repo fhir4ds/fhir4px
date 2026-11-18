@@ -113,6 +113,7 @@ function buildConditionCodeIndex(conditionGroups: PatientFriendlyGroup[]): Map<s
 }
 
 import { loadGbdWeights, lookupDwForCode } from "../lib/priority/gbd-weights";
+import { scoreCondition, scoreLab, scoreMedication, scoreEncounter } from "../lib/priority/scoring";
 import {
   emptyGroupingCache,
   GROUPING_CACHE_ID,
@@ -139,6 +140,9 @@ import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/
 import { loadLabPartCrosswalk } from "../lib/associations/bundle";
 import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
 import { runImmunizationForecast, type ImmunizationForecastItem } from "../lib/fhir/immunization-forecast";
+import { buildImmunizationGaps, buildMeasureGaps, rankCareGaps, type CareGap } from "../lib/fhir/care-gaps";
+import { runQualityMeasures, evaluateMeasureGaps } from "../lib/fhir/measures";
+import CareGapCarousel from "../components/CareGapCarousel";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
@@ -1392,6 +1396,8 @@ export function PatientExplorer() {
   const [labPartCrosswalk, setLabPartCrosswalk] = useState<Record<string, string[]> | null>(null);
   const [panelsSectionExpanded, setPanelsSectionExpanded] = useState(true);
   const [immunizationForecast, setImmunizationForecast] = useState<ImmunizationForecastItem[] | null>(null);
+  const [measureGaps, setMeasureGaps] = useState<CareGap[]>([]);
+  const [measureGapsBusy, setMeasureGapsBusy] = useState(false);
   const [viewerDocument, setViewerDocument] = useState<{ resource: FhirResource; label: string; sourceBaseUrl?: string } | null>(null);
   const [viewerBlob, setViewerBlob] = useState<Blob | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
@@ -3052,22 +3058,20 @@ export function PatientExplorer() {
     });
   }, [groups, canonicalResolvedGroups]);
 
-  // Compute a simple priority score per group for the Summary view mode.
-  // Formula is intentionally lightweight (no full booster chain) — we layer
-  // the full scoring engine later. Inputs: canonical DW (conditions), out-of-
-  // range flag (labs), group confidence (fallback signal), and a small recency
-  // bump so ties break toward more-recent activity.
-  //
-  // Scoring tiers (so conditions generally outrank labs/meds):
-  //   Conditions      : 0.7 × DW (from ICD-10 canonical) + 0.10 tier boost
-  //   Labs/vitals     : 0.3 × (max owning-condition DW via relationship cache)
-  //                     + 0.10 out-of-range + small confidence/recency
-  //   Medications     : 0.3 × (max treated-condition DW) — TODO, falls back to confidence only
-  //   Other (Enc etc.): confidence + recency only
-  //
-  // The inherited-DW path means a lab is bounded above by its owning
-  // condition's score, so the condition always ranks higher. Unclaimed labs
-  // (no relationship) get a small base so they surface below conditions.
+  // Full booster-chain priority scoring (src/lib/priority/scoring.ts):
+  //   total = 0.7 × base DW + 0.3 × boosters
+  //   - Conditions: DW base + out-of-range related labs + active related med
+  //     count boosters (encounter-timing boosters await an
+  //     Encounter↔Condition linkage — reasonReference extraction — which the
+  //     data model does not carry yet)
+  //   - Labs/vitals: inherited max owning-condition DW + out-of-range +
+  //     monitored-by-meds boosters
+  //   - Medications: inherited treated-condition DW
+  //   - Encounters: hospitalization (visit class) booster
+  // Relationship inputs come from the relationship cache (lab↔condition)
+  // and the deterministic med-claim table (med→condition). Items the
+  // engine scores 0 keep a small surface floor (confidence + recency) so
+  // uncoded groups still surface below scored ones, as before.
   useEffect(() => {
     if (groups.length === 0) {
       if (Object.keys(groupPriorityScores).length > 0) setGroupPriorityScores({});
@@ -3081,6 +3085,11 @@ export function PatientExplorer() {
       } catch {
         // GBD unavailable — score with whatever we have
       }
+
+      const dwOf = (group: PatientFriendlyGroup | undefined): number => {
+        if (!group || group.canonicalCode?.system !== "icd10" || !gbdTable) return 0;
+        return lookupDwForCode(group.canonicalCode.code, gbdTable);
+      };
 
       // Index condition groups by relationshipGroupKey for fast lookup
       const conditionByKey = new Map<string, PatientFriendlyGroup>();
@@ -3108,73 +3117,106 @@ export function PatientExplorer() {
         set.add(entry.targetGroupId);
       }
 
-      // For each lab group, find the max DW across owning conditions
-      const labInheritedDwByGroupId = new Map<string, number>();
+      // Inverse: condition key → lab groups (for out-of-range lab counts)
+      const labsByOwnerKey = new Map<string, PatientFriendlyGroup[]>();
       for (const labGroup of groups) {
         if (!labGroup.resourceTypes.includes("Observation")) continue;
-        const labKey = relationshipGroupKey(labGroup);
-        const owners = labOwnersByKey.get(labKey);
-        if (!owners || owners.size === 0) continue;
-        let maxDw = 0;
+        const owners = labOwnersByKey.get(relationshipGroupKey(labGroup));
+        if (!owners) continue;
         for (const ownerKey of owners) {
-          const ownerGroup = conditionByKey.get(ownerKey);
-          if (ownerGroup?.canonicalCode?.system === "icd10" && gbdTable) {
-            const dw = lookupDwForCode(ownerGroup.canonicalCode.code, gbdTable);
-            if (dw > maxDw) maxDw = dw;
+          let list = labsByOwnerKey.get(ownerKey);
+          if (!list) {
+            list = [];
+            labsByOwnerKey.set(ownerKey, list);
           }
+          list.push(labGroup);
         }
-        if (maxDw > 0) labInheritedDwByGroupId.set(labGroup.groupId, maxDw);
       }
+
+      // Med claims inverse: condition group id → active med count
+      const medCountByConditionGroupId = new Map<string, number>();
+      for (const claim of Object.values(medClaimedByCondition)) {
+        medCountByConditionGroupId.set(claim, (medCountByConditionGroupId.get(claim) ?? 0) + 1);
+      }
+      const conditionGroupById = new Map(groups.filter((g) => g.resourceTypes.includes("Condition")).map((g) => [g.groupId, g]));
+      const encounterById = new Map((summary?.encounters ?? []).map((encounter) => [encounter.id, encounter]));
 
       const now = Date.now();
       const RECENCY_MS = 90 * 24 * 60 * 60 * 1000;
       const scored: Record<string, number> = {};
       for (const group of groups) {
-        let score = 0;
         const isCondition = group.resourceTypes.includes("Condition");
         const isObservation = group.resourceTypes.includes("Observation");
+        const isMedication = group.resourceTypes.includes("MedicationRequest");
+        const isEncounter = group.resourceTypes.includes("Encounter");
+        let total = 0;
 
         if (isCondition) {
-          // Tier 1: condition. Full-weight DW + flat tier boost so even mild
-          // conditions (low DW) outrank the labs that monitor them.
-          if (group.canonicalCode?.system === "icd10" && gbdTable) {
-            score += 0.7 * lookupDwForCode(group.canonicalCode.code, gbdTable);
-          }
-          score += 0.10; // condition tier boost
+          const ownedLabs = labsByOwnerKey.get(relationshipGroupKey(group)) ?? [];
+          const outOfRangeLabCount = ownedLabs.filter((lab) => groupOutOfRangeFlags[lab.groupId] === true).length;
+          total = scoreCondition({
+            baseDw: dwOf(group),
+            relatedEncounters: [],
+            visitClassByEncounterId: new Map(),
+            outOfRangeLabCount,
+            activeRelatedMedCount: medCountByConditionGroupId.get(group.groupId) ?? 0
+          }).total;
         } else if (isObservation) {
-          // Tier 2: lab/vital. Inherit DW from owning condition at lower
-          // weight (0.3 vs 0.7) so the lab ranks below its condition.
-          const inheritedDw = labInheritedDwByGroupId.get(group.groupId);
-          if (inheritedDw && inheritedDw > 0) {
-            score += 0.3 * inheritedDw;
+          const owners = labOwnersByKey.get(relationshipGroupKey(group));
+          let maxDw = 0;
+          let relatedMedCount = 0;
+          if (owners) {
+            for (const ownerKey of owners) {
+              const ownerGroup = conditionByKey.get(ownerKey);
+              maxDw = Math.max(maxDw, dwOf(ownerGroup));
+              relatedMedCount += medCountByConditionGroupId.get(ownerGroup?.groupId ?? "") ?? 0;
+            }
           }
-          if (groupOutOfRangeFlags[group.groupId] === true) {
-            score += 0.10;
-          }
-        } else {
-          // Tier 3: meds, encounters, procedures, etc.
-          score += 0.05;
+          total = scoreLab({
+            baseDw: maxDw,
+            outOfRange: groupOutOfRangeFlags[group.groupId] === true,
+            relatedMedCount
+          }).total;
+        } else if (isMedication) {
+          const claimedConditionId = medClaimedByCondition[group.groupId];
+          total = scoreMedication({
+            baseDw: dwOf(conditionGroupById.get(claimedConditionId)),
+            relatedEncounters: [],
+            visitClassByEncounterId: new Map()
+          }).total;
+        } else if (isEncounter) {
+          const encounterRecord = records.find((r) => group.resourceIds.includes(r.id) && r.resourceType === "Encounter");
+          total = scoreEncounter({
+            baseDw: 0,
+            visitClass: encounterRecord
+              ? deterministicEncounterVisitClassification(encounterRecord).visitClass
+              : undefined
+          }).total;
         }
 
-        // Common: group confidence (LLM/lookup certainty) + recency bump
-        score += 0.05 * group.confidence;
-        const memberDates = group.resourceIds
-          .map((id) => observationById.get(id)?.effectiveDate)
-          .filter((d): d is string => Boolean(d));
-        if (memberDates.some((d) => {
-          const parsed = new Date(d);
-          return !Number.isNaN(parsed.getTime()) && (now - parsed.getTime()) < RECENCY_MS;
-        })) {
-          score += 0.03;
+        // Surface floor: uncoded/quiet groups stay visible (below scored
+        // ones) via confidence + a small recency tie-breaker, matching the
+        // previous lightweight formula's tier-3 behavior.
+        if (total <= 0) {
+          total = 0.05 * group.confidence;
+          const memberDates = group.resourceIds
+            .map((id) => observationById.get(id)?.effectiveDate ?? encounterById.get(id)?.periodStart)
+            .filter((d): d is string => Boolean(d));
+          if (memberDates.some((d) => {
+            const parsed = new Date(d);
+            return !Number.isNaN(parsed.getTime()) && (now - parsed.getTime()) < RECENCY_MS;
+          })) {
+            total += 0.03;
+          }
         }
-        scored[group.groupId] = score;
+        scored[group.groupId] = total;
       }
       if (!cancelled) setGroupPriorityScores(scored);
     })();
     return () => {
       cancelled = true;
     };
-  }, [groups, groupOutOfRangeFlags, observationById, relationshipCache]);
+  }, [groups, groupOutOfRangeFlags, observationById, relationshipCache, medClaimedByCondition, records, summary]);
 
   // Build med→condition claim map via the deterministic condition_medication
   // lookup table. For each med group, we check whether its patient-friendly
@@ -4186,11 +4228,73 @@ export function PatientExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary, resourceByKey]);
 
+  // CMS measure care gaps: run the shared measures pipeline once per
+  // dataset load. This is a best-effort enrichment — the engine (and its
+  // cold boot) may fail or be unavailable, in which case the band simply
+  // shows no measure gaps.
+  useEffect(() => {
+    if (!summary) return;
+    let cancelled = false;
+    setMeasureGapsBusy(true);
+    void runQualityMeasures()
+      .then((results) => {
+        if (cancelled) return;
+        setMeasureGaps(buildMeasureGaps(evaluateMeasureGaps(results)));
+      })
+      .catch((caught) => {
+        // Best-effort path (see comment above) — log and leave gaps empty.
+        console.warn("[fhir4px:care-gaps] measure evaluation unavailable", caught);
+        if (!cancelled) setMeasureGaps([]);
+      })
+      .finally(() => {
+        if (!cancelled) setMeasureGapsBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [summary]);
+
+  const immunizationGaps = useMemo(
+    () => buildImmunizationGaps(immunizationForecast ?? []),
+    [immunizationForecast]
+  );
+  const careGaps = useMemo(
+    () => rankCareGaps([...immunizationGaps, ...measureGaps]),
+    [immunizationGaps, measureGaps]
+  );
+
   function forecastStatusColor(status: string): "success" | "warning" | "error" | "default" {
     if (status === "complete" || status === "immune") return "success";
     if (status === "notComplete" || status === "due") return "warning";
     if (status === "contraindicated" || status === "pastDue") return "error";
     return "default";
+  }
+
+  function renderCareGaps() {
+    if (careGaps.length === 0 && !measureGapsBusy) return null;
+    return (
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography fontWeight={700}>Care gaps &amp; recommendations</Typography>
+          {measureGapsBusy && (
+            <Typography variant="caption" color="text.secondary">
+              evaluating quality measures…
+            </Typography>
+          )}
+        </Stack>
+        <Typography variant="caption" color="text.secondary">
+          CDC adult immunization schedule (CDSi) and CMS quality measures — negative results surface here as
+          actions. Click a card for details.
+        </Typography>
+        <CareGapCarousel
+          gaps={careGaps}
+          busy={measureGapsBusy}
+          onSelect={(gap) => {
+            if (gap.targetTab) setActiveTab(gap.targetTab as ExplorerTab);
+          }}
+        />
+      </Stack>
+    );
   }
 
   function renderImmunizationForecast() {
@@ -6509,6 +6613,7 @@ export function PatientExplorer() {
           <Stack spacing={2.5}>
             {renderDataStatusBar()}
             {renderPatientProfile()}
+            {activeTab === "PatientSummary" && renderCareGaps()}
             {activeTab === "PatientSummary" && renderImmunizationForecast()}
             {error && <Alert severity="warning">{error}</Alert>}
 

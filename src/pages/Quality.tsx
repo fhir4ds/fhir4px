@@ -1,30 +1,12 @@
 import { useEffect, useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { Activity, ClipboardCheck, Play } from "lucide-react";
-import { engineLoadResources, engineQuery } from "../lib/engine/engine-client";
+import { engineLoadResources } from "../lib/engine/engine-client";
 import { runUsCoreChecks, type UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { loadSessionResources } from "../lib/engine/session-data";
+import { runQualityMeasures, type MeasureResult } from "../lib/fhir/measures";
 
 
-
-interface MeasureManifest {
-  measures: Record<string, { title: string; populations: string[]; sql: string }>;
-}
-
-interface MeasureResult {
-  id: string;
-  title: string;
-  columns: string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  rows: any[][];
-  error?: string;
-  executionMs: number;
-}
-
-function terminologyBaseUrl(): string {
-  const base = import.meta.env.BASE_URL || "/";
-  return `${base.replace(/\/?$/, "/")}fhir4ds/measures`;
-}
 
 export default function QualityPage() {
   const [busy, setBusy] = useState(false);
@@ -50,33 +32,7 @@ export default function QualityPage() {
       setChecks(results);
 
       setStatus("Running quality measures…");
-      const manifestResponse = await fetch(`${terminologyBaseUrl()}/manifest.json`);
-      if (!manifestResponse.ok) throw new Error(`Measure manifest unavailable (${manifestResponse.status})`);
-      const manifest = (await manifestResponse.json()) as MeasureManifest;
-      const measureResults: MeasureResult[] = [];
-      for (const [id, measure] of Object.entries(manifest.measures)) {
-        const sqlResponse = await fetch(`${terminologyBaseUrl()}/${measure.sql}`);
-        if (!sqlResponse.ok) {
-          measureResults.push({ id, title: measure.title, columns: [], rows: [], error: `SQL unavailable (${sqlResponse.status})`, executionMs: 0 });
-          continue;
-        }
-        let sql = await sqlResponse.text();
-        // Measure SQL is generated for the 2026 measurement period; shift to
-        // the current year so live data windows line up.
-        const year = new Date().getFullYear();
-        if (year !== 2026) {
-          sql = sql
-            .replaceAll("2026-01-01T00:00:00.000", `${year}-01-01T00:00:00.000`)
-            .replaceAll("2026-12-31T23:59:59.999", `${year}-12-31T23:59:59.999`);
-        }
-        const started = performance.now();
-        try {
-          const result = await engineQuery(sql);
-          measureResults.push({ id, title: measure.title, columns: result.columns, rows: result.rows, executionMs: Math.round(performance.now() - started) });
-        } catch (caught) {
-          measureResults.push({ id, title: measure.title, columns: [], rows: [], error: caught instanceof Error ? caught.message : String(caught), executionMs: Math.round(performance.now() - started) });
-        }
-      }
+      const measureResults = await runQualityMeasures();
       setMeasures(measureResults);
       setStatus(`Completed — ${results.length} conformance checks and ${measureResults.length} measures over ${resources.length} resources`);
     } catch (caught) {
