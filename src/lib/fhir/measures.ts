@@ -58,9 +58,10 @@ export async function fetchMeasureManifest(): Promise<MeasureManifest> {
 /**
  * Load session resources into the engine and execute every measure in the
  * manifest. Measure SQL is generated for the 2026 measurement period; dates
- * are shifted to the current year so live data windows line up.
+ * are shifted to the current year so live data windows line up. Use
+ * runQualityMeasures() (cached) instead of calling this directly.
  */
-export async function runQualityMeasures(): Promise<MeasureResult[]> {
+async function executeQualityMeasures(): Promise<MeasureResult[]> {
   const resources = await loadSessionResources();
   await engineLoadResources(resources);
   const manifest = await fetchMeasureManifest();
@@ -96,24 +97,65 @@ function boolAt(row: unknown[], columns: string[], name: string): boolean | null
   return value === true || value === 1 || value === "true" ? true : value === false || value === 0 || value === "false" ? false : null;
 }
 
+/** A measure evaluated for the loaded patient, with full population pathway. */
+export interface MeasureEvaluation {
+  id: string;
+  title: string;
+  negative: boolean;
+  polarity: "proportion" | "inverse";
+  initialPopulation: boolean;
+  denominator: boolean;
+  excluded: boolean;
+  numerator: boolean;
+}
+
+export function evaluateMeasureGaps(results: MeasureResult[]): MeasureGapResult[] {
+  return evaluateMeasures(results).map(({ id, title, negative, polarity }) => ({ id, title, negative, polarity }));
+}
+
 /**
  * Evaluate measure results for the loaded (single-patient) dataset.
- * Errored measures and missing population columns are never negative —
+ * Errored measures and missing population columns evaluate to all-false —
  * a gap is only asserted from a well-formed executed row.
  */
-export function evaluateMeasureGaps(results: MeasureResult[]): MeasureGapResult[] {
+export function evaluateMeasures(results: MeasureResult[]): MeasureEvaluation[] {
   return results.map((result) => {
     const polarity: "proportion" | "inverse" = "proportion";
     if (result.error || result.rows.length === 0) {
-      return { id: result.id, title: result.title, negative: false, polarity };
+      return { id: result.id, title: result.title, negative: false, polarity, initialPopulation: false, denominator: false, excluded: false, numerator: false };
     }
     const row = result.rows[0];
-    const denominator = boolAt(row, result.columns, "Denominator");
-    const excluded = boolAt(row, result.columns, "Denominator Exclusions");
-    const numerator = boolAt(row, result.columns, "Numerator");
+    const initialPopulation = boolAt(row, result.columns, "Initial Population") === true;
+    const denominator = boolAt(row, result.columns, "Denominator") === true;
+    const excluded = boolAt(row, result.columns, "Denominator Exclusions") === true;
+    const numerator = boolAt(row, result.columns, "Numerator") === true;
     const negative =
-      denominator === true && excluded !== true &&
-      (polarity === "proportion" ? numerator === false : numerator === true);
-    return { id: result.id, title: result.title, negative, polarity };
+      denominator && !excluded &&
+      (polarity === "proportion" ? !numerator : numerator);
+    return { id: result.id, title: result.title, negative, polarity, initialPopulation, denominator, excluded, numerator };
   });
+}
+
+// ── Session-level cache ──────────────────────────────────────────────────
+// The measure calculation is dataset-scoped: run once, share the results
+// between the Patient Summary care-gap band and the Quality page.
+// Invalidated when the loaded dataset changes.
+
+let cachedRun: Promise<MeasureResult[]> | null = null;
+
+export function invalidateQualityMeasures(): void {
+  cachedRun = null;
+}
+
+/** Execute (or return the cached) measure run for the loaded dataset. */
+export function runQualityMeasures(): Promise<MeasureResult[]> {
+  if (!cachedRun) {
+    cachedRun = executeQualityMeasures().catch((caught) => {
+      // Don't cache failures — a later caller (e.g. the Quality page) may
+      // succeed once the engine has finished booting.
+      cachedRun = null;
+      throw caught;
+    });
+  }
+  return cachedRun;
 }

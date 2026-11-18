@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, Button, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
-import { Activity, ClipboardCheck, Play } from "lucide-react";
+import { Activity, ArrowRight, ClipboardCheck, Play } from "lucide-react";
 import { engineLoadResources } from "../lib/engine/engine-client";
 import { runUsCoreChecks, type UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { loadSessionResources } from "../lib/engine/session-data";
-import { runQualityMeasures, type MeasureResult } from "../lib/fhir/measures";
+import { runQualityMeasures, evaluateMeasures, type MeasureEvaluation, type MeasureResult } from "../lib/fhir/measures";
 
 
 
@@ -47,6 +47,26 @@ export default function QualityPage() {
       // engine frame is session-scoped; nothing to dispose here
     };
   }, []);
+
+  const measureEvaluations = useMemo(
+    () =>
+      measures.map((measure) => ({
+        measure,
+        evaluation: evaluateMeasures([measure])[0] as MeasureEvaluation
+      })),
+    [measures]
+  );
+
+  function populationChip(name: string, met: boolean, color: "success" | "warning" = "success") {
+    return (
+      <Chip
+        size="small"
+        variant={met ? "filled" : "outlined"}
+        color={met ? color : "default"}
+        label={met ? `${name} ✓` : `${name} ✕`}
+      />
+    );
+  }
 
   function conformanceChip(result: UsCoreCheckResult): React.ReactNode {
     if (result.error) return <Chip size="small" color="error" label="error" />;
@@ -111,46 +131,54 @@ export default function QualityPage() {
             </Stack>
           )}
 
-          {measures.length > 0 && (
+          {measureEvaluations.length > 0 && (
             <Stack spacing={1}>
               <Divider />
               <Typography fontWeight={700}>Quality measures (CMS, pre-translated CQL→SQL)</Typography>
-              {measures.map((measure) => (
+              <Typography variant="body2" color="text.secondary">
+                Evaluated once per loaded dataset and shared with the Records summary care-gap band.
+                Measures whose initial population is false are listed compactly — they do not apply to this patient.
+              </Typography>
+              {measureEvaluations.map(({ measure, evaluation }) => (
                 <Box key={measure.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1.5 }}>
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                     <Typography fontWeight={700}>{measure.id}</Typography>
                     <Typography color="text.secondary">{measure.title}</Typography>
                     {measure.error ? (
                       <Chip size="small" color="error" label="failed" />
-                    ) : (
-                      <Chip size="small" variant="outlined" label={`${measure.executionMs} ms`} />
-                    )}
+                    ) : evaluation.negative ? (
+                      <Chip size="small" color="error" label="care gap" />
+                    ) : evaluation.initialPopulation ? (
+                      <Chip size="small" color="success" label="met" />
+                    ) : null}
+                    <Chip size="small" variant="outlined" label={`${measure.executionMs} ms`} />
                   </Stack>
                   {measure.error ? (
                     <Typography variant="body2" color="error" sx={{ mt: 0.5, overflowWrap: "anywhere" }}>
                       {measure.error.slice(0, 300)}
                     </Typography>
+                  ) : evaluation.initialPopulation ? (
+                    <Stack direction="row" spacing={0.75} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap alignItems="center">
+                      {populationChip("Initial population", true)}
+                      <ArrowRight size={13} />
+                      {populationChip("Denominator", evaluation.denominator)}
+                      {evaluation.excluded && populationChip("Excluded", true, "warning")}
+                      {evaluation.denominator && !evaluation.excluded && (
+                        <>
+                          <ArrowRight size={13} />
+                          {populationChip("Numerator", evaluation.numerator)}
+                          <Typography variant="caption" color="text.secondary">
+                            {evaluation.numerator
+                              ? "— numerator requirement documented"
+                              : "— numerator requirement not documented"}
+                          </Typography>
+                        </>
+                      )}
+                    </Stack>
                   ) : (
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          {measure.columns.map((column) => (
-                            <TableCell key={column} sx={{ fontWeight: 700 }}>
-                              {column}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {measure.rows.map((row, index) => (
-                          <TableRow key={index}>
-                            {row.map((cell, cellIndex) => (
-                              <TableCell key={cellIndex}>{cell === null || cell === undefined ? "—" : typeof cell === "object" ? JSON.stringify(cell).slice(0, 80) : String(cell)}</TableCell>
-                            ))}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      Not in initial population — measure does not apply to this patient.
+                    </Typography>
                   )}
                 </Box>
               ))}

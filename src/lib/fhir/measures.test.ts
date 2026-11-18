@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateMeasureGaps, type MeasureResult } from "./measures";
+import { evaluateMeasureGaps, evaluateMeasures, type MeasureResult } from "./measures";
 
 const COLUMNS = ["patient_id", "Initial Population", "Denominator", "Denominator Exclusions", "Numerator"];
 
@@ -46,5 +46,29 @@ describe("evaluateMeasureGaps", () => {
   it("handles string booleans from the engine", () => {
     const [result] = evaluateMeasureGaps([measure({ rows: [["p1", "true", "true", "false", "false"]] })]);
     expect(result.negative).toBe(true);
+  });
+});
+
+describe("evaluateMeasures", () => {
+  it("exposes the full population pathway for evidence display", () => {
+    const [evaluation] = evaluateMeasures([
+      measure({ rows: [["p1", true, true, false, false]] })
+    ]);
+    expect(evaluation).toMatchObject({
+      initialPopulation: true,
+      denominator: true,
+      excluded: false,
+      numerator: false,
+      negative: true
+    });
+  });
+
+  it("evaluates errored measures to all-false without a gap", () => {
+    const [evaluation] = evaluateMeasures([measure({ error: "boom", rows: [] })]);
+    expect(evaluation).toMatchObject({
+      initialPopulation: false,
+      denominator: false,
+      negative: false
+    });
   });
 });
