@@ -4263,13 +4263,6 @@ export function PatientExplorer() {
     [immunizationGaps, measureGaps]
   );
 
-  function forecastStatusColor(status: string): "success" | "warning" | "error" | "default" {
-    if (status === "complete" || status === "immune") return "success";
-    if (status === "notComplete" || status === "due") return "warning";
-    if (status === "contraindicated" || status === "pastDue") return "error";
-    return "default";
-  }
-
   function renderCareGaps() {
     if (careGaps.length === 0 && !measureGapsBusy) return null;
     return (
@@ -4293,53 +4286,6 @@ export function PatientExplorer() {
             if (gap.targetTab) setActiveTab(gap.targetTab as ExplorerTab);
           }}
         />
-      </Stack>
-    );
-  }
-
-  function renderImmunizationForecast() {
-    if (!immunizationForecast || immunizationForecast.length === 0) return null;
-    // Hide fully inapplicable output (all agedOut/complete with no dates) to
-    // keep the card meaningful — show when anything is due or actionable.
-    const actionable = immunizationForecast.filter(
-      (item) => item.status !== "agedOut" && !(item.status === "complete" && !item.recommendedDate)
-    );
-    if (actionable.length === 0) return null;
-    return (
-      <Stack spacing={1}>
-        <Typography fontWeight={700}>Immunization forecast</Typography>
-        <Typography variant="caption" color="text.secondary">
-          CDC adult schedule (CDSi) — evaluated locally; dates are earliest / recommended / past-due.
-        </Typography>
-        <Table size="small" aria-label="Immunization forecast">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700 }}>Vaccine</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-              <TableCell sx={{ fontWeight: 700 }}>Recommended date</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {actionable.map((item, index) => (
-              <TableRow key={`${item.vaccineCodes.join(",")}:${index}`} sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
-                <TableCell>{item.vaccineLabel}</TableCell>
-                <TableCell>
-                  <Chip
-                    size="small"
-                    color={forecastStatusColor(item.status)}
-                    label={item.statusDisplay ?? item.status}
-                    title={item.reason ?? item.description}
-                  />
-                </TableCell>
-                <TableCell>
-                  {item.recommendedDate
-                    ? new Date(`${item.recommendedDate.slice(0, 10)}T00:00:00`).toLocaleDateString()
-                    : "—"}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
       </Stack>
     );
   }
@@ -5607,10 +5553,13 @@ export function PatientExplorer() {
 
     if (visible.length === 0) {
       return (
-        <Alert severity="info">
-          No prioritized items yet. Items need a canonical code match (ICD-10/LOINC/RxNorm)
-          or an out-of-range flag to surface here.
-        </Alert>
+        <Stack spacing={1.5}>
+          {renderCareGaps()}
+          <Alert severity="info">
+            No prioritized items yet. Items need a canonical code match (ICD-10/LOINC/RxNorm)
+            or an out-of-range flag to surface here.
+          </Alert>
+        </Stack>
       );
     }
 
@@ -5624,6 +5573,7 @@ export function PatientExplorer() {
 
     return (
       <Stack spacing={1.5}>
+        {renderCareGaps()}
         <Typography variant="caption" color="text.secondary">
           Top {visible.length} items across all domains by priority
           {hiddenCount > 0 ? ` · ${hiddenCount} more lower-priority hidden` : ""}
@@ -6613,8 +6563,6 @@ export function PatientExplorer() {
           <Stack spacing={2.5}>
             {renderDataStatusBar()}
             {renderPatientProfile()}
-            {activeTab === "PatientSummary" && renderCareGaps()}
-            {activeTab === "PatientSummary" && renderImmunizationForecast()}
             {error && <Alert severity="warning">{error}</Alert>}
 
             <Divider />
