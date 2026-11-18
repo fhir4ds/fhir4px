@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Box, Button, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
-import { Activity, ArrowRight, ClipboardCheck, Play } from "lucide-react";
+import { Alert, Box, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Activity, ArrowRight, ClipboardCheck } from "lucide-react";
 import { engineLoadResources } from "../lib/engine/engine-client";
 import { runUsCoreChecks, type UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { loadSessionResources } from "../lib/engine/session-data";
@@ -43,9 +43,15 @@ export default function QualityPage() {
   }
 
   useEffect(() => {
+    // Auto-run once per mount — results are dataset-scoped and cached at
+    // module level (shared with the Records summary care-gap band), so there
+    // is no manual trigger. Without a connected session the run throws and
+    // the connect hint stays up.
+    void runChecks();
     return () => {
       // engine frame is session-scoped; nothing to dispose here
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const measureEvaluations = useMemo(
@@ -95,9 +101,9 @@ export default function QualityPage() {
           {busy && <LinearProgress />}
           {error && <Alert severity="error">{error}</Alert>}
 
-          <Button variant="contained" startIcon={<Play size={18} />} onClick={() => void runChecks()} disabled={busy}>
-            Run US Core checks &amp; measures
-          </Button>
+          <Typography variant="caption" color="text.secondary">
+            Runs automatically from the loaded dataset — results are shared with the Records summary care-gap band.
+          </Typography>
           {resourceCount !== null && <Chip label={`${resourceCount} resources loaded into the engine`} />}
 
           {checks.length > 0 && (

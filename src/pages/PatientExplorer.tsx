@@ -5443,9 +5443,8 @@ export function PatientExplorer() {
     const OVERVIEW_CAP = 8;
     // Build maps:
     //   conditionKeyToGroup    — for resolving owning conditions
-    //   labKeyToConditionKey   — labs claimed by a condition (via cache + recency)
-    //   conditionKeyToClaimedLab — for showing the most recent claimed lab inline
-    const LAB_RECENCY_MS = 180 * 24 * 60 * 60 * 1000;
+    //   labKeyToConditionKey   — labs claimed by a condition (via association cache)
+    //   conditionKeyToInlineLabs — claimed labs shown inline on the condition card
     const conditionByKey = new Map<string, PatientFriendlyGroup>();
     for (const g of displayGroups) {
       if (g.resourceTypes.includes("Condition")) {
@@ -5469,20 +5468,19 @@ export function PatientExplorer() {
       }
       const labGroup = labByKey.get(entry.sourceGroupId);
       if (!labGroup) continue;
-      // Only claim if the lab has a value within the recency window
-      const hasRecent = labGroup.resourceIds.some((id) => {
-        const obs = observationById.get(id);
-        if (!obs?.effectiveDate) return false;
-        const parsed = new Date(obs.effectiveDate);
-        if (Number.isNaN(parsed.getTime())) return false;
-        const age = Date.now() - parsed.getTime();
-        return age >= 0 && age <= LAB_RECENCY_MS;
-      });
-      if (hasRecent) labKeyToConditionKey.set(entry.sourceGroupId, entry.targetGroupId);
+      labKeyToConditionKey.set(entry.sourceGroupId, entry.targetGroupId);
     }
 
-    // For each condition, pick the most recent claimed lab for inline display
-    const conditionKeyToInlineLab = new Map<string, { group: PatientFriendlyGroup; value: string; effectiveDate?: string; outOfRange: boolean }>();
+    // For each condition, collect claimed labs (latest value each) —
+    // out-of-range first, then most recent; capped for the card.
+    const INLINE_LAB_CAP = 3;
+    interface InlineLab {
+      group: PatientFriendlyGroup;
+      value: string;
+      effectiveDate?: string;
+      outOfRange: boolean;
+    }
+    const labsByConditionKey = new Map<string, InlineLab[]>();
     for (const [labKey, condKey] of labKeyToConditionKey) {
       const labGroup = labByKey.get(labKey);
       if (!labGroup) continue;
@@ -5500,18 +5498,26 @@ export function PatientExplorer() {
         }
       }
       if (!latestObs) continue;
-      const value = latestObs.value || "(no value)";
-      const outOfRange = groupOutOfRangeFlags[labGroup.groupId] === true;
-      const existing = conditionKeyToInlineLab.get(condKey);
-      // Pick the out-of-range one if any; otherwise keep the first
-      if (!existing || (outOfRange && !existing.outOfRange)) {
-        conditionKeyToInlineLab.set(condKey, {
-          group: labGroup,
-          value,
-          effectiveDate: latestObs.effectiveDate,
-          outOfRange
-        });
+      const inline: InlineLab = {
+        group: labGroup,
+        value: latestObs.value || "(no value)",
+        effectiveDate: latestObs.effectiveDate,
+        outOfRange: groupOutOfRangeFlags[labGroup.groupId] === true
+      };
+      let list = labsByConditionKey.get(condKey);
+      if (!list) {
+        list = [];
+        labsByConditionKey.set(condKey, list);
       }
+      list.push(inline);
+    }
+    const conditionKeyToInlineLabs = new Map<string, InlineLab[]>();
+    for (const [condKey, list] of labsByConditionKey) {
+      list.sort((a, b) => {
+        if (a.outOfRange !== b.outOfRange) return a.outOfRange ? -1 : 1;
+        return (b.effectiveDate ?? "").localeCompare(a.effectiveDate ?? "");
+      });
+      conditionKeyToInlineLabs.set(condKey, list.slice(0, INLINE_LAB_CAP));
     }
 
     // Build condition → claimed meds map (from medClaimedByCondition state)
@@ -5586,8 +5592,8 @@ export function PatientExplorer() {
           const domainLabel = group.resourceTypes[0]
             ? RESOURCE_LABELS[group.resourceTypes[0] as ExplorerTab] ?? group.resourceTypes[0]
             : "Record";
-          const inlineLab = group.resourceTypes.includes("Condition")
-            ? conditionKeyToInlineLab.get(relationshipGroupKey(group))
+          const inlineLabs = group.resourceTypes.includes("Condition")
+            ? conditionKeyToInlineLabs.get(relationshipGroupKey(group))
             : undefined;
           const inlineMeds = group.resourceTypes.includes("Condition")
             ? conditionKeyToInlineMeds.get(relationshipGroupKey(group))
@@ -5624,41 +5630,52 @@ export function PatientExplorer() {
                 )}
                 {group.fallback && <Chip size="small" variant="outlined" label="Review" />}
               </Stack>
-              {inlineLab && (
-                <Box
-                  sx={{
-                    mt: 1,
-                    p: 1,
-                    bgcolor: inlineLab.outOfRange ? "rgba(255, 180, 0, 0.06)" : "rgba(255, 255, 255, 0.03)",
-                    border: 1,
-                    borderColor: inlineLab.outOfRange ? "warning.main" : "divider",
-                    borderRadius: 1
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    const firstType = inlineLab.group.resourceTypes[0] as ExplorerTab | undefined;
-                    if (firstType) setActiveTab(firstType);
-                    openDetails(inlineLab.group as unknown as GroupableRecord, undefined);
-                  }}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              {inlineLabs && inlineLabs.length > 0 && (
+                <Stack spacing={0.5} sx={{ mt: 1 }}>
+                  {inlineLabs.length === 1 ? null : (
                     <Typography variant="caption" color="text.secondary">
-                      Latest related lab:
+                      Related labs ({inlineLabs.length}):
                     </Typography>
-                    <Typography variant="caption" fontWeight={700}>
-                      {inlineLab.group.patientFriendlyName}
-                    </Typography>
-                    <Typography variant="caption">{inlineLab.value}</Typography>
-                    {inlineLab.outOfRange && (
-                      <Chip size="small" color="warning" variant="outlined" label="Outside typical range" />
-                    )}
-                    {inlineLab.effectiveDate && (
-                      <Typography variant="caption" color="text.secondary">
-                        {new Date(inlineLab.effectiveDate).toLocaleDateString()}
-                      </Typography>
-                    )}
-                  </Stack>
-                </Box>
+                  )}
+                  {inlineLabs.map((inlineLab) => (
+                    <Box
+                      key={inlineLab.group.groupId}
+                      sx={{
+                        p: 1,
+                        bgcolor: inlineLab.outOfRange ? "rgba(255, 180, 0, 0.06)" : "rgba(255, 255, 255, 0.03)",
+                        border: 1,
+                        borderColor: inlineLab.outOfRange ? "warning.main" : "divider",
+                        borderRadius: 1
+                      }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const firstType = inlineLab.group.resourceTypes[0] as ExplorerTab | undefined;
+                        if (firstType) setActiveTab(firstType);
+                        openDetails(inlineLab.group as unknown as GroupableRecord, undefined);
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                        {inlineLabs.length === 1 && (
+                          <Typography variant="caption" color="text.secondary">
+                            Latest related lab:
+                          </Typography>
+                        )}
+                        <Typography variant="caption" fontWeight={700}>
+                          {inlineLab.group.patientFriendlyName}
+                        </Typography>
+                        <Typography variant="caption">{inlineLab.value}</Typography>
+                        {inlineLab.outOfRange && (
+                          <Chip size="small" color="warning" variant="outlined" label="Outside typical range" />
+                        )}
+                        {inlineLab.effectiveDate && (
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(inlineLab.effectiveDate).toLocaleDateString()}
+                          </Typography>
+                        )}
+                      </Stack>
+                    </Box>
+                  ))}
+                </Stack>
               )}
               {inlineMeds && inlineMeds.length > 0 && (
                 <Box
