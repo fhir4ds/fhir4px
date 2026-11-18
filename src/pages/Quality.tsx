@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, matchPath } from "react-router-dom";
 import { Alert, Box, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { Activity, ArrowRight, ClipboardCheck } from "lucide-react";
 import { engineLoadResources } from "../lib/engine/engine-client";
 import { runUsCoreChecks, type UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { loadSessionResources } from "../lib/engine/session-data";
-import { runQualityMeasures, evaluateMeasures, type MeasureEvaluation, type MeasureResult } from "../lib/fhir/measures";
+import { runQualityMeasures, evaluateMeasures, qualityDatasetVersion, type MeasureEvaluation, type MeasureResult } from "../lib/fhir/measures";
 
 
 
@@ -46,13 +47,26 @@ export default function QualityPage() {
     // Auto-run once per mount — results are dataset-scoped and cached at
     // module level (shared with the Records summary care-gap band), so there
     // is no manual trigger. Without a connected session the run throws and
-    // the connect hint stays up.
+    // the connect hint stays up. The page stays mounted (keep-alive routes),
+    // so on reactivation we only re-run when the dataset changed.
     void runChecks();
     return () => {
       // engine frame is session-scoped; nothing to dispose here
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const location = useLocation();
+  const qualityActive = matchPath("/quality", location.pathname) !== null;
+  const [seenDatasetVersion, setSeenDatasetVersion] = useState<number | null>(null);
+  useEffect(() => {
+    if (!qualityActive) return;
+    const version = qualityDatasetVersion();
+    if (seenDatasetVersion !== null && version !== seenDatasetVersion) {
+      void runChecks();
+    }
+    setSeenDatasetVersion(version);
+  }, [qualityActive, seenDatasetVersion]);
 
   const measureEvaluations = useMemo(
     () =>

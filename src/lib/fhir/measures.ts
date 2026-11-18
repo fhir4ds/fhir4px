@@ -142,9 +142,16 @@ export function evaluateMeasures(results: MeasureResult[]): MeasureEvaluation[] 
 // Invalidated when the loaded dataset changes.
 
 let cachedRun: Promise<MeasureResult[]> | null = null;
+let datasetVersion = 0;
 
 export function invalidateQualityMeasures(): void {
   cachedRun = null;
+  datasetVersion += 1;
+}
+
+/** Bumped whenever the measure cache is invalidated (dataset changed). */
+export function qualityDatasetVersion(): number {
+  return datasetVersion;
 }
 
 /** Execute (or return the cached) measure run for the loaded dataset. */
