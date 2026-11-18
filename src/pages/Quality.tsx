@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, matchPath } from "react-router-dom";
 import { Alert, Box, Card, CardContent, Chip, Divider, LinearProgress, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import { Activity, ArrowRight, ClipboardCheck } from "lucide-react";
-import { engineLoadResources } from "../lib/engine/engine-client";
-import { runUsCoreChecks, type UsCoreCheckResult } from "../lib/fhir/uscore-checks";
-import { loadSessionResources } from "../lib/engine/session-data";
-import { runQualityMeasures, evaluateMeasures, qualityDatasetVersion, type MeasureEvaluation, type MeasureResult } from "../lib/fhir/measures";
+import type { UsCoreCheckResult } from "../lib/fhir/uscore-checks";
+import { evaluateMeasures, type MeasureEvaluation, type MeasureResult } from "../lib/fhir/measures";
+import { runQualityEvaluation, qualityDatasetVersion, type QualityEvaluation } from "../lib/fhir/quality-run";
 
 
 
@@ -20,22 +19,17 @@ export default function QualityPage() {
   async function runChecks() {
     setBusy(true);
     setError(null);
-    setChecks([]);
-    setMeasures([]);
     try {
-      setStatus("Loading patient data into the analysis engine…");
-      const resources = await loadSessionResources();
-      await engineLoadResources(resources);
-      setResourceCount(resources.length);
-
-      setStatus("Running US Core checks via the fhir4ds view engine…");
-      const results = await runUsCoreChecks(resources);
-      setChecks(results);
-
-      setStatus("Running quality measures…");
-      const measureResults = await runQualityMeasures();
-      setMeasures(measureResults);
-      setStatus(`Completed — ${results.length} conformance checks and ${measureResults.length} measures over ${resources.length} resources`);
+      // Shared dataset-scoped evaluation — normally already computed by the
+      // Records care-gap band at dataset load; this awaits the same promise.
+      setStatus("Evaluating US Core conformance and quality measures…");
+      const evaluation: QualityEvaluation = await runQualityEvaluation();
+      setChecks(evaluation.checks);
+      setMeasures(evaluation.measures);
+      setResourceCount(evaluation.resourceCount);
+      setStatus(
+        `Completed — ${evaluation.checks.length} conformance checks and ${evaluation.measures.length} measures over ${evaluation.resourceCount} resources`
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Quality run failed");
     } finally {

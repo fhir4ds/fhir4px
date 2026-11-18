@@ -37,7 +37,7 @@ function KeepAlive({ paths, children }: { paths: string[]; children: ReactNode }
 export function AppRoutes() {
   return (
     <>
-      <KeepAlive paths={["/records", "/summary"]}>
+      <KeepAlive paths={["/records"]}>
         <PatientExplorer />
       </KeepAlive>
       <KeepAlive paths={["/quality"]}>

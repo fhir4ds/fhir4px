@@ -141,7 +141,8 @@ import { loadLabPartCrosswalk } from "../lib/associations/bundle";
 import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
 import { runImmunizationForecast, type ImmunizationForecastItem } from "../lib/fhir/immunization-forecast";
 import { buildImmunizationGaps, buildMeasureGaps, rankCareGaps, type CareGap } from "../lib/fhir/care-gaps";
-import { runQualityMeasures, evaluateMeasureGaps, invalidateQualityMeasures } from "../lib/fhir/measures";
+import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
+import { evaluateMeasureGaps } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
@@ -4228,19 +4229,20 @@ export function PatientExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary, resourceByKey]);
 
-  // CMS measure care gaps: run the shared measures pipeline once per
-  // dataset load. This is a best-effort enrichment — the engine (and its
-  // cold boot) may fail or be unavailable, in which case the band simply
-  // shows no measure gaps.
+  // Quality evaluation (US Core checks + CMS measures): runs once per
+  // dataset load, together with the care gaps — the Quality page displays
+  // the same shared results. This is a best-effort enrichment — the engine
+  // (and its cold boot) may fail or be unavailable, in which case the band
+  // simply shows no measure gaps.
   useEffect(() => {
     if (!summary) return;
     let cancelled = false;
     setMeasureGapsBusy(true);
-    invalidateQualityMeasures(); // dataset changed — recalculate measures
-    void runQualityMeasures()
-      .then((results) => {
+    invalidateQualityEvaluation(); // dataset changed — recalculate
+    void runQualityEvaluation()
+      .then((evaluation) => {
         if (cancelled) return;
-        setMeasureGaps(buildMeasureGaps(evaluateMeasureGaps(results)));
+        setMeasureGaps(buildMeasureGaps(evaluateMeasureGaps(evaluation.measures)));
       })
       .catch((caught) => {
         // Best-effort path (see comment above) — log and leave gaps empty.
