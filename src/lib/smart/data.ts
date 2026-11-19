@@ -84,6 +84,20 @@ export async function fetchAllPages(
 
     nextUrl =
       bundle.link?.find((link: { relation?: string; url?: string }) => link.relation === "next")?.url ?? null;
+    // Some servers (e.g. HAPI behind a proxy) emit absolute next-links against
+    // their container-internal origin, which the browser then blocks (CORS).
+    // Normalize next-links onto the requested page's origin.
+    if (nextUrl && url) {
+      try {
+        const next = new URL(nextUrl, url);
+        const first = new URL(url);
+        if (next.origin !== first.origin) {
+          nextUrl = `${first.origin}${next.pathname}${next.search}`;
+        }
+      } catch {
+        // Malformed link — leave as-is and let the fetch surface the error.
+      }
+    }
     page += 1;
   }
 
