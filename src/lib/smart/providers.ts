@@ -121,6 +121,18 @@ export function getSandboxProviders(): SmartProvider[] {
                 label: "Jordan Linked (Relationships)",
                 description: "Tests deterministic relationships: HbA1c/Glucose→Diabetes, BP→HTN, Metformin→Diabetes, Lisinopril→HTN, Albuterol→Asthma",
                 source: "configured" as const
+              },
+              {
+                id: "epic-e898f60a386335c3402baac8",
+                label: "Camila Lopez (Epic)",
+                description: "Epic non-prod sandbox test patient, pulled via SMART (female, 1987; labs, visits, reports)",
+                source: "configured" as const
+              },
+              {
+                id: "epic-f95f96a568cf431d76cfb4af",
+                label: "Derrick Lin (Epic)",
+                description: "Epic non-prod sandbox test patient, pulled via SMART (male, 1973; ~1600 observations)",
+                source: "configured" as const
               }
             ],
             launchMode: "local-test-session" as const
