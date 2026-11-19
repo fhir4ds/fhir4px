@@ -3,8 +3,9 @@ import { RefreshCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { listConnectedSources, sourceLabel, type ConnectedSource } from "../lib/smart/sources";
-import { clearSessionVaultKey, getOrCreateSessionVaultKey } from "../lib/vault/keys";
+import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 import { localVault } from "../lib/vault/store";
+import { clearAllLocalData } from "../lib/vault/clear-local";
 
 export function ConnectedProvider() {
   const [sources, setSources] = useState<ConnectedSource[]>([]);
@@ -15,9 +16,7 @@ export function ConnectedProvider() {
   }
 
   async function clear() {
-    await localVault.clear();
-    clearSessionVaultKey();
-    setSources([]);
+    await clearAllLocalData();
   }
 
   useEffect(() => {

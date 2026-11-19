@@ -1,16 +1,14 @@
 import { Alert, Button, Card, CardContent, Chip, Divider, Stack, Typography } from "@mui/material";
 import { Fingerprint, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { clearTransientState } from "../lib/smart/transient-state";
 import {
-  clearSessionVaultKey,
   clearWebAuthnPrfProfile,
   createWebAuthnPrfProfile,
   isWebAuthnPrfPotentiallyAvailable,
   loadWebAuthnPrfProfile,
   type WebAuthnPrfProfile
 } from "../lib/vault/keys";
-import { localVault } from "../lib/vault/store";
+import { clearAllLocalData } from "../lib/vault/clear-local";
 
 export function Settings() {
   const [profile, setProfile] = useState<WebAuthnPrfProfile | null>(null);
@@ -24,10 +22,7 @@ export function Settings() {
   }, []);
 
   async function clearAll() {
-    clearTransientState();
-    await localVault.clear();
-    clearSessionVaultKey();
-    setStatus("Local data cleared");
+    await clearAllLocalData();
   }
 
   async function registerWebAuthnVault() {
