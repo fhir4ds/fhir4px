@@ -5656,6 +5656,14 @@ export function PatientExplorer() {
           Top {visible.length} items across all domains by priority
           {hiddenCount > 0 ? ` · ${hiddenCount} more lower-priority hidden` : ""}
         </Typography>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "repeat(2, minmax(0, 1fr))" },
+            gap: 1.5,
+            alignItems: "start"
+          }}
+        >
         {visible.map(({ group, score }) => {
           const impact = impactFor(score);
           const range = groupReferenceRanges[group.groupId];
@@ -5669,6 +5677,48 @@ export function PatientExplorer() {
           const inlineMeds = group.resourceTypes.includes("Condition")
             ? conditionKeyToInlineMeds.get(relationshipGroupKey(group))
             : undefined;
+          // Floor-surfaced items (no engine score) render as compact
+          // single-line rows; cards are reserved for engine-scored items
+          // and conditions with inline evidence.
+          const isCondition = group.resourceTypes.includes("Condition");
+          if (!impact && !isCondition) {
+            let latest = "";
+            for (const id of group.resourceIds) {
+              const date = observationById.get(id)?.effectiveDate;
+              if (date && date > latest) latest = date;
+            }
+            return (
+              <Box
+                key={group.groupId}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.85,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  cursor: "pointer",
+                  "&:hover": { borderColor: "primary.main" }
+                }}
+                onClick={() => {
+                  const firstType = group.resourceTypes[0] as ExplorerTab | undefined;
+                  if (firstType && firstType !== "PatientSummary") setActiveTab(firstType);
+                  openDetails(group as unknown as GroupableRecord, undefined);
+                }}
+              >
+                <Typography variant="body2" fontWeight={600} sx={{ overflowWrap: "anywhere" }}>
+                  {group.patientFriendlyName}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {domainLabel} · {group.resourceIds.length} {group.resourceIds.length === 1 ? "record" : "records"}
+                  {latest ? ` · ${new Date(latest).toLocaleDateString()}` : ""}
+                </Typography>
+                {group.fallback && <Chip size="small" variant="outlined" label="Review" />}
+              </Box>
+            );
+          }
           return (
             <Box
               key={group.groupId}
@@ -5678,7 +5728,8 @@ export function PatientExplorer() {
                 borderColor: "divider",
                 borderRadius: 1,
                 cursor: "pointer",
-                "&:hover": { borderColor: "primary.main" }
+                "&:hover": { borderColor: "primary.main" },
+                ...(isCondition ? { gridColumn: "1 / -1" } : {})
               }}
               onClick={() => {
                 const firstType = group.resourceTypes[0] as ExplorerTab | undefined;
@@ -5783,6 +5834,7 @@ export function PatientExplorer() {
             </Box>
           );
         })}
+        </Box>
       </Stack>
     );
   }
