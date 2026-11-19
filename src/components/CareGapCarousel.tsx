@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { Box, Card, CardContent, Chip, IconButton, Skeleton, Stack, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { AlarmClockOff, CalendarClock, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { AlarmClockOff, CalendarClock, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, X } from "lucide-react";
 import type { CareGap, CareGapSeverity } from "../lib/fhir/care-gaps";
 
 const SEVERITY_COLOR: Record<CareGapSeverity, "error" | "warning"> = {
@@ -24,9 +24,12 @@ interface CareGapCarouselProps {
   gaps: CareGap[];
   busy?: boolean;
   onSelect?: (gap: CareGap) => void;
+  dismissed?: CareGap[];
+  onDismiss?: (gap: CareGap) => void;
+  onRestore?: (gap: CareGap) => void;
 }
 
-export default function CareGapCarousel({ gaps, busy = false, onSelect }: CareGapCarouselProps) {
+export default function CareGapCarousel({ gaps, busy = false, onSelect, dismissed = [], onDismiss, onRestore }: CareGapCarouselProps) {
   const theme = useTheme();
   const isWide = useMediaQuery(theme.breakpoints.up("md"));
   const perView = isWide ? 3 : 1;
@@ -80,19 +83,32 @@ export default function CareGapCarousel({ gaps, busy = false, onSelect }: CareGa
                   )}
                   <Chip size="small" color={SEVERITY_COLOR[gap.severity]} variant="outlined" label={gap.severity === "high" ? "Overdue" : "Due"} />
                   <Chip size="small" variant="outlined" label={SOURCE_LABEL[gap.source]} />
-                  {gap.targetTab && onSelect && (
-                    <Box onClick={(event) => event.stopPropagation()} sx={{ ml: "auto" }}>
-                      <Tooltip title="View records">
-                        <IconButton
-                          size="small"
-                          aria-label={`View records for ${gap.title}`}
-                          onClick={() => onSelect(gap)}
-                        >
-                          <ExternalLink size={14} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  )}
+                  <Box onClick={(event) => event.stopPropagation()} sx={{ ml: "auto" }}>
+                    <Stack direction="row" spacing={0.25}>
+                      {gap.targetTab && onSelect && (
+                        <Tooltip title="View records">
+                          <IconButton
+                            size="small"
+                            aria-label={`View records for ${gap.title}`}
+                            onClick={() => onSelect(gap)}
+                          >
+                            <ExternalLink size={14} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {onDismiss && (
+                        <Tooltip title="Dismiss">
+                          <IconButton
+                            size="small"
+                            aria-label={`Dismiss ${gap.title}`}
+                            onClick={() => onDismiss(gap)}
+                          >
+                            <X size={14} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  </Box>
                 </Stack>
                 <Typography fontWeight={700} sx={{ mt: 0.75, overflowWrap: "anywhere" }}>
                   {gap.title}
@@ -116,6 +132,24 @@ export default function CareGapCarousel({ gaps, busy = false, onSelect }: CareGa
         {visible.length < 3 && isWide &&
           Array.from({ length: 3 - visible.length }, (_, fillerIndex) => <Box key={`filler-${fillerIndex}`} />)}
       </Box>
+      {dismissed.length > 0 && (
+        <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Typography variant="caption" color="text.secondary">
+            Dismissed:
+          </Typography>
+          {dismissed.map((gap) => (
+            <Chip
+              key={gap.id}
+              size="small"
+              variant="outlined"
+              label={gap.title}
+              deleteIcon={<RotateCcw size={12} />}
+              onDelete={() => onRestore?.(gap)}
+              onClick={() => onRestore?.(gap)}
+            />
+          ))}
+        </Stack>
+      )}
       {pageCount > 1 && (
         <Stack direction="row" spacing={0.5} alignItems="center">
           <IconButton size="small" aria-label="Previous care gaps" disabled={safePage === 0} onClick={() => setPage(safePage - 1)}>

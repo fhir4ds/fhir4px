@@ -1353,6 +1353,9 @@ export function PatientExplorer() {
   const [groupOutOfRangeFlags, setGroupOutOfRangeFlags] = useState<Record<string, boolean | null>>({});
   const [canonicalResolvedGroups, setCanonicalResolvedGroups] = useState<Set<string>>(new Set());
   const [groupPriorityScores, setGroupPriorityScores] = useState<Record<string, number>>({});
+  /** Groups whose records are placeholders (e.g. "Patient not asked" allergy
+   * codes) — excluded from the priority summary entirely. */
+  const [placeholderGroupIds, setPlaceholderGroupIds] = useState<Set<string>>(new Set());
   const [medClaimedByCondition, setMedClaimedByCondition] = useState<Record<string, string>>({});
   const [groupingCache, setGroupingCache] = useState<GroupingCacheRecord>(() => emptyGroupingCache());
   const [classificationCache, setClassificationCache] = useState<ClassificationCacheRecord>(() => emptyClassificationCache());
@@ -3145,6 +3148,21 @@ export function PatientExplorer() {
       const now = Date.now();
       const RECENCY_MS = 90 * 24 * 60 * 60 * 1000;
       const scored: Record<string, number> = {};
+
+      // Placeholder records (source artifacts like Epic's "Patient not asked"
+      // allergy) carry no clinical signal — suppress them from the summary.
+      const PLACEHOLDER_SNOMED = new Set(["1631000175102"]);
+      const PLACEHOLDER_NAME = /^(patient )?not asked$|^no known( allergies?)?$|^unknown$/i;
+      const suppressed = new Set<string>();
+      for (const group of groups) {
+        const code = group.canonicalCode;
+        const name = group.patientFriendlyName.trim();
+        if ((code?.system === "snomed" && PLACEHOLDER_SNOMED.has(code.code)) || PLACEHOLDER_NAME.test(name)) {
+          suppressed.add(group.groupId);
+          continue;
+        }
+      }
+
       for (const group of groups) {
         const isCondition = group.resourceTypes.includes("Condition");
         const isObservation = group.resourceTypes.includes("Observation");
@@ -3212,7 +3230,10 @@ export function PatientExplorer() {
         }
         scored[group.groupId] = total;
       }
-      if (!cancelled) setGroupPriorityScores(scored);
+      if (!cancelled) {
+        setGroupPriorityScores(scored);
+        setPlaceholderGroupIds(suppressed);
+      }
     })();
     return () => {
       cancelled = true;
@@ -4263,10 +4284,49 @@ export function PatientExplorer() {
     () => buildImmunizationGaps(immunizationForecast ?? []),
     [immunizationForecast]
   );
-  const careGaps = useMemo(
+  const [dismissedGapIds, setDismissedGapIds] = useState<Set<string>>(new Set());
+  const [dismissedGaps, setDismissedGaps] = useState<CareGap[]>([]);
+  const allRankedGaps = useMemo(
     () => rankCareGaps([...immunizationGaps, ...measureGaps]),
     [immunizationGaps, measureGaps]
   );
+  const careGaps = useMemo(
+    () => allRankedGaps.filter((gap) => !dismissedGapIds.has(gap.id)),
+    [allRankedGaps, dismissedGapIds]
+  );
+  useEffect(() => {
+    setDismissedGaps(allRankedGaps.filter((gap) => dismissedGapIds.has(gap.id)));
+  }, [allRankedGaps, dismissedGapIds]);
+
+  // Care-gap dismissals persist in the vault (patient-session scoped).
+  useEffect(() => {
+    if (!summary) return;
+    let cancelled = false;
+    void (async () => {
+      const key = await getOrCreateSessionVaultKey();
+      const records = await localVault.listJson<{ id: string; dismissedAt: string }>(key, "care-gap-dismissal");
+      if (!cancelled) setDismissedGapIds(new Set(records.map((record) => record.id)));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [summary]);
+
+  async function dismissCareGap(gap: CareGap) {
+    setDismissedGapIds((current) => new Set([...current, gap.id]));
+    const key = await getOrCreateSessionVaultKey();
+    await localVault.putJson(key, { type: "care-gap-dismissal", id: gap.id }, { id: gap.id, dismissedAt: new Date().toISOString() });
+  }
+
+  async function restoreCareGap(gap: CareGap) {
+    setDismissedGapIds((current) => {
+      const next = new Set(current);
+      next.delete(gap.id);
+      return next;
+    });
+    const key = await getOrCreateSessionVaultKey();
+    await localVault.delete({ type: "care-gap-dismissal", id: gap.id });
+  }
 
   function renderCareGaps() {
     if (careGaps.length === 0 && !measureGapsBusy) return null;
@@ -4282,6 +4342,9 @@ export function PatientExplorer() {
         <CareGapCarousel
           gaps={careGaps}
           busy={measureGapsBusy}
+          dismissed={dismissedGaps}
+          onDismiss={(gap) => void dismissCareGap(gap)}
+          onRestore={(gap) => void restoreCareGap(gap)}
           onSelect={(gap) => {
             if (gap.targetTab) setActiveTab(gap.targetTab as ExplorerTab);
           }}
@@ -5535,8 +5598,10 @@ export function PatientExplorer() {
       conditionKeyToInlineMeds.get(condKey)!.push(g);
     }
 
-    // Filter out labs AND meds claimed by a condition — they show inline
+    // Filter out labs AND meds claimed by a condition — they show inline —
+    // and placeholder groups ("Patient not asked" and similar artifacts).
     const allScored = displayGroups
+      .filter((g) => !placeholderGroupIds.has(g.groupId))
       .filter((g) => {
         if (g.resourceTypes.includes("Observation")) {
           const claimed = labKeyToConditionKey.has(relationshipGroupKey(g));
@@ -5569,9 +5634,16 @@ export function PatientExplorer() {
       );
     }
 
-    const q25 = positiveScores[Math.floor(positiveScores.length * 0.25)] ?? 0;
-    const q75 = positiveScores[Math.floor(positiveScores.length * 0.75)] ?? 0;
-    const impactFor = (score: number): { label: string; color: "default" | "warning" | "error" } => {
+    // Impact labels from engine-scored items only (>=0.2 — conditions with a
+    // GBD weight plus boosters). Floor-surfaced items (uncoded/quiet records)
+    // get no chip: quartile buckets degenerate when computed over the floor
+    // cluster and flag nearly everything "High impact" on thin datasets.
+    const ENGINE_SCORE_FLOOR = 0.2;
+    const engineScores = positiveScores.filter((s) => s >= ENGINE_SCORE_FLOOR);
+    const q25 = engineScores[Math.floor(engineScores.length * 0.25)] ?? Number.POSITIVE_INFINITY;
+    const q75 = engineScores[Math.floor(engineScores.length * 0.75)] ?? Number.POSITIVE_INFINITY;
+    const impactFor = (score: number): { label: string; color: "default" | "warning" | "error" } | null => {
+      if (score < ENGINE_SCORE_FLOOR || engineScores.length < 3) return null;
       if (score >= q75) return { label: "High impact", color: "error" };
       if (score >= q25) return { label: "Moderate impact", color: "warning" };
       return { label: "Low impact", color: "default" };
@@ -5616,7 +5688,7 @@ export function PatientExplorer() {
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                 <Typography fontWeight={700}>{group.patientFriendlyName}</Typography>
-                <Chip size="small" color={impact.color} variant="outlined" label={impact.label} />
+                {impact && <Chip size="small" color={impact.color} variant="outlined" label={impact.label} />}
               </Stack>
               <Stack direction="row" spacing={1} mt={0.75} flexWrap="wrap" useFlexGap>
                 <Chip size="small" color="primary" variant="outlined" label={domainLabel} />
@@ -6006,9 +6078,16 @@ export function PatientExplorer() {
       );
     }
 
-    const q25 = positiveScores[Math.floor(positiveScores.length * 0.25)] ?? 0;
-    const q75 = positiveScores[Math.floor(positiveScores.length * 0.75)] ?? 0;
-    const impactFor = (score: number): { label: string; color: "default" | "warning" | "error" } => {
+    // Impact labels from engine-scored items only (>=0.2 — conditions with a
+    // GBD weight plus boosters). Floor-surfaced items (uncoded/quiet records)
+    // get no chip: quartile buckets degenerate when computed over the floor
+    // cluster and flag nearly everything "High impact" on thin datasets.
+    const ENGINE_SCORE_FLOOR = 0.2;
+    const engineScores = positiveScores.filter((s) => s >= ENGINE_SCORE_FLOOR);
+    const q25 = engineScores[Math.floor(engineScores.length * 0.25)] ?? Number.POSITIVE_INFINITY;
+    const q75 = engineScores[Math.floor(engineScores.length * 0.75)] ?? Number.POSITIVE_INFINITY;
+    const impactFor = (score: number): { label: string; color: "default" | "warning" | "error" } | null => {
+      if (score < ENGINE_SCORE_FLOOR || engineScores.length < 3) return null;
       if (score >= q75) return { label: "High impact", color: "error" };
       if (score >= q25) return { label: "Moderate impact", color: "warning" };
       return { label: "Low impact", color: "default" };
@@ -6130,7 +6209,7 @@ export function PatientExplorer() {
             >
               <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                 <Typography fontWeight={700}>{group.patientFriendlyName}</Typography>
-                <Chip size="small" color={impact.color} variant="outlined" label={impact.label} />
+                {impact && <Chip size="small" color={impact.color} variant="outlined" label={impact.label} />}
               </Stack>
 
               {/* Latest date + value */}

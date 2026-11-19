@@ -9,7 +9,8 @@ export type VaultRecordType =
   | "patient-patch"
   | "patient-authored-record"
   | "referral-draft"
-  | "handoff-state";
+  | "handoff-state"
+  | "care-gap-dismissal";
 
 export interface EncryptedEnvelope {
   version: 1;
