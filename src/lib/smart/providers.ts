@@ -133,6 +133,12 @@ export function getSandboxProviders(): SmartProvider[] {
                 label: "Derrick Lin (Epic)",
                 description: "Epic non-prod sandbox test patient, pulled via SMART (male, 1973; ~1600 observations)",
                 source: "configured" as const
+              },
+              {
+                id: "epic-9812977b3bdcc25fd203339c",
+                label: "Desiree Powell (Epic)",
+                description: "Epic non-prod sandbox test patient, pulled via SMART (female, 2014 — pediatric; 629 observations, 7 immunizations)",
+                source: "configured" as const
               }
             ],
             launchMode: "local-test-session" as const
