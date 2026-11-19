@@ -139,6 +139,18 @@ export function getSandboxProviders(): SmartProvider[] {
                 label: "Desiree Powell (Epic)",
                 description: "Epic non-prod sandbox test patient, pulled via SMART (female, 2014 — pediatric; 629 observations, 7 immunizations)",
                 source: "configured" as const
+              },
+              {
+                id: "epic-4bd1549e881bc26fc9cfa21b",
+                label: "Elijah Davis (Epic)",
+                description: "Epic non-prod sandbox test patient, pulled via SMART (male, 1993; conditions, allergies, smoking history)",
+                source: "configured" as const
+              },
+              {
+                id: "epic-d0d4a9c9b56d243d2c3d94b3",
+                label: "Linda Ross (Epic)",
+                description: "Epic non-prod sandbox test patient, pulled via SMART (female, 1969; vitals, conditions, medications)",
+                source: "configured" as const
               }
             ],
             launchMode: "local-test-session" as const
