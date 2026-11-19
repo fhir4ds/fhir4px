@@ -85,22 +85,36 @@ async function countPatientResourcesWhenIndexed(resourceType, patientId, expecte
 
 async function fetchPatientResourceIds(resourceType, patientId) {
   const resourceIds = [];
-  let url = `/${resourceType}?patient=${encodeURIComponent(patientId)}&_count=100`;
-  let pages = 0;
-
-  while (url && pages < 20) {
-    const bundle = await fhirFetch(url);
-    resourceIds.push(
-      ...((bundle.entry ?? [])
-        .map((entry) => entry.resource?.id)
-        .filter(Boolean)
-        .map((id) => ({ resourceType, id })))
-    );
-    url = bundle.link?.find((link) => link.relation === "next")?.url;
-    if (url?.startsWith(baseUrl)) url = url.slice(baseUrl.length);
-    pages += 1;
+  // HAPI's _getpages cache can evict page tokens under load (large datasets),
+  // returning 404 mid-walk. Prefer one big page; retry the whole walk once.
+  for (const count of [500, 100]) {
+    try {
+      let url = `/${resourceType}?patient=${encodeURIComponent(patientId)}&_count=${count}`;
+      let pages = 0;
+      resourceIds.length = 0;
+      while (url && pages < 40) {
+        const bundle = await fhirFetch(url);
+        resourceIds.push(
+          ...((bundle.entry ?? [])
+            .map((entry) => entry.resource?.id)
+            .filter(Boolean)
+            .map((id) => ({ resourceType, id })))
+        );
+        url = bundle.link?.find((link) => link.relation === "next")?.url;
+        // HAPI emits absolute next-links against its container-internal origin
+        // (e.g. http://localhost:8080/...) — swap the origin onto baseUrl's.
+        if (url && !url.startsWith(baseUrl)) {
+          const parsed = new URL(url);
+          const base = new URL(baseUrl);
+          url = `${base.origin}${parsed.pathname}${parsed.search}`;
+        }
+        pages += 1;
+      }
+      return resourceIds;
+    } catch (error) {
+      // fall through to the smaller page size / give up after the retry
+    }
   }
-
   return resourceIds;
 }
 
