@@ -95,18 +95,29 @@ export interface ViewSqlResult {
   diagnostics: Array<Record<string, unknown>> | null;
 }
 
+// Translation cache: the generated SQL depends only on the CQL inputs and
+// the Measurement Period — never on patient data. Translations are reused
+// across patients/dataset switches; re-translation happens only when the
+// measurement year changes (or the CQL inputs are re-vendored).
+const measureSqlCache = new Map<string, string>();
+
 /**
  * Live eCQM translation: multi-library CQL → population SQL with the
  * Measurement Period bound as a translation parameter. Value sets resolve
  * at execution time through the engine's native in_valueset UDF reading the
  * C++ g_valueset_cache (seeded via valueset-bridge.ts — the same surface the
- * CQL cleanroom uses).
+ * CQL cleanroom uses). Parsed dependency libraries persist across calls in
+ * Pyodide, and translated SQL is cached per (CQL, period).
  */
 export async function translateMeasureSql(
   measureCql: string,
   libraryTexts: Record<string, string>,
   measurementPeriod: { start: string; end: string }
 ): Promise<string> {
+  const cacheKey = `${measurementPeriod.start}..${measurementPeriod.end}\n${measureCql}\n${JSON.stringify(libraryTexts)}`;
+  const cached = measureSqlCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
   await ensurePyodide();
   pyodide.globals.set("_measure_cql", measureCql);
   pyodide.globals.set("_lib_texts", JSON.stringify(libraryTexts));
@@ -121,7 +132,13 @@ try:
     from fhir4ds.cql.parser import parse_cql
     from fhir4ds.cql.translator import CQLToSQLTranslator
 
-    _lib_cache = {}
+    # Persistent dep-library cache across calls (FHIRHelpers and friends are
+    # expensive to parse and shared by every measure).
+    try:
+        _lib_cache
+    except NameError:
+        _lib_cache = {}
+
     def _loader(alias):
         if alias in _lib_cache:
             return _lib_cache[alias]
@@ -154,7 +171,9 @@ except Exception as e:
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [sql, err] = pyResult.toJs ? pyResult.toJs() : Array.from(pyResult as any);
   if (err) throw new Error(String(err));
-  return typeof sql === "string" ? sql : String(sql);
+  const result = typeof sql === "string" ? sql : String(sql);
+  measureSqlCache.set(cacheKey, result);
+  return result;
 }
 export async function generateViewSql(viewDefinition: Record<string, unknown>): Promise<ViewSqlResult> {
   await ensurePyodide();
