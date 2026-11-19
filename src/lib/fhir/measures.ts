@@ -30,6 +30,8 @@ export interface MeasureManifest {
 export interface MeasureResult {
   id: string;
   title: string;
+  /** "proportion": numerator is good (default). "inverse": numerator is bad. */
+  polarity?: "proportion" | "inverse";
   columns: string[];
   rows: unknown[][];
   error?: string;
@@ -69,7 +71,7 @@ async function executeQualityMeasures(): Promise<MeasureResult[]> {
   for (const [id, measure] of Object.entries(manifest.measures)) {
     const sqlResponse = await fetch(`${measuresBaseUrl()}/${measure.sql}`);
     if (!sqlResponse.ok) {
-      results.push({ id, title: measure.title, columns: [], rows: [], error: `SQL unavailable (${sqlResponse.status})`, executionMs: 0 });
+      results.push({ id, title: measure.title, polarity: measure.polarity ?? "proportion", columns: [], rows: [], error: `SQL unavailable (${sqlResponse.status})`, executionMs: 0 });
       continue;
     }
     let sql = await sqlResponse.text();
@@ -82,9 +84,9 @@ async function executeQualityMeasures(): Promise<MeasureResult[]> {
     const started = performance.now();
     try {
       const result = await engineQuery(sql);
-      results.push({ id, title: measure.title, columns: result.columns, rows: result.rows, executionMs: Math.round(performance.now() - started) });
+      results.push({ id, title: measure.title, polarity: measure.polarity ?? "proportion", columns: result.columns, rows: result.rows, executionMs: Math.round(performance.now() - started) });
     } catch (caught) {
-      results.push({ id, title: measure.title, columns: [], rows: [], error: caught instanceof Error ? caught.message : String(caught), executionMs: Math.round(performance.now() - started) });
+      results.push({ id, title: measure.title, polarity: measure.polarity ?? "proportion", columns: [], rows: [], error: caught instanceof Error ? caught.message : String(caught), executionMs: Math.round(performance.now() - started) });
     }
   }
   return results;
@@ -120,7 +122,7 @@ export function evaluateMeasureGaps(results: MeasureResult[]): MeasureGapResult[
  */
 export function evaluateMeasures(results: MeasureResult[]): MeasureEvaluation[] {
   return results.map((result) => {
-    const polarity: "proportion" | "inverse" = "proportion";
+    const polarity: "proportion" | "inverse" = result.polarity ?? "proportion";
     if (result.error || result.rows.length === 0) {
       return { id: result.id, title: result.title, negative: false, polarity, initialPopulation: false, denominator: false, excluded: false, numerator: false };
     }

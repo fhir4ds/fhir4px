@@ -71,4 +71,15 @@ describe("evaluateMeasures", () => {
       negative: false
     });
   });
+
+  it("inverse measures flag numerator membership as the gap", () => {
+    const [evaluation] = evaluateMeasures([
+      measure({ polarity: "inverse", rows: [["p1", true, true, false, true]] })
+    ]);
+    expect(evaluation.negative).toBe(true);
+    const [controlled] = evaluateMeasures([
+      measure({ polarity: "inverse", rows: [["p1", true, true, false, false]] })
+    ]);
+    expect(controlled.negative).toBe(false);
+  });
 });

@@ -10,6 +10,37 @@
    ],
    "sql": "cms124.sql"
   },
+  "CMS125": {
+   "title": "Breast Cancer Screening",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms125.sql"
+  },
+  "CMS130": {
+   "title": "Colorectal Cancer Screening",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms130.sql"
+  },
+  "CMS122": {
+   "title": "Diabetes: Glycemic Status Assessment (HbA1c Poor Control)",
+   "populations": [
+    "Initial Population",
+    "Denominator",
+    "Denominator Exclusions",
+    "Numerator"
+   ],
+   "sql": "cms122.sql",
+   "polarity": "inverse"
+  },
   "CMS349": {
    "title": "HIV Screening",
    "populations": [
