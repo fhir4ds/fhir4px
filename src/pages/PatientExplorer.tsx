@@ -4043,12 +4043,14 @@ export function PatientExplorer() {
         : "Organizing medical records...";
     }
     if (appDataIsLoading()) return "Loading app data...";
+    if (measureGapsBusy) return "Evaluating quality measures...";
     return dataStatusSummary();
   }
 
   function dataStatusDetailText() {
     if (busy || modelBusy) return dataStatusSummary();
     if (appDataIsLoading()) return sources.length > 0 ? dataStatusSummary() : null;
+    if (measureGapsBusy) return dataStatusSummary();
     if (groupingDiagnostics.length > 0) return "Some records used AI model fallback names.";
     if (sources.length === 0 && status !== "Ready") return status;
     return null;
@@ -4081,7 +4083,7 @@ export function PatientExplorer() {
             bgcolor: "rgba(255, 193, 7, 0.12)",
             dot: "warning.main"
           }
-        : busy || modelBusy || appDataLoading
+        : busy || modelBusy || appDataLoading || measureGapsBusy
           ? {
               accent: "primary.main",
               bgcolor: "rgba(25, 118, 210, 0.12)",
@@ -4184,7 +4186,7 @@ export function PatientExplorer() {
               </Menu>
             </Stack>
           </Stack>
-          {(busy || modelBusy || appDataLoading) &&
+          {(busy || modelBusy || appDataLoading || measureGapsBusy) &&
             (dataProgressValue === null ? (
               <LinearProgress sx={{ height: 3, borderRadius: 999 }} />
             ) : (
@@ -4272,11 +4274,6 @@ export function PatientExplorer() {
       <Stack spacing={1}>
         <Stack direction="row" spacing={1} alignItems="center">
           <Typography fontWeight={700}>Care gaps &amp; recommendations</Typography>
-          {measureGapsBusy && (
-            <Typography variant="caption" color="text.secondary">
-              evaluating quality measures…
-            </Typography>
-          )}
         </Stack>
         <Typography variant="caption" color="text.secondary">
           CDC adult immunization schedule (CDSi) and CMS quality measures — negative results surface here as
