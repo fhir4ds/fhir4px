@@ -1,14 +1,15 @@
 /**
- * Clear ALL local app data: the encrypted vault (sessions, tokens, datasets,
- * grouping/classification/relationship caches, patient patches and authored
- * records), localStorage (SMART transient state, session vault key, OMOP
- * concept cache), Cache Storage (downloaded models/assets), and in-memory
- * module caches (quality-measure runs). Then reloads the app — keep-alive
- * pages hold loaded patient state in React state, so a reload is the only
- * reliable reset.
+ * Clear local PATIENT data only: the encrypted vault (SMART sessions and
+ * tokens, fetched datasets, grouping/classification/relationship caches,
+ * patient patches and authored records), SMART transient state, the session
+ * vault key, and in-memory dataset-scoped caches (quality-measure runs).
+ * Then reloads the app — keep-alive pages hold loaded patient state in
+ * React state, so a reload is the only reliable reset.
  *
- * Static app assets (fhir4ds wheel/wasm/valuesets/CQL under /vendor and
- * /fhir4ds) are code, not data — they are never cleared.
+ * App-only data is intentionally preserved: Cache Storage (embedding and
+ * terminology models), the fhir4ds wheel/wasm extensions, vendored eCQM CQL
+ * and ValueSets (static app code under /vendor and /fhir4ds), and the OMOP
+ * concept cache (terminology code mappings, not patient data).
  */
 
 import { localVault } from "./store";
@@ -22,21 +23,7 @@ export async function clearAllLocalData(): Promise<void> {
   clearTransientState();
   clearSessionVaultKey();
 
-  // localStorage app data (OMOP concept cache etc.)
-  const keysToRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i += 1) {
-    const key = localStorage.key(i);
-    if (key && (key.startsWith("fhir4px:") || key.startsWith("smart."))) keysToRemove.push(key);
-  }
-  for (const key of keysToRemove) localStorage.removeItem(key);
-
-  // Cache Storage: downloaded embedding/terminology models and assets
-  if (typeof caches !== "undefined") {
-    const names = await caches.keys();
-    await Promise.all(names.map((name) => caches.delete(name)));
-  }
-
-  // In-memory dataset-scoped caches (quality measures)
+  // In-memory dataset-scoped caches (quality-measure runs are patient-derived)
   invalidateQualityEvaluation();
 
   // Keep-alive pages hold loaded patient state in React state — reload.
