@@ -14,6 +14,7 @@
 
 import { engineLoadResources, engineQuery } from "../engine/engine-client";
 import { loadSessionResources } from "../engine/session-data";
+import { translateMeasureSql } from "../engine/viewdef";
 
 export interface MeasureManifestEntry {
   title: string;
@@ -36,6 +37,8 @@ export interface MeasureResult {
   rows: unknown[][];
   error?: string;
   executionMs: number;
+  /** Measurement period the SQL was shifted to (data-driven). */
+  measurementYear?: number;
 }
 
 /** A measure evaluated for the loaded patient: negative = care gap. */
@@ -63,33 +66,177 @@ export async function fetchMeasureManifest(): Promise<MeasureManifest> {
  * are shifted to the current year so live data windows line up. Use
  * runQualityMeasures() (cached) instead of calling this directly.
  */
+/**
+ * Execute CMS quality measures with LIVE CQL→SQL translation: the eCQM CQL
+ * libraries (vendored machine-readable inputs) are translated at runtime by
+ * the fhir4ds wheel, with the Measurement Period bound as a translation
+ * parameter and value sets expanded into the SQL by the wheel's own logic.
+ * Nothing pre-translated is executed.
+ */
 async function executeQualityMeasures(): Promise<MeasureResult[]> {
-  const resources = await loadSessionResources();
+  const [resources, manifest, cqlManifest] = await Promise.all([
+    loadSessionResources(),
+    fetchMeasureManifest(),
+    fetch(`${measuresBaseUrl()}/cql-manifest.json`).then((response) => {
+      if (!response.ok) throw new Error(`CQL manifest unavailable (${response.status})`);
+      return response.json() as Promise<{ libraries?: string[]; valuesets?: string[] } & Record<string, { file: string }>>;
+    })
+  ]);
   await engineLoadResources(resources);
-  const manifest = await fetchMeasureManifest();
+
+  // Static inputs (CQL texts + expanded ValueSets) are content-addressed by
+  // the manifest — fetch once per session.
+  const inputs = await loadEcqmInputs(cqlManifest);
+
+  // Data-driven measurement period: eCQM initial populations require
+  // qualifying encounters within the measurement year, but test data is
+  // often historical. Bind to the most recent year in which the patient
+  // actually had an encounter (fallback: the current year, i.e. standard
+  // eCQM semantics).
+  const measurementYear = deriveMeasurementYear(resources);
+  const measurementPeriod = {
+    start: `${measurementYear}-01-01T00:00:00.000Z`,
+    end: `${measurementYear}-12-31T23:59:59.999Z`
+  };
+
   const results: MeasureResult[] = [];
   for (const [id, measure] of Object.entries(manifest.measures)) {
-    const sqlResponse = await fetch(`${measuresBaseUrl()}/${measure.sql}`);
-    if (!sqlResponse.ok) {
-      results.push({ id, title: measure.title, polarity: measure.polarity ?? "proportion", columns: [], rows: [], error: `SQL unavailable (${sqlResponse.status})`, executionMs: 0 });
+    const measureCql = inputs.measureCql[id];
+    if (!measureCql) {
+      results.push({ id, title: measure.title, polarity: measure.polarity ?? "proportion", columns: [], rows: [], error: "CQL library not vendored", executionMs: 0, measurementYear });
       continue;
-    }
-    let sql = await sqlResponse.text();
-    const year = new Date().getFullYear();
-    if (year !== 2026) {
-      sql = sql
-        .replaceAll("2026-01-01T00:00:00.000", `${year}-01-01T00:00:00.000`)
-        .replaceAll("2026-12-31T23:59:59.999", `${year}-12-31T23:59:59.999`);
     }
     const started = performance.now();
     try {
+      const sql = await translateMeasureSql(measureCql, inputs.libraryTexts, inputs.valuesetResources, measurementPeriod);
       const result = await engineQuery(sql);
-      results.push({ id, title: measure.title, polarity: measure.polarity ?? "proportion", columns: result.columns, rows: result.rows, executionMs: Math.round(performance.now() - started) });
+      results.push({
+        id,
+        title: measure.title,
+        polarity: measure.polarity ?? "proportion",
+        columns: result.columns,
+        rows: result.rows,
+        executionMs: Math.round(performance.now() - started),
+        measurementYear
+      });
     } catch (caught) {
-      results.push({ id, title: measure.title, polarity: measure.polarity ?? "proportion", columns: [], rows: [], error: caught instanceof Error ? caught.message : String(caught), executionMs: Math.round(performance.now() - started) });
+      results.push({
+        id,
+        title: measure.title,
+        polarity: measure.polarity ?? "proportion",
+        columns: [],
+        rows: [],
+        error: caught instanceof Error ? caught.message : String(caught),
+        executionMs: Math.round(performance.now() - started),
+        measurementYear
+      });
     }
   }
   return results;
+}
+
+interface EcqmInputs {
+  measureCql: Record<string, string>;
+  libraryTexts: Record<string, string>;
+  valuesetResources: Record<string, string>;
+}
+
+let cachedInputs: Promise<EcqmInputs> | null = null;
+
+async function loadEcqmInputs(cqlManifest: {
+  libraries?: string[];
+  valuesets?: string[];
+} & Record<string, { file: string }>): Promise<EcqmInputs> {
+  if (!cachedInputs) {
+    cachedInputs = (async () => {
+      const measureIds = Object.keys(cqlManifest).filter((key) => key.startsWith("CMS"));
+      // Loader aliases: file stem plus the local aliases the eCQM libraries
+      // use in include statements (e.g. SupplementalDataElements as SDE).
+      const aliasFilenames: Record<string, string> = {
+        SDE: "SupplementalDataElements.cql",
+        AHA: "AdvancedIllnessandFrailty.cql",
+        AIFrailLTCF: "AdvancedIllnessandFrailty.cql"
+      };
+      const libraryFiles = [...(cqlManifest.libraries ?? [])];
+      for (const filename of Object.values(aliasFilenames)) {
+        if (!libraryFiles.includes(filename)) libraryFiles.push(filename);
+      }
+      const libraryTexts: Record<string, string> = {};
+      await Promise.all(
+        libraryFiles.map(async (filename) => {
+          const response = await fetch(`${measuresBaseUrl()}/cql/${filename}`);
+          if (!response.ok) return;
+          const text = await response.text();
+          const stem = filename.replace(/\.cql$/, "");
+          libraryTexts[stem] = text;
+          for (const [alias, target] of Object.entries(aliasFilenames)) {
+            if (target === filename) libraryTexts[alias] = text;
+          }
+        })
+      );
+      const measureCql: Record<string, string> = {};
+      await Promise.all(
+        measureIds.map(async (id) => {
+          const response = await fetch(`${measuresBaseUrl()}/cql/${cqlManifest[id].file}`);
+          if (response.ok) measureCql[id] = await response.text();
+        })
+      );
+      const valuesetResources: Record<string, string> = {};
+      await Promise.all(
+        (cqlManifest.valuesets ?? []).map(async (url) => {
+          const oid = url.split("/").pop() ?? url;
+          const response = await fetch(`${measuresBaseUrl()}/valuesets/valueset-${oid}.json`);
+          if (response.ok) valuesetResources[url] = await response.text();
+        })
+      );
+      return { measureCql, libraryTexts, valuesetResources };
+    })().catch((caught) => {
+      cachedInputs = null;
+      throw caught;
+    });
+  }
+  return cachedInputs;
+}
+
+/** Most recent year with clinical activity in the loaded dataset, across
+ * any dated clinical field (encounters, observations, conditions, meds,
+ * procedures, reports, documents). Meta timestamps are excluded so server
+ * load times don't skew the period. */
+function deriveMeasurementYear(resources: Record<string, unknown>[]): number {
+  const dateFields = [
+    "effectiveDateTime",
+    "effectiveDate",
+    "onsetDateTime",
+    "recordedDate",
+    "performedDateTime",
+    "performedDate",
+    "occurrenceDateTime",
+    "authoredOn",
+    "date",
+    "when"
+  ];
+  const periodFields = [
+    ["effectivePeriod", "start"],
+    ["onsetPeriod", "start"],
+    ["performedPeriod", "start"],
+    ["occurrencePeriod", "start"],
+    ["period", "start"]
+  ];
+  let latest = 0;
+  for (const resource of resources) {
+    if (typeof resource !== "object" || resource === null) continue;
+    const candidates: unknown[] = dateFields.map((field) => resource[field]);
+    for (const [parent, child] of periodFields) {
+      const period = resource[parent];
+      if (typeof period === "object" && period !== null) candidates.push((period as Record<string, unknown>)[child]);
+    }
+    for (const candidate of candidates) {
+      if (typeof candidate !== "string" || candidate.length < 4) continue;
+      const year = Number.parseInt(candidate.slice(0, 4), 10);
+      if (Number.isFinite(year) && year > latest && year <= 2100) latest = year;
+    }
+  }
+  return latest > 0 ? latest : new Date().getFullYear();
 }
 
 function boolAt(row: unknown[], columns: string[], name: string): boolean | null {

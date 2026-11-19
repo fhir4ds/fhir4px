@@ -151,7 +151,8 @@ export default function QualityPage() {
               <Typography fontWeight={700}>Quality measures (CMS, pre-translated CQL→SQL)</Typography>
               <Typography variant="body2" color="text.secondary">
                 Evaluated once per loaded dataset and shared with the Records summary care-gap band.
-                Measures whose initial population is false are listed compactly — they do not apply to this patient.
+                The measurement period is data-driven — shifted to the patient's most recent encounter year —
+                and measures whose initial population is false are listed compactly (they do not apply).
               </Typography>
               {measureEvaluations.map(({ measure, evaluation }) => (
                 <Box key={measure.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1.5 }}>
@@ -166,10 +167,13 @@ export default function QualityPage() {
                       <Chip size="small" color="success" label="met" />
                     ) : null}
                     <Chip size="small" variant="outlined" label={`${measure.executionMs} ms`} />
+                    {measure.measurementYear && (
+                      <Chip size="small" variant="outlined" label={`measurement year ${measure.measurementYear}`} />
+                    )}
                   </Stack>
                   {measure.error ? (
                     <Typography variant="body2" color="error" sx={{ mt: 0.5, overflowWrap: "anywhere" }}>
-                      {measure.error.slice(0, 300)}
+                      {measure.error.slice(0, 1200)}
                     </Typography>
                   ) : evaluation.initialPopulation ? (
                     <Stack direction="row" spacing={0.75} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap alignItems="center">
