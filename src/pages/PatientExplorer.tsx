@@ -6608,7 +6608,7 @@ export function PatientExplorer() {
             {visibleTabRecords.length === 0 ? (
               <Alert severity="info">
                 No {statusFilterEnabled && resourceStatusFilter === "active" ? "active " : ""}
-                {isCrossDomainSummary ? "records" : `${RESOURCE_LABELS[activeTab].toLowerCase()} `}available.
+                {isCrossDomainSummary ? "records " : `${RESOURCE_LABELS[activeTab].toLowerCase()} `}available.
               </Alert>
             ) : isCrossDomainSummary ? (
               renderCrossDomainSummary()
