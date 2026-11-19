@@ -15,6 +15,7 @@
 import { engineLoadResources, engineQuery } from "../engine/engine-client";
 import { loadSessionResources } from "../engine/session-data";
 import { translateMeasureSql } from "../engine/viewdef";
+import { valuesetToRows, seedValuesetCache, type ValuesetRow } from "../engine/valueset-bridge";
 
 export interface MeasureManifestEntry {
   title: string;
@@ -99,6 +100,10 @@ async function executeQualityMeasures(): Promise<MeasureResult[]> {
     end: `${measurementYear}-12-31T23:59:59.999Z`
   };
 
+  // Seed the C++ g_valueset_cache (native in_valueset reads it, not a table)
+  // — same UDF surface the CQL cleanroom uses.
+  await seedValuesetCache(inputs.valuesetRows, (sql) => engineQuery(sql));
+
   const results: MeasureResult[] = [];
   for (const [id, measure] of Object.entries(manifest.measures)) {
     const measureCql = inputs.measureCql[id];
@@ -108,7 +113,7 @@ async function executeQualityMeasures(): Promise<MeasureResult[]> {
     }
     const started = performance.now();
     try {
-      const sql = await translateMeasureSql(measureCql, inputs.libraryTexts, inputs.valuesetResources, measurementPeriod);
+      const sql = await translateMeasureSql(measureCql, inputs.libraryTexts, measurementPeriod);
       const result = await engineQuery(sql);
       results.push({
         id,
@@ -138,7 +143,7 @@ async function executeQualityMeasures(): Promise<MeasureResult[]> {
 interface EcqmInputs {
   measureCql: Record<string, string>;
   libraryTexts: Record<string, string>;
-  valuesetResources: Record<string, string>;
+  valuesetRows: ValuesetRow[];
 }
 
 let cachedInputs: Promise<EcqmInputs> | null = null;
@@ -181,15 +186,19 @@ async function loadEcqmInputs(cqlManifest: {
           if (response.ok) measureCql[id] = await response.text();
         })
       );
-      const valuesetResources: Record<string, string> = {};
+      const valuesetResources: Array<Record<string, unknown>> = [];
       await Promise.all(
         (cqlManifest.valuesets ?? []).map(async (url) => {
           const oid = url.split("/").pop() ?? url;
           const response = await fetch(`${measuresBaseUrl()}/valuesets/valueset-${oid}.json`);
-          if (response.ok) valuesetResources[url] = await response.text();
+          if (response.ok) {
+            const valueset = await response.json();
+            valuesetResources.push(valueset);
+          }
         })
       );
-      return { measureCql, libraryTexts, valuesetResources };
+      const { rows: valuesetRows } = valuesetToRows(valuesetResources);
+      return { measureCql, libraryTexts, valuesetRows };
     })().catch((caught) => {
       cachedInputs = null;
       throw caught;

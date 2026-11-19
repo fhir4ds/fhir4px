@@ -88,160 +88,30 @@ except Exception as e:
   return typeof sql === "string" ? sql : String(sql);
 }
 
-// Python-side eCQM pipeline: multi-library translation + in_valueset →
-// valueset-CTE rewrite. The rewrite is a verbatim port of the proven
-// fhir4ds wasm-demo expansion (prepare_cms_data.py) so runtime SQL matches
-// the previously-validated output; value set codes come from the wheel's
-// own extract_codes_from_valueset_resource.
-const ECQM_PIPELINE_PY = `
-import json as _json
-import re as _re
-
-_ARRAY_CC_PATHS = {"type", "category"}
-_CHOICE_TYPE_PATHS = {"value"}
-
-def _split_simple_args(text):
-    args, cur, depth, in_str, q_char = [], [], 0, False, ""
-    for c in text:
-        if in_str:
-            if c == q_char:
-                in_str = False
-            cur.append(c)
-        else:
-            if c in ("'", '"'):
-                in_str, q_char = True, c
-                cur.append(c)
-            elif c == "(":
-                depth += 1
-                cur.append(c)
-            elif c == ")":
-                depth -= 1
-                cur.append(c)
-            elif c == "," and depth == 0:
-                args.append("".join(cur))
-                cur = []
-            else:
-                cur.append(c)
-    if cur:
-        args.append("".join(cur))
-    return args
-
-def _build_cte_in_valueset(resource_expr, path, cte_name):
-    if path in _ARRAY_CC_PATHS:
-        unnest_sql = (
-            "unnest(flatten(COALESCE(list_transform("
-            "COALESCE(from_json(json_extract(" + resource_expr + "::JSON, '$." + path + "'), '[\\"JSON\\"]'), CAST([] AS JSON[])),"
-            " _cc -> COALESCE(from_json(json_extract(_cc, '$.coding'), '[\\"JSON\\"]'), CAST([] AS JSON[]))"
-            "), CAST([] AS JSON[][])))) AS _c"
-        )
-    elif path in _CHOICE_TYPE_PATHS:
-        unnest_sql = (
-            "unnest(COALESCE("
-            "from_json(json_extract(" + resource_expr + "::JSON, '$." + path + "CodeableConcept.coding'), '[\\"JSON\\"]'),"
-            "from_json(json_extract(" + resource_expr + "::JSON, '$." + path + ".coding'), '[\\"JSON\\"]'),"
-            "CAST([] AS JSON[]))) AS _c"
-        )
-    else:
-        unnest_sql = (
-            "unnest(COALESCE("
-            "from_json(json_extract(" + resource_expr + "::JSON, '$." + path + ".coding'), '[\\"JSON\\"]'),"
-            "CAST([] AS JSON[]))) AS _c"
-        )
-    return (
-        "EXISTS (SELECT 1 FROM (SELECT " + unnest_sql + ") _inv"
-        " INNER JOIN " + cte_name + " ON " + cte_name + "._vs_code = json_extract_string(_c, '$.code')"
-        " AND (" + cte_name + "._vs_system = '' OR " + cte_name + "._vs_system = json_extract_string(_c, '$.system')))"
-    )
-
-def _expand_in_valueset_to_ctes(sql, vs_codes):
-    pattern = "in_valueset("
-    used_vs_urls = sorted(set(
-        m.group(1) for m in _re.finditer(r"in_valueset\\([^,]+,\\s*'[^']+',\\s*'([^']+)'", sql)
-    ))
-    if not used_vs_urls:
-        return sql
-    vs_cte_name = {url: "_vs_%d" % i for i, url in enumerate(used_vs_urls)}
-    vs_cte_blocks = []
-    for url in used_vs_urls:
-        name = vs_cte_name[url]
-        codes = vs_codes.get(url, [])
-        if not codes:
-            vs_cte_blocks.append(name + "(_vs_system, _vs_code) AS (SELECT '' AS _vs_system, '' AS _vs_code WHERE FALSE)")
-            continue
-        pairs = ", ".join(
-            "('%s','%s')" % (s.replace("'", "''"), c.replace("'", "''"))
-            for s, c in codes
-        )
-        vs_cte_blocks.append(name + "(_vs_system, _vs_code) AS (VALUES " + pairs + ")")
-    result, i = [], 0
-    while True:
-        pos = sql.find(pattern, i)
-        if pos == -1:
-            result.append(sql[i:])
-            break
-        result.append(sql[i:pos])
-        j = pos + len(pattern)
-        depth, in_str, q_char = 1, False, ""
-        while j < len(sql) and depth > 0:
-            c = sql[j]
-            if in_str:
-                if c == q_char:
-                    in_str = False
-            else:
-                if c in ("'", '"'):
-                    in_str, q_char = True, c
-                elif c == "(":
-                    depth += 1
-                elif c == ")":
-                    depth -= 1
-            j += 1
-        call_end = j
-        args = _split_simple_args(sql[pos + len(pattern):j - 1])
-        if len(args) != 3:
-            result.append(sql[pos:call_end])
-            i = call_end
-            continue
-        resource_expr = args[0].strip()
-        path_lit = args[1].strip().strip("'\\"")
-        vs_url_lit = args[2].strip().strip("'\\"")
-        cte_name = vs_cte_name.get(vs_url_lit)
-        if not cte_name:
-            result.append(sql[pos:call_end])
-            i = call_end
-            continue
-        result.append(_build_cte_in_valueset(resource_expr, path_lit, cte_name))
-        i = call_end
-    expanded = "".join(result)
-    with_match = _re.match(r"^(\\s*--[^\\n]*\\n)*\\s*WITH\\s+", expanded, _re.IGNORECASE)
-    if with_match and vs_cte_blocks:
-        insert_pos = with_match.end()
-        ctes_prefix = ",\\n".join(vs_cte_blocks) + ",\\n"
-        expanded = expanded[:insert_pos] + ctes_prefix + expanded[insert_pos:]
-    return expanded
-`;
+export interface ViewSqlResult {
+  ok: boolean;
+  sql: string | null;
+  setup_sql?: string[];
+  diagnostics: Array<Record<string, unknown>> | null;
+}
 
 /**
  * Live eCQM translation: multi-library CQL → population SQL with the
- * Measurement Period bound as a translation parameter, then the runtime
- * in_valueset → valueset-CTE rewrite so the SQL is self-contained for
- * DuckDB-WASM. Value set codes are extracted by the wheel's own expansion
- * logic from machine-expanded ValueSet resources.
+ * Measurement Period bound as a translation parameter. Value sets resolve
+ * at execution time through the engine's native in_valueset UDF reading the
+ * C++ g_valueset_cache (seeded via valueset-bridge.ts — the same surface the
+ * CQL cleanroom uses).
  */
 export async function translateMeasureSql(
   measureCql: string,
   libraryTexts: Record<string, string>,
-  valuesetResources: Record<string, string>,
   measurementPeriod: { start: string; end: string }
 ): Promise<string> {
   await ensurePyodide();
   pyodide.globals.set("_measure_cql", measureCql);
   pyodide.globals.set("_lib_texts", JSON.stringify(libraryTexts));
-  pyodide.globals.set("_vs_resources", JSON.stringify(valuesetResources));
   pyodide.globals.set("_mp_start", measurementPeriod.start);
   pyodide.globals.set("_mp_end", measurementPeriod.end);
-  if (!pyodide.globals.get("_ecqm_pipeline_ready")) {
-    pyodide.runPython(`${ECQM_PIPELINE_PY}\n_ecqm_pipeline_ready = True`);
-  }
   const pyResult = pyodide.runPython(`
 import traceback
 _error = None
@@ -250,27 +120,17 @@ try:
     import json as _json
     from fhir4ds.cql.parser import parse_cql
     from fhir4ds.cql.translator import CQLToSQLTranslator
-    from fhir4ds.cql.valueset_codes import extract_codes_from_valueset_resource
 
     _lib_cache = {}
     def _loader(alias):
         if alias in _lib_cache:
             return _lib_cache[alias]
-        texts = _json.loads(_lib_texts)
-        text = texts.get(alias)
+        text = _json.loads(_lib_texts).get(alias)
         if text is None:
             return None
         lib = parse_cql(text)
         _lib_cache[alias] = lib
         return lib
-
-    _vs_codes = {}
-    for _url, _vs_json in _json.loads(_vs_resources).items():
-        try:
-            _members = extract_codes_from_valueset_resource(_json.loads(_vs_json))
-            _vs_codes[_url] = [(m["system"] or "", m["code"]) for m in _members if m.get("code")]
-        except Exception:
-            pass
 
     _library = parse_cql(_measure_cql)
     _translator = CQLToSQLTranslator(library_loader=_loader)
@@ -284,7 +144,6 @@ try:
         },
         parameters={"Measurement Period": (_mp_start, _mp_end)},
     )
-    _sql = _expand_in_valueset_to_ctes(_sql, _vs_codes)
 except Exception as e:
     lines = traceback.format_exc().strip().splitlines()
     last = next((l.strip() for l in reversed(lines) if l.strip() and not l.startswith("During")), str(e))
@@ -297,15 +156,6 @@ except Exception as e:
   if (err) throw new Error(String(err));
   return typeof sql === "string" ? sql : String(sql);
 }
-
-export interface ViewSqlResult {
-  ok: boolean;
-  sql: string | null;
-  setup_sql?: string[];
-  diagnostics: Array<Record<string, unknown>> | null;
-}
-
-/** flatten_view capability: ViewDefinition JSON -> executable SQL. */
 export async function generateViewSql(viewDefinition: Record<string, unknown>): Promise<ViewSqlResult> {
   await ensurePyodide();
   pyodide.globals.set("__vd_json", JSON.stringify(viewDefinition));
