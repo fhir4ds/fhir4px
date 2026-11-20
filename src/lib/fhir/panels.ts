@@ -21,6 +21,13 @@ export interface PanelDefinition {
   /** Panel LOINC code (the crosswalk key). */
   code: string;
   name: string;
+  /** Explicit expected component parts. When set, overrides the crosswalk
+   * expansion — used where the crosswalk's member set outgrows the parts
+   * real transmissions carry (e.g. Blood Pressure also lists mean arterial
+   * pressure and a LOINC panel term, which would require ≥3 of 4 parts
+   * under the 66% coverage floor and reject ordinary systolic+diastolic
+   * draws). */
+  parts?: string[];
 }
 
 /**
@@ -35,7 +42,14 @@ export const PANEL_DEFINITIONS: readonly PanelDefinition[] = [
   { code: "57698-3", name: "Lipid Panel" },
   { code: "24325-3", name: "Liver Panel" },
   { code: "24357-6", name: "Urinalysis" },
-  { code: "85354-9", name: "Blood Pressure" }
+  {
+    code: "85354-9",
+    name: "Blood Pressure",
+    // Systolic + diastolic are the parts ordinary BP transmissions carry;
+    // the crosswalk's extra members (mean arterial pressure, panel term)
+    // must not gate draw qualification.
+    parts: ["VAL-VIT-LOINC-8480-6", "VAL-VIT-LOINC-8462-4"]
+  }
 ];
 
 /** One part occurrence: the part was produced by a group on this date. */
@@ -76,6 +90,7 @@ export function panelPartCids(
   definition: PanelDefinition,
   crosswalk: Record<string, string[]>
 ): string[] {
+  if (definition.parts && definition.parts.length > 0) return definition.parts;
   return crosswalk[`VAL-LAB-LOINC-${definition.code}`] ?? crosswalk[`VAL-VIT-LOINC-${definition.code}`] ?? [];
 }
 
