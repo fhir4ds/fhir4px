@@ -6082,9 +6082,17 @@ export function PatientExplorer() {
     );
   }
 
-  function renderPanelsSection() {
+  function renderPanelsSection(bucket: "labs" | "vitals") {
     const expanded = panelsSectionExpanded;
-    const sorted = [...matchedPanels].sort((left, right) =>
+    // Vitals buckets show vitals panels (VAL-VIT parts — blood pressure);
+    // the labs bucket shows the lab panels (CMP, CBC, lipid, ...).
+    const bucketPanels = matchedPanels.filter((panel) =>
+      bucket === "vitals"
+        ? panel.partCids.every((cid) => cid.startsWith("VAL-VIT-"))
+        : panel.partCids.some((cid) => !cid.startsWith("VAL-VIT-"))
+    );
+    if (bucketPanels.length === 0) return null;
+    const sorted = [...bucketPanels].sort((left, right) =>
       left.draws[0].date < right.draws[0].date ? 1 : left.draws[0].date > right.draws[0].date ? -1 : 0
     );
     return (
@@ -6093,7 +6101,7 @@ export function PatientExplorer() {
           <Layers size={16} />
           <Typography fontWeight={700}>Panels</Typography>
           <Typography variant="caption" color="text.secondary">
-            {sorted.length} panel{sorted.length === 1 ? "" : "s"} — labs drawn together
+            {sorted.length} panel{sorted.length === 1 ? "" : "s"} — {bucket === "vitals" ? "vitals measured together" : "labs drawn together"}
           </Typography>
           <Button
             size="small"
@@ -6732,9 +6740,8 @@ export function PatientExplorer() {
                 {renderRecordViewToolbar()}
 
                 {activeTab === "Observation" &&
-                  activeObservationBucket === "labs" &&
-                  matchedPanels.length > 0 &&
-                  renderPanelsSection()}
+                  (activeObservationBucket === "labs" || activeObservationBucket === "vitals") &&
+                  renderPanelsSection(activeObservationBucket)}
 
             {visibleTabRecords.length === 0 ? (
               <Alert severity="info">
