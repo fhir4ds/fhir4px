@@ -144,6 +144,7 @@ import { buildImmunizationGaps, buildMeasureGaps, rankCareGaps, type CareGap } f
 import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
 import { evaluateMeasureGaps } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
+import { publishConnectionStatus, type ConnectionPhase } from "../lib/app/connection-status";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
@@ -4053,6 +4054,47 @@ export function PatientExplorer() {
     return ["preparing", "downloading", "loading"].includes(webLlmWarmupStatus.phase);
   }
 
+  // Publish connection status for the top-bar ConnectionPill.
+  useEffect(() => {
+    const sourcesForPill = sources.map((source) => ({
+      id: source.id,
+      label: sourceLabel(source),
+      status: source.status,
+      recordCount: sourceDatasets[source.id]?.resources.length ?? source.recordCount
+    }));
+    const hasError = filteredSources.some((source) => source.status === "error" || source.status === "needs-reconnect");
+    const phase: ConnectionPhase =
+      busy || modelBusy || appDataIsLoading()
+        ? "loading"
+        : measureGapsBusy
+          ? "evaluating"
+          : sources.length === 0
+            ? "disconnected"
+            : hasError
+              ? "warning"
+              : "connected";
+    publishConnectionStatus({
+      phase,
+      label:
+        phase === "disconnected"
+          ? "No portal connected"
+          : phase === "evaluating"
+            ? "Evaluating quality measures"
+            : phase === "loading"
+              ? dataStatusPrimaryText()
+              : dataStatusSummary(),
+      detail:
+        phase === "loading" || phase === "evaluating"
+          ? dataStatusSummary()
+          : groupingDiagnostics.length > 0
+            ? "Some records used AI model fallback names."
+            : null,
+      progressValue: null,
+      sources: sourcesForPill
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length]);
+
   function dataStatusPrimaryText() {
     if (busy) return "Downloading medical records...";
     if (modelBusy) {
@@ -4077,145 +4119,56 @@ export function PatientExplorer() {
     return null;
   }
 
-  function renderDataStatusBar() {
-    const canAttemptLocalGrouping = records.length > 0 && browserCanAttemptNaming();
+  function renderDataToolbar() {
     const menuOpen = Boolean(dataMenuAnchorEl);
-    const detailText = dataStatusDetailText();
-    const appDataLoading = appDataIsLoading();
-    const dataProgressValue =
-      busy
-        ? null
-        : modelBusy
-          ? groupingProgressValue
-          : null;
-    const unavailableReferences =
-      (dataset?.referenceResolution?.skipped.length ?? 0) + (dataset?.referenceResolution?.unresolved.length ?? 0);
-    const hasSourceError = filteredSources.some((source) => source.status === "error" || source.status === "needs-reconnect");
-    const hasPendingSource = filteredSources.some((source) => source.status === "connected" || source.status === "fetching");
-    const statusTone = hasSourceError || error
-      ? {
-          accent: "error.main",
-          bgcolor: "rgba(244, 67, 54, 0.10)",
-          dot: "error.main"
-        }
-      : unavailableReferences > 0 || hasPendingSource
-        ? {
-            accent: "warning.main",
-            bgcolor: "rgba(255, 193, 7, 0.12)",
-            dot: "warning.main"
-          }
-        : busy || modelBusy || appDataLoading || measureGapsBusy
-          ? {
-              accent: "primary.main",
-              bgcolor: "rgba(25, 118, 210, 0.12)",
-              dot: "primary.main"
-            }
-          : sources.length > 0
-            ? {
-                accent: "success.main",
-                bgcolor: "rgba(46, 125, 50, 0.12)",
-                dot: "success.main"
-              }
-            : {
-                accent: "divider",
-                bgcolor: "rgba(255,255,255,0.025)",
-                dot: "text.secondary"
-              };
 
     return (
-      <Box
-        sx={{
-          borderRadius: 1,
-          borderLeft: 4,
-          borderColor: statusTone.accent,
-          bgcolor: statusTone.bgcolor,
-          p: { xs: 1.25, sm: 1.5 }
-        }}
-      >
-        <Stack spacing={1.25}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1.25}
-            alignItems={{ xs: "stretch", md: "center" }}
-            justifyContent="space-between"
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<Plus size={16} />}
+          onClick={openAddRecordDialog}
+        >
+          Add record
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<Database size={16} />}
+          endIcon={<ChevronDown size={16} />}
+          onClick={(event) => setDataMenuAnchorEl(event.currentTarget)}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen ? "true" : undefined}
+        >
+          Data
+        </Button>
+        <Menu anchorEl={dataMenuAnchorEl} open={menuOpen} onClose={() => setDataMenuAnchorEl(null)}>
+          <MenuItem
+            disabled={busy}
+            onClick={() => {
+              setDataMenuAnchorEl(null);
+              void refreshSources();
+            }}
           >
-            <Stack minWidth={0} spacing={0.25}>
-              <Stack direction="row" spacing={0.75} alignItems="center" minWidth={0}>
-                <Box
-                  aria-hidden="true"
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    bgcolor: statusTone.dot,
-                    flex: "0 0 auto"
-                  }}
-                />
-                <Typography variant="body2" fontWeight={700} sx={{ overflowWrap: "anywhere" }}>
-                  {dataStatusPrimaryText()}
-                </Typography>
-              </Stack>
-              {detailText && (
-                <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
-                  {detailText}
-                </Typography>
-              )}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <RefreshCcw size={16} />
+              <Typography>Refresh all</Typography>
             </Stack>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Plus size={16} />}
-                onClick={openAddRecordDialog}
-              >
-                Add record
-              </Button>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<Database size={16} />}
-                endIcon={<ChevronDown size={16} />}
-                onClick={(event) => setDataMenuAnchorEl(event.currentTarget)}
-                aria-haspopup="menu"
-                aria-expanded={menuOpen ? "true" : undefined}
-              >
-                Data
-              </Button>
-              <Menu anchorEl={dataMenuAnchorEl} open={menuOpen} onClose={() => setDataMenuAnchorEl(null)}>
-                <MenuItem
-                  disabled={busy}
-                  onClick={() => {
-                    setDataMenuAnchorEl(null);
-                    void refreshSources();
-                  }}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <RefreshCcw size={16} />
-                    <Typography>Refresh all</Typography>
-                  </Stack>
-                </MenuItem>
-                <MenuItem
-                  component="a"
-                  href="/providers"
-                  onClick={() => setDataMenuAnchorEl(null)}
-                >
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Plus size={16} />
-                    <Typography>Add portal</Typography>
-                  </Stack>
-                </MenuItem>
-              </Menu>
+          </MenuItem>
+          <MenuItem
+            component="a"
+            href="/providers"
+            onClick={() => setDataMenuAnchorEl(null)}
+          >
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Plus size={16} />
+              <Typography>Add portal</Typography>
             </Stack>
-          </Stack>
-          {(busy || modelBusy || appDataLoading || measureGapsBusy) &&
-            (dataProgressValue === null ? (
-              <LinearProgress sx={{ height: 3, borderRadius: 999 }} />
-            ) : (
-              <LinearProgress variant="determinate" value={dataProgressValue} sx={{ height: 3, borderRadius: 999 }} />
-            ))}
-          {renderSourceSelector()}
-        </Stack>
-      </Box>
+          </MenuItem>
+        </Menu>
+        {renderSourceSelector()}
+      </Stack>
     );
   }
 
@@ -6717,7 +6670,7 @@ export function PatientExplorer() {
       <Card variant="outlined">
         <CardContent>
           <Stack spacing={2.5}>
-            {renderDataStatusBar()}
+            {renderDataToolbar()}
             {renderPatientProfile()}
             {error && <Alert severity="warning">{error}</Alert>}
 

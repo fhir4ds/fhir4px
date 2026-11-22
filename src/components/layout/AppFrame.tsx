@@ -12,10 +12,10 @@ import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 import { preloadAssociations } from "../../lib/associations/bundle";
 import { Gauge, Users } from "lucide-react";
+import ConnectionPill from "../ConnectionPill";
 
 const navItems = [
   { to: "/providers", label: "Providers", icon: <Search size={18} /> },
-  { to: "/connected", label: "Vault", icon: <LockKeyhole size={18} /> },
   { to: "/records", label: "Records", icon: <ClipboardList size={18} /> },
   { to: "/quality", label: "Quality", icon: <Gauge size={18} /> },
   { to: "/cohorts", label: "Cohorts", icon: <Users size={18} /> },
@@ -105,7 +105,7 @@ export function AppFrame({ children }: PropsWithChildren) {
           >
             fhir4px
           </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
             {navItems.map((item) => (
               <Button
                 key={item.to}
@@ -118,6 +118,7 @@ export function AppFrame({ children }: PropsWithChildren) {
                 {item.label}
               </Button>
             ))}
+            <ConnectionPill />
           </Stack>
         </Stack>
         {children}
