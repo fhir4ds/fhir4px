@@ -1,4 +1,4 @@
-import { Alert, Button, Card, CardContent, Chip, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
 import { RefreshCcw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
@@ -9,19 +9,18 @@ import { clearAllLocalData } from "../lib/vault/clear-local";
 
 export function ConnectedProvider() {
   const [sources, setSources] = useState<ConnectedSource[]>([]);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function load() {
     const key = await getOrCreateSessionVaultKey();
     setSources(await listConnectedSources(key));
   }
 
-  async function clear() {
-    await clearAllLocalData();
-  }
-
   useEffect(() => {
     void load();
   }, []);
+
+  const recordTotal = sources.reduce((sum, source) => sum + (source.recordCount ?? 0), 0);
 
   return (
     <Card variant="outlined">
@@ -43,42 +42,65 @@ export function ConnectedProvider() {
                           <Chip size="small" label={source.status} />
                           {source.recordCount !== undefined && <Chip size="small" label={`${source.recordCount} resources`} />}
                         </Stack>
-                        <Typography color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
-                          {source.fhirBaseUrl}
-                        </Typography>
-                        {source.lastFetchedAt && (
-                          <Typography color="text.secondary">
-                            Last fetched {new Date(source.lastFetchedAt).toLocaleString()}
-                          </Typography>
-                        )}
-                        {source.lastError && <Alert severity="warning">{source.lastError}</Alert>}
+                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                          <Button component={RouterLink} to="/records" variant="outlined" startIcon={<RefreshCcw size={16} />}>
+                            View records
+                          </Button>
+                          <Button component={RouterLink} to="/referral" variant="outlined" startIcon={<RefreshCcw size={16} />}>
+                            Referral summary
+                          </Button>
+                        </Stack>
                       </Stack>
                     </CardContent>
                   </Card>
                 ))}
               </Stack>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Button component={RouterLink} to="/records" variant="contained" startIcon={<RefreshCcw size={18} />}>
-                  View records
-                </Button>
-                <Button component={RouterLink} to="/providers" variant="outlined">
-                  Add portal
-                </Button>
-                <Button component={RouterLink} to="/referral" variant="outlined" startIcon={<RefreshCcw size={18} />}>
-                  Referral summary
-                </Button>
-                <Button variant="outlined" color="error" onClick={() => void clear()} startIcon={<Trash2 size={18} />}>
+                <Button variant="outlined" color="error" onClick={() => setConfirmOpen(true)} startIcon={<Trash2 size={18} />}>
                   Clear local data
                 </Button>
               </Stack>
             </>
           ) : (
             <Alert severity="warning">
-              No decryptable local connection is available. Connect to a provider or re-auth after reload.
+              No portal connections stored yet. Connect a portal from the <RouterLink to="/providers">provider search</RouterLink>.
             </Alert>
           )}
         </Stack>
       </CardContent>
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Clear all local data?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" component="div">
+            <Box component="p" mb={1}>
+              This permanently deletes all locally stored patient data
+              {sources.length > 0 && (
+                <>
+                  {" "}— {sources.length} connection{sources.length === 1 ? "" : "s"}
+                  {recordTotal > 0 && ` with ${recordTotal.toLocaleString()} records`}
+                </>
+              )}
+              :
+            </Box>
+            <Box component="ul" pl={2} mb={1}>
+              <li>Portal connections and token material</li>
+              <li>Fetched medical records</li>
+              <li>Record groupings, patches, and authored entries</li>
+              <li>Care-gap dismissals</li>
+            </Box>
+            <Box component="p" mt={1} fontWeight={700}>
+              This cannot be undone.
+            </Box>
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={() => void clearAllLocalData()} startIcon={<Trash2 size={16} />}>
+            Delete everything
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }

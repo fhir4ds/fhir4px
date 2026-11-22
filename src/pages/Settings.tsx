@@ -1,4 +1,4 @@
-import { Alert, Button, Card, CardContent, Chip, Divider, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, Card, CardContent, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, Typography } from "@mui/material";
 import { Fingerprint, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -21,9 +21,7 @@ export function Settings() {
     setProfile(loadWebAuthnPrfProfile());
   }, []);
 
-  async function clearAll() {
-    await clearAllLocalData();
-  }
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function registerWebAuthnVault() {
     setError(null);
@@ -80,11 +78,37 @@ export function Settings() {
           </Stack>
 
           <Divider />
-          <Button color="error" variant="outlined" startIcon={<Trash2 size={18} />} onClick={() => void clearAll()}>
+          <Button color="error" variant="outlined" startIcon={<Trash2 size={18} />} onClick={() => setConfirmOpen(true)}>
             Clear local data
           </Button>
         </Stack>
       </CardContent>
+
+      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Clear all local data?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" component="div">
+            <Box component="p" mb={1}>
+              This permanently deletes all locally stored patient data:
+            </Box>
+            <Box component="ul" pl={2} mb={1}>
+              <li>Portal connections and token material</li>
+              <li>Fetched medical records</li>
+              <li>Record groupings, patches, and authored entries</li>
+              <li>Care-gap dismissals</li>
+            </Box>
+            <Box component="p" mt={1} fontWeight={700}>
+              This cannot be undone.
+            </Box>
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={() => void clearAllLocalData()} startIcon={<Trash2 size={16} />}>
+            Delete everything
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 }
