@@ -1,6 +1,14 @@
+export type MatchGrade = "certain" | "probable" | "possible";
+
 export interface BM25Candidate {
   name: string;
+  /** Raw term score before normalization (diagnostics only). */
   score: number;
+  /** Score scaled to 0..1 by the rarest terms of the query. */
+  normalized_score: number;
+  match_grade: MatchGrade;
+  /** The row's name is the query itself, after normalization. */
+  exact_surface: boolean;
   friendly_name: string;
   code: string;
   system: string;
@@ -12,6 +20,9 @@ export interface BM25Candidate {
 export interface BM25Result {
   name: string | null;
   score: number;
+  normalized_score: number;
+  match_grade: MatchGrade | null;
+  exact_surface: boolean;
   friendly_name: string | null;
   code: string | null;
   system: string | null;
