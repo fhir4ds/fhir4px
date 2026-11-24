@@ -20,7 +20,7 @@ let bootPromise: Promise<void> | null = null;
 
 function wheelUrl(): string {
   const base = import.meta.env.BASE_URL || "/";
-  return new URL(`${base.replace(/\/?$/, "/")}vendor/fhir4ds/fhir4ds_v2-0.0.25-py3-none-any.whl`, globalThis.location.href).href;
+  return new URL(`${base.replace(/\/?$/, "/")}vendor/fhir4ds/fhir4ds_v2-0.0.26-py3-none-any.whl`, globalThis.location.href).href;
 }
 
 async function bootPyodide(): Promise<void> {
@@ -74,6 +74,12 @@ _sql = None
 try:
     _library = parse_cql(_cql_input)
     _translator = CQLToSQLTranslator()
+    # Translate the library first, then build the population SQL — the
+    # sequence fhir4ds's own conformance runner uses. On a cold translator
+    # (0.0.26) the lateral-dedup rewrite names a hoisted subquery's source
+    # column "value" even where the CTE exposes "resource" (CMS159), which
+    # no DuckDB can bind.
+    _translator.translate_library(_library)
     _sql = _translator.translate_library_to_population_sql(_library)
 except Exception as e:
     lines = traceback.format_exc().strip().splitlines()
@@ -151,6 +157,10 @@ try:
 
     _library = parse_cql(_measure_cql)
     _translator = CQLToSQLTranslator(library_loader=_loader)
+    # Same sequence as above and as fhir4ds's conformance runner: the
+    # pre-call is what makes the lateral-dedup rewrite resolve a hoisted
+    # subquery's source column correctly (CMS159).
+    _translator.translate_library(_library)
     _sql = _translator.translate_library_to_population_sql(
         library=_library,
         output_columns={

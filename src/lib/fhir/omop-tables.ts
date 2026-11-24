@@ -1,7 +1,7 @@
 /**
  * OMOP CDM export via the fhir4ds viewdef engine — NO hand-written SQL.
  *
- * The wheel (public/vendor/fhir4ds/fhir4ds_v2-0.0.24) carries the OMOP
+ * The vendored wheel (public/vendor/fhir4ds/) carries the OMOP
  * ViewDefinition library (source views, conceptmap view, SQLQuery
  * libraries, composition runner). The pipeline mirrors the viewing-room
  * worker exactly:
