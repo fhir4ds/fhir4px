@@ -44,23 +44,16 @@ import {
 } from "@mui/lab";
 import { LineChart } from "@mui/x-charts/LineChart";
 import {
-  Activity,
   CalendarDays,
   ChevronDown,
   EyeOff,
-  FileText,
-  HeartPulse,
   Info,
   Layers,
   LayoutDashboard,
   List,
   ListCollapse,
-  Pill,
   Plus,
   RefreshCcw,
-  ShieldAlert,
-  Stethoscope,
-  Syringe,
   X
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -144,6 +137,7 @@ import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/q
 import { evaluateMeasureGaps } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
 import ConnectionChip from "../components/ConnectionChip";
+import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
 import {
   publishConnectionStatus,
   registerRecordsPageActions,
@@ -246,17 +240,6 @@ import {
 import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 import { localVault } from "../lib/vault/store";
 
-type ExplorerTab =
-  | "PatientSummary"
-  | "MedicationRequest"
-  | "AllergyIntolerance"
-  | "Condition"
-  | "Observation"
-  | "Immunization"
-  | "Encounter"
-  | "Procedure"
-  | "DiagnosticReport"
-  | "DocumentReference";
 type ExplorerGroupingSource = PatientGroupingResult["source"];
 type ObservationBucket = PatientObservationBucket;
 type LocalGroupingMode = "one-b-batch" | "one-b-single" | "three-b-batch" | "custom-single";
@@ -295,31 +278,6 @@ const RESOURCE_LABELS: Record<ExplorerTab, string> = {
 };
 
 const EXPLORER_TABS = (Object.keys(RESOURCE_LABELS) as ExplorerTab[]).filter((t) => t !== "PatientSummary");
-
-function resourceTypeIcon(type: ExplorerTab, size = 20) {
-  switch (type) {
-    case "PatientSummary":
-      return <LayoutDashboard size={size} />;
-    case "MedicationRequest":
-      return <Pill size={size} />;
-    case "AllergyIntolerance":
-      return <ShieldAlert size={size} />;
-    case "Condition":
-      return <HeartPulse size={size} />;
-    case "Observation":
-      return <Activity size={size} />;
-    case "Immunization":
-      return <Syringe size={size} />;
-    case "Encounter":
-      return <CalendarDays size={size} />;
-    case "Procedure":
-      return <Stethoscope size={size} />;
-    case "DiagnosticReport":
-      return <FileText size={size} />;
-    case "DocumentReference":
-      return <FileText size={size} />;
-  }
-}
 
 const PATIENT_RESOURCE_OPTIONS: Array<{ value: PatientAuthoredResourceType; label: string }> = [
   { value: "MedicationRequest", label: "Medication" },
@@ -3951,7 +3909,7 @@ export function PatientExplorer() {
         <Tab
           key="PatientSummary"
           value="PatientSummary"
-          icon={resourceTypeIcon("PatientSummary", isVertical ? 22 : 20)}
+          icon={recordTypeIcon("PatientSummary", isVertical ? 22 : 20)}
           iconPosition="top"
           label="Summary"
         />
@@ -3959,7 +3917,7 @@ export function PatientExplorer() {
           <Tab
             key={type}
             value={type}
-            icon={resourceTypeIcon(type, isVertical ? 22 : 20)}
+            icon={recordTypeIcon(type, isVertical ? 22 : 20)}
             iconPosition="top"
             label={`${RESOURCE_LABELS[type]} (${recordsByType(records, type).length})`}
           />
@@ -6456,7 +6414,7 @@ export function PatientExplorer() {
                   bgcolor: "rgba(116, 192, 252, 0.12)"
                 }}
               >
-                {resourceTypeIcon(activeTab, 22)}
+                {recordTypeIcon(activeTab, 22)}
               </Box>
               <Stack minWidth={0} spacing={0}>
                 <Typography variant="h3" fontWeight={700} sx={{ overflowWrap: "anywhere" }}>

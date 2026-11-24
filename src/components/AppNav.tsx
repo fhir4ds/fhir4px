@@ -5,10 +5,15 @@
  * Providers as a secondary entry. Level 2 shows the active section's
  * children; today only Records has any — its resource tabs (Summary,
  * Medications, Allergies, …), ending in Add record. It can be collapsed from
- * a control at the foot of the rail and collapses by itself for sections
- * without children. Both levels share one border, with a separator between
- * them. Below the md breakpoint only the rail is shown and the Records page
- * uses its own horizontal tab strip; the two share that breakpoint.
+ * a control in the rail and collapses by itself for sections without
+ * children. Both levels share one border, with a separator between them.
+ * Below the md breakpoint only the rail is shown and the Records page uses
+ * its own horizontal tab strip; the two share that breakpoint.
+ *
+ * The box stretches the full height of the page, while the rail and the
+ * second level stay in view as the page scrolls. The collapse control
+ * therefore follows the section icons rather than sitting at the foot of
+ * the box, which can be far below the viewport.
  *
  * The Records page is keep-alive mounted only after its first visit, so its
  * tabs come from the connection-status store and tab selection and Add
@@ -17,9 +22,10 @@
  */
 
 import { useEffect, useState, type ReactElement } from "react";
-import { Box, Button, Divider, IconButton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Chip, Divider, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronsLeft, ChevronsRight, ClipboardList, FlaskConical, Gauge, Plus, Search, Users } from "lucide-react";
+import { recordTypeIcon } from "./RecordTypeIcon";
 import {
   dispatchRecordsPageCommand,
   getConnectionStatus,
@@ -33,6 +39,15 @@ const SECTIONS_PANEL_ID = "nav-sections";
 /** Shown from this breakpoint up; the Records page hides its own tab strip
  *  at the same one. */
 const SECTIONS_BREAKPOINT = { xs: "none", md: "flex" } as const;
+
+/** A level that stays in view while the page scrolls. */
+const STICKY_LEVEL_STYLE = {
+  position: "sticky",
+  top: 16,
+  alignSelf: "flex-start",
+  maxHeight: "calc(100vh - 32px)",
+  overflowY: "auto"
+} as const;
 
 interface RailItem {
   to: string;
@@ -102,15 +117,17 @@ export default function AppNav() {
   const collapseLabel = sectionsExpanded ? "Collapse sections" : "Expand sections";
 
   return (
+    // Stretches to the height of the page row it sits in; the levels inside
+    // are what stay in view.
     <Stack
       component="nav"
       aria-label="Main navigation"
       direction="row"
-      sx={{ position: "sticky", top: 16, border: 1, borderColor: "divider", borderRadius: 1 }}
+      sx={{ border: 1, borderColor: "divider", borderRadius: 1 }}
     >
       {/* A plain flex column, not a Stack: a Stack's spacing would override
-          the collapse control's auto margin, which pins it to the foot. */}
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5, p: 0.75 }}>
+          children's own margins. */}
+      <Box sx={{ ...STICKY_LEVEL_STYLE, display: "flex", flexDirection: "column", gap: 0.5, p: 0.75 }}>
         {SECTIONS.map((item) => (
           <RailButton
             key={item.to}
@@ -121,7 +138,7 @@ export default function AppNav() {
             {item.icon}
           </RailButton>
         ))}
-        <Divider sx={{ my: 4 }} />
+        <Divider sx={{ my: 0.5 }} />
         {SECONDARY.map((item) => (
           <RailButton
             key={item.to}
@@ -133,25 +150,28 @@ export default function AppNav() {
           </RailButton>
         ))}
         {sectionHasChildren && (
-          <Tooltip title={collapseLabel} placement="right">
-            <IconButton
-              size="small"
-              aria-label={collapseLabel}
-              aria-expanded={sectionsExpanded}
-              aria-controls={SECTIONS_PANEL_ID}
-              onClick={() => setSectionsExpanded((current) => !current)}
-              sx={{ ...RAIL_BUTTON_STYLE, mt: "auto", display: { xs: "none", md: "inline-flex" } }}
-            >
-              {sectionsExpanded ? <ChevronsLeft size={18} /> : <ChevronsRight size={18} />}
-            </IconButton>
-          </Tooltip>
+          <Box sx={{ display: { xs: "none", md: "flex" }, flexDirection: "column", gap: 0.5 }}>
+            <Divider sx={{ my: 0.5 }} />
+            <Tooltip title={collapseLabel} placement="right">
+              <IconButton
+                size="small"
+                aria-label={collapseLabel}
+                aria-expanded={sectionsExpanded}
+                aria-controls={SECTIONS_PANEL_ID}
+                onClick={() => setSectionsExpanded((current) => !current)}
+                sx={RAIL_BUTTON_STYLE}
+              >
+                {sectionsExpanded ? <ChevronsLeft size={18} /> : <ChevronsRight size={18} />}
+              </IconButton>
+            </Tooltip>
+          </Box>
         )}
       </Box>
 
       {showSections && (
         <>
-          <Divider orientation="vertical" flexItem sx={{ mx: 4, display: { xs: "none", md: "block" } }} />
-          <Stack id={SECTIONS_PANEL_ID} spacing={0.5} sx={{ display: SECTIONS_BREAKPOINT, width: 200, p: 0.75 }}>
+          <Divider orientation="vertical" flexItem sx={{ mx: 0.5, display: { xs: "none", md: "block" } }} />
+          <Stack id={SECTIONS_PANEL_ID} spacing={0.5} sx={{ ...STICKY_LEVEL_STYLE, display: SECTIONS_BREAKPOINT, width: 200, p: 0.75 }}>
             {recordTabs && !recordsOpen && (
               <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5 }}>
                 No records open
@@ -167,6 +187,7 @@ export default function AppNav() {
                   sx={{
                     justifyContent: "flex-start",
                     textTransform: "none",
+                    gap: 1,
                     px: 1.25,
                     borderRadius: 1,
                     color: active ? "primary.main" : "text.secondary",
@@ -174,10 +195,9 @@ export default function AppNav() {
                     "&:hover": { bgcolor: "rgba(116, 192, 252, 0.08)" }
                   }}
                 >
-                  {tab.label}{" "}
-                  <Box component="span" sx={{ ml: "auto", pl: 2, fontSize: "0.75rem", color: "text.secondary" }}>
-                    {tab.count}
-                  </Box>
+                  {recordTypeIcon(tab.id, 16)}
+                  {tab.label}
+                  <Chip component="span" size="small" label={tab.count} sx={{ ml: "auto" }} />
                 </Button>
               );
             })}

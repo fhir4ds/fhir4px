@@ -96,9 +96,16 @@ export function AppFrame({ children }: PropsWithChildren) {
   const onRecords = location.pathname === "/records";
 
   return (
-    <Box minHeight="100vh" sx={{ background: "linear-gradient(180deg, #0d1b2a 0%, #09131e 100%)" }}>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} mb={3}>
+    <Box
+      minHeight="100vh"
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        background: "linear-gradient(180deg, #0d1b2a 0%, #09131e 100%)"
+      }}
+    >
+      <Container maxWidth="lg" sx={{ pt: 3 }}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
           <Typography
             component={RouterLink}
             to="/providers"
@@ -123,10 +130,15 @@ export function AppFrame({ children }: PropsWithChildren) {
             {!onRecords && <ConnectionPill />}
           </Stack>
         </Stack>
-        <Stack direction="row" spacing={2} alignItems="flex-start">
-          <AppNav />
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
-        </Stack>
+      </Container>
+      {/* The body fills the rest of the viewport, so the side navigation
+          stretches the full height of the page. */}
+      <Container
+        maxWidth="lg"
+        sx={{ display: "flex", flexDirection: "row", alignItems: "stretch", flexGrow: 1, pt: 3, pb: 3 }}
+      >
+        <AppNav />
+        <Box sx={{ flexGrow: 1, minWidth: 0, ml: 2 }}>{children}</Box>
       </Container>
     </Box>
   );
