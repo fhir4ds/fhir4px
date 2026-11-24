@@ -9481,14 +9481,14 @@
    "name": "Grace Mensah",
    "tier": "M",
    "focus": "Ischemic stroke with residual hemiparesis, carotid endarterectomy",
-   "total": 243,
+   "total": 244,
    "counts": {
     "Patient": 1,
     "Practitioner": 1,
     "Condition": 8,
     "Medication": 4,
     "MedicationRequest": 4,
-    "Encounter": 5,
+    "Encounter": 6,
     "Observation": 205,
     "Procedure": 10,
     "Immunization": 5
@@ -10962,6 +10962,12 @@
       "expected": "Consultation",
       "class": "AMB",
       "id": "fhir4px-chronic-grace-stroke-enc-0032"
+     },
+     {
+      "text": "Encounter for Check Up",
+      "expected": "Encounter for Check Up",
+      "class": "AMB",
+      "id": "fhir4px-chronic-grace-stroke-enc-0033"
      }
     ]
    }

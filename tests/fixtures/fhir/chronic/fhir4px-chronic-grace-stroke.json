@@ -11846,10 +11846,21 @@
    }
   },
   {
-   "fullUrl": "urn:uuid:fhir4px-chronic-grace-stroke-cp-visit-2025",
+   "fullUrl": "https://fhir4px.local/r4/Encounter/fhir4px-chronic-grace-stroke-enc-0033",
    "resource": {
     "resourceType": "Encounter",
-    "id": "fhir4px-chronic-grace-stroke-cp-visit-2025",
+    "id": "fhir4px-chronic-grace-stroke-enc-0033",
+    "meta": {
+     "profile": [
+      "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+     ]
+    },
+    "identifier": [
+     {
+      "system": "https://fhir4px.local/encounter",
+      "value": "ENC-C1004-33"
+     }
+    ],
     "status": "finished",
     "class": {
      "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
@@ -11858,27 +11869,27 @@
     },
     "type": [
      {
+      "text": "Encounter for Check Up",
       "coding": [
        {
         "system": "http://snomed.info/sct",
         "code": "185349003",
         "display": "Encounter for check-up"
        }
-      ],
-      "text": "Encounter for Check Up"
+      ]
      }
     ],
     "subject": {
      "reference": "Patient/fhir4px-chronic-grace-stroke"
     },
     "period": {
-     "start": "2025-06-12T09:00:00Z",
-     "end": "2025-06-12T09:30:00Z"
+     "start": "2025-06-12",
+     "end": "2025-06-12"
     }
    },
    "request": {
     "method": "PUT",
-    "url": "Encounter/fhir4px-chronic-grace-stroke-cp-visit-2025"
+    "url": "Encounter/fhir4px-chronic-grace-stroke-enc-0033"
    }
   }
  ]
