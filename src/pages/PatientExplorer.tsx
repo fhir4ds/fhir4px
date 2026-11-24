@@ -47,7 +47,6 @@ import {
   Activity,
   CalendarDays,
   ChevronDown,
-  Database,
   EyeOff,
   FileText,
   HeartPulse,
@@ -144,7 +143,11 @@ import { buildImmunizationGaps, buildMeasureGaps, rankCareGaps, type CareGap } f
 import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
 import { evaluateMeasureGaps } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
-import { publishConnectionStatus, type ConnectionPhase } from "../lib/app/connection-status";
+import {
+  publishConnectionStatus,
+  registerRecordsPageActions,
+  type ConnectionPhase
+} from "../lib/app/connection-status";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
@@ -1386,7 +1389,6 @@ export function PatientExplorer() {
     !groupSortUserSet && activeTab === "MedicationRequest" ? "newest" : groupSort;
   const [dateSort, setDateSort] = useState<DateSortMode>("newest");
   const [density, setDensity] = useState<ExplorerDensity>("comfortable");
-  const [dataMenuAnchorEl, setDataMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [webLlmWarmupStatus, setNamingWarmupStatus] = useState<NamingWarmupStatus>(() => getNamingWarmupStatus());
   const [selectedRecordKey, setSelectedRecordKey] = useState<string | null>(null);
   const [selectedMatchingRecordKeys, setSelectedMatchingRecordKeys] = useState<string[]>([]);
@@ -3965,40 +3967,6 @@ export function PatientExplorer() {
     );
   }
 
-  function renderSourceSelector() {
-    if (sources.length < 2) return null;
-
-    return (
-      <ToggleButtonGroup
-        exclusive
-        size="small"
-        value={activeSourceId}
-        onChange={(_event, value: string | null) => {
-          if (value) {
-            setActiveSourceId(value);
-            const selected = sources.find((source) => source.id === value);
-            showSourceRecords(value === "all" || !selected ? "Showing all portals" : `Showing ${sourceLabel(selected)}`);
-          }
-        }}
-        aria-label="Record source"
-        sx={{
-          maxWidth: "100%",
-          overflowX: "auto",
-          "& .MuiToggleButton-root": { whiteSpace: "nowrap" }
-        }}
-      >
-        <ToggleButton value="all" aria-label="All portals">
-          All portals ({sources.length})
-        </ToggleButton>
-        {sources.map((source) => (
-          <ToggleButton key={source.id} value={source.id} aria-label={sourceLabel(source)}>
-            {sourceLabel(source)}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
-    );
-  }
-
   function dataStatusSummary() {
     const unresolvedReferenceCount =
       (dataset?.referenceResolution?.skipped.length ?? 0) + (dataset?.referenceResolution?.unresolved.length ?? 0);
@@ -4090,10 +4058,43 @@ export function PatientExplorer() {
             ? "Some records used AI model fallback names."
             : null,
       progressValue: null,
-      sources: sourcesForPill
+      sources: sourcesForPill,
+      recordTabs: {
+        patientLabel: patientProfiles[0]?.patient ? patientDisplayName(patientProfiles[0].patient) : null,
+        activeTabId: activeTab,
+        activeSourceId,
+        tabs: [
+          { id: "PatientSummary", label: RESOURCE_LABELS.PatientSummary, count: records.length },
+          ...EXPLORER_TABS.map((type) => ({
+            id: type,
+            label: RESOURCE_LABELS[type],
+            count: recordsByType(records, type).length
+          }))
+        ]
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length]);
+  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, activeSourceId, records, patientProfiles]);
+
+  // The app frame (drawer, connection popover) drives this page through the
+  // records-page command registry; it queues commands until we register.
+  useEffect(() => {
+    registerRecordsPageActions({
+      selectTab: (tabId) => setActiveTab(tabId as ExplorerTab),
+      selectSource: (sourceId) => switchSource(sourceId),
+      refreshSources: () => void refreshSources(),
+      addRecord: () => openAddRecordDialog()
+    });
+    return () => registerRecordsPageActions(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function switchSource(value: string) {
+    setActiveSourceId(value);
+    const selected = sources.find((source) => source.id === value);
+    showSourceRecords(value === "all" || !selected ? "Showing all portals" : `Showing ${sourceLabel(selected)}`);
+  }
+
 
   function dataStatusPrimaryText() {
     if (busy) return "Downloading medical records...";
@@ -4120,55 +4121,12 @@ export function PatientExplorer() {
   }
 
   function renderDataToolbar() {
-    const menuOpen = Boolean(dataMenuAnchorEl);
-
+    // Source selection and Refresh live in the connection popover; Add portal
+    // is on the Providers page and in that popover too.
     return (
-      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<Plus size={16} />}
-          onClick={openAddRecordDialog}
-        >
-          Add record
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<Database size={16} />}
-          endIcon={<ChevronDown size={16} />}
-          onClick={(event) => setDataMenuAnchorEl(event.currentTarget)}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen ? "true" : undefined}
-        >
-          Data
-        </Button>
-        <Menu anchorEl={dataMenuAnchorEl} open={menuOpen} onClose={() => setDataMenuAnchorEl(null)}>
-          <MenuItem
-            disabled={busy}
-            onClick={() => {
-              setDataMenuAnchorEl(null);
-              void refreshSources();
-            }}
-          >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <RefreshCcw size={16} />
-              <Typography>Refresh all</Typography>
-            </Stack>
-          </MenuItem>
-          <MenuItem
-            component="a"
-            href="/providers"
-            onClick={() => setDataMenuAnchorEl(null)}
-          >
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Plus size={16} />
-              <Typography>Add portal</Typography>
-            </Stack>
-          </MenuItem>
-        </Menu>
-        {renderSourceSelector()}
-      </Stack>
+      <Button variant="outlined" size="small" startIcon={<Plus size={16} />} onClick={openAddRecordDialog}>
+        Add record
+      </Button>
     );
   }
 
@@ -6676,18 +6634,9 @@ export function PatientExplorer() {
 
             <Divider />
 
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "92px minmax(0, 1fr)" },
-                gap: { xs: 2, md: 2.5 },
-                alignItems: "start"
-              }}
-            >
-              <Box sx={{ display: { xs: "none", md: "block" }, position: "sticky", top: 16 }}>
-                {renderResourceNavigation("vertical")}
-              </Box>
-              <Stack spacing={2.25} minWidth={0}>
+            <Stack spacing={2.25} minWidth={0}>
+                {/* Resource tabs live in the app-frame drawer (☰); this
+                    horizontal strip is the narrow-screen fallback. */}
                 <Box sx={{ display: { xs: "block", md: "none" } }}>{renderResourceNavigation("horizontal")}</Box>
 
                 {renderRecordViewToolbar()}
@@ -6710,8 +6659,7 @@ export function PatientExplorer() {
             ) : (
               <Stack spacing={density === "compact" ? 1 : 2}>{sortedVisibleTabGroups.map(renderGroup)}</Stack>
             )}
-              </Stack>
-            </Box>
+            </Stack>
           </Stack>
         </CardContent>
       </Card>

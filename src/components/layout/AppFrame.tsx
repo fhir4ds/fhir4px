@@ -1,7 +1,7 @@
-import { Box, Button, Container, Stack, Typography } from "@mui/material";
-import { ClipboardList, Database, FlaskConical, LockKeyhole, Search, Settings } from "lucide-react";
+import { Box, Button, Container, IconButton, Stack, Typography } from "@mui/material";
+import { Database, FlaskConical, Menu, Settings } from "lucide-react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, type PropsWithChildren } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 import {
   dispatchSmartAuthPopupEvent,
   isSmartAuthPopupMessage,
@@ -11,14 +11,13 @@ import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
 import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 import { preloadAssociations } from "../../lib/associations/bundle";
-import { Gauge, Users } from "lucide-react";
+import AppNavDrawer from "../AppNavDrawer";
 import ConnectionPill from "../ConnectionPill";
 
+// Top-bar destinations are the tools that apply across the product. The
+// product pages themselves (Records, Quality, Cohorts, Providers) live in
+// the two-level slide-out opened by the menu button.
 const navItems = [
-  { to: "/providers", label: "Providers", icon: <Search size={18} /> },
-  { to: "/records", label: "Records", icon: <ClipboardList size={18} /> },
-  { to: "/quality", label: "Quality", icon: <Gauge size={18} /> },
-  { to: "/cohorts", label: "Cohorts", icon: <Users size={18} /> },
   { to: "/export", label: "Export", icon: <Database size={18} /> },
   { to: "/llm-playground", label: "LLM Lab", icon: <FlaskConical size={18} /> },
   { to: "/settings", label: "Settings", icon: <Settings size={18} /> }
@@ -27,6 +26,7 @@ const navItems = [
 export function AppFrame({ children }: PropsWithChildren) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [navOpen, setNavOpen] = useState(false);
 
   // Preload embedding model eagerly (needed for classification) and patient-
   // friendly lookup tables lazily (needed for deterministic naming). The model
@@ -106,6 +106,14 @@ export function AppFrame({ children }: PropsWithChildren) {
             fhir4px
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+            <IconButton
+              size="small"
+              aria-label="Open navigation"
+              aria-expanded={navOpen ? "true" : undefined}
+              onClick={() => setNavOpen(true)}
+            >
+              <Menu size={20} />
+            </IconButton>
             {navItems.map((item) => (
               <Button
                 key={item.to}
@@ -123,6 +131,7 @@ export function AppFrame({ children }: PropsWithChildren) {
         </Stack>
         {children}
       </Container>
+      <AppNavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
     </Box>
   );
 }

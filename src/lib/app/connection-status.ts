@@ -1,8 +1,8 @@
 /**
  * Connection status store — shared between PatientExplorer (which computes
- * the state) and the ConnectionPill in the app frame (which renders it).
- * Small pub/sub; PatientExplorer publishes on state changes, the pill
- * subscribes and re-renders.
+ * the state) and the ConnectionPill / AppNavDrawer in the app frame (which
+ * render it). Small pub/sub; PatientExplorer publishes on state changes,
+ * the app-frame components subscribe and re-render.
  */
 
 export type ConnectionPhase = "disconnected" | "loading" | "evaluating" | "connected" | "warning";
@@ -14,15 +14,34 @@ export interface ConnectionStatusSource {
   recordCount?: number;
 }
 
+/** A Records sub-navigation entry (resource-type tab). */
+export interface RecordTabEntry {
+  /** ExplorerTab value (Records-page tab id), e.g. "PatientSummary". */
+  id: string;
+  label: string;
+  count: number;
+}
+
+export interface RecordTabsState {
+  patientLabel: string | null;
+  tabs: RecordTabEntry[];
+  activeTabId: string;
+  /** Records-page source filter: "all" or a source id. */
+  activeSourceId: string;
+}
+
 export interface ConnectionStatusState {
   phase: ConnectionPhase;
   /** Primary line, e.g. "SMART Dev Sandbox · 243 records". */
   label: string;
-  /** Secondary detail (current status-bar detail line). */
+  /** Secondary detail (status-bar detail line). */
   detail?: string | null;
   /** Determinate progress 0..100; null = indeterminate; undefined = none. */
   progressValue?: number | null;
   sources: ConnectionStatusSource[];
+  /** Present while a Records page is mounted (keep-alive) — drives the
+   * drawer's second level. */
+  recordTabs?: RecordTabsState | null;
 }
 
 type Listener = (state: ConnectionStatusState) => void;
@@ -62,4 +81,65 @@ export function subscribeConnectionStatus(listener: Listener): () => void {
   return () => {
     listeners.delete(listener);
   };
+}
+
+// ── Records-page actions ──────────────────────────────────────────────────
+// PatientExplorer is keep-alive mounted, but only after its first visit.
+// The app frame (drawer, connection popover) registers nothing itself: it
+// dispatches commands here, which run immediately when the Records page is
+// mounted and queue up for it to consume on mount otherwise.
+
+/** Commands the app frame can ask the Records page to perform. */
+export type RecordsPageCommand =
+  | { kind: "selectTab"; tabId: string }
+  | { kind: "selectSource"; sourceId: string }
+  | { kind: "refreshSources" }
+  | { kind: "addRecord" };
+
+export interface RecordsPageHandlers {
+  selectTab: (tabId: string) => void;
+  selectSource: (sourceId: string) => void;
+  refreshSources: () => void;
+  addRecord: () => void;
+}
+
+let recordsPageHandlers: RecordsPageHandlers | null = null;
+let pendingCommands: RecordsPageCommand[] = [];
+
+function run(command: RecordsPageCommand): void {
+  if (!recordsPageHandlers) {
+    pendingCommands.push(command);
+    return;
+  }
+  switch (command.kind) {
+    case "selectTab":
+      recordsPageHandlers.selectTab(command.tabId);
+      break;
+    case "selectSource":
+      recordsPageHandlers.selectSource(command.sourceId);
+      break;
+    case "refreshSources":
+      recordsPageHandlers.refreshSources();
+      break;
+    case "addRecord":
+      recordsPageHandlers.addRecord();
+      break;
+  }
+}
+
+/** Dispatch a command to the Records page (queued if it is not mounted). */
+export function dispatchRecordsPageCommand(command: RecordsPageCommand): void {
+  run(command);
+}
+
+/**
+ * Register the Records page's handlers and run any commands queued before it
+ * mounted. Pass null on unmount.
+ */
+export function registerRecordsPageActions(handlers: RecordsPageHandlers | null): void {
+  recordsPageHandlers = handlers;
+  if (!handlers) return;
+  const queued = pendingCommands;
+  pendingCommands = [];
+  for (const command of queued) run(command);
 }

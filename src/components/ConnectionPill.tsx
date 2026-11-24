@@ -2,15 +2,32 @@
  * Connection pill — top-bar status + management surface for portal
  * connections. States: disconnected (connect CTA), loading / evaluating
  * (spinner + phase), connected (green dot + summary), warning (amber dot).
- * The popover lists connections and offers add-portal and clear-local-data
- * (with the no-undo confirmation).
+ * The popover lists connections and offers the Records page's source filter
+ * ("Viewing") and refresh, plus add-portal and clear-local-data (with the
+ * no-undo confirmation).
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Link as MuiLink, Popover, Stack, Typography } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
-import { Plus, Trash2 } from "lucide-react";
 import {
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Link as MuiLink,
+  Popover,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography
+} from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  dispatchRecordsPageCommand,
   getConnectionStatus,
   subscribeConnectionStatus,
   type ConnectionStatusState
@@ -115,8 +132,49 @@ export default function ConnectionPill() {
             </>
           )}
 
+          {status.recordTabs && status.sources.length > 1 && (
+            <>
+              <Divider />
+              <Stack spacing={0.5}>
+                <Typography variant="caption" color="text.secondary">
+                  Viewing
+                </Typography>
+                <ToggleButtonGroup
+                  exclusive
+                  size="small"
+                  value={status.recordTabs.activeSourceId}
+                  onChange={(_event, value: string | null) => {
+                    if (value) dispatchRecordsPageCommand({ kind: "selectSource", sourceId: value });
+                  }}
+                  aria-label="Records to show"
+                  sx={{ flexWrap: "wrap", "& .MuiToggleButton-root": { whiteSpace: "nowrap" } }}
+                >
+                  <ToggleButton value="all">All portals ({status.sources.length})</ToggleButton>
+                  {status.sources.map((source) => (
+                    <ToggleButton key={source.id} value={source.id}>
+                      {source.label}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Stack>
+            </>
+          )}
+
           <Divider />
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {status.recordTabs && status.sources.length > 0 && (
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<RefreshCw size={15} />}
+                onClick={() => {
+                  setAnchorEl(null);
+                  dispatchRecordsPageCommand({ kind: "refreshSources" });
+                }}
+              >
+                Refresh
+              </Button>
+            )}
             <Button
               size="small"
               variant="outlined"
