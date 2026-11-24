@@ -15,6 +15,7 @@
 import { engineLoadResources, engineQuery } from "../engine/engine-client";
 import { loadSessionResources } from "../engine/session-data";
 import { translateMeasureSql } from "../engine/viewdef";
+import { boolAt } from "../engine/result-values";
 import { valuesetToRows, seedValuesetCache, type ValuesetRow } from "../engine/valueset-bridge";
 
 export interface MeasureManifestEntry {
@@ -248,12 +249,6 @@ function deriveMeasurementYear(resources: Record<string, unknown>[]): number {
   return latest > 0 ? latest : new Date().getFullYear();
 }
 
-function boolAt(row: unknown[], columns: string[], name: string): boolean | null {
-  const index = columns.indexOf(name);
-  if (index < 0) return null;
-  const value = row[index];
-  return value === true || value === 1 || value === "true" ? true : value === false || value === 0 || value === "false" ? false : null;
-}
 
 /** A measure evaluated for the loaded patient, with full population pathway. */
 export interface MeasureEvaluation {
