@@ -22,8 +22,6 @@ import {
   DialogTitle,
   Drawer,
   IconButton,
-  LinearProgress,
-  Menu,
   MenuItem,
   Stack,
   Tab,
@@ -3964,15 +3962,6 @@ export function PatientExplorer() {
     return dataStatusSummary();
   }
 
-  function dataStatusDetailText() {
-    if (busy || modelBusy) return dataStatusSummary();
-    if (appDataIsLoading()) return sources.length > 0 ? dataStatusSummary() : null;
-    if (measureGapsBusy) return dataStatusSummary();
-    if (groupingDiagnostics.length > 0) return "Some records used AI model fallback names.";
-    if (sources.length === 0 && status !== "Ready") return status;
-    return null;
-  }
-
   function renderDataToolbar() {
     // Add record lives in the side navigation's second level, which is hidden
     // below the md breakpoint (the same one the nav panel appears at) — so
@@ -4112,7 +4101,6 @@ export function PatientExplorer() {
       next.delete(gapId);
       return next;
     });
-    const key = await getOrCreateSessionVaultKey();
     await localVault.delete({ type: "care-gap-dismissal", id: careGapDismissalId(dismissalPatientId, gapId) });
   }
 
@@ -6300,10 +6288,6 @@ export function PatientExplorer() {
       : "date";
   const dateViewClusters = sortedDateClusters(visibleTabRecords);
   const labelsByRecordId = groupLabelByRecordId(visibleTabGroups);
-  const groupingProgressValue =
-    groupingProgress && groupingProgress.total > 0
-      ? Math.round((groupingProgress.completed / groupingProgress.total) * 100)
-      : null;
 
   function renderRecordViewToolbar() {
     if (isCrossDomainSummary) return null;
