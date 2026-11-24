@@ -30,3 +30,9 @@ peer-to-peer.
   Observation search requires a `category` param. Epic IDs can be invalid for
   HAPI (>64 chars / dots) — re-id with reference rewriting (see
   tests/fixtures/fhir/epic-sandbox/).
+- Opt-in e2e specs need the local Docker sandbox and a dev server:
+  `SMART_DEV_SANDBOX_E2E=1 [PLAYWRIGHT_PORT=<port>] npx playwright test
+  tests/e2e/<spec>` (port 3000 is often taken by another project). After any
+  fhir4ds wheel bump run `quality-measures.spec.ts`: fhir4ds <=0.0.26 emits
+  invalid CMS159 SQL unless `translate_library()` is called before
+  `translate_library_to_population_sql()` (see src/lib/engine/viewdef.ts).
