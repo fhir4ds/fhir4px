@@ -48,7 +48,7 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-export function patientName(patient: FhirResource | null | undefined): string | undefined {
+function patientName(patient: FhirResource | null | undefined): string | undefined {
   const names = Array.isArray(patient?.name) ? patient.name : [];
   const official = names.find((name) => {
     const use = (name as { use?: unknown }).use;
@@ -85,6 +85,11 @@ export function sourceIdForConnection(session: SmartSessionInfo, token: SmartTok
 export function sourceLabel(source: ConnectedSource): string {
   if (source.providerName && source.patientName) return `${source.providerName} · ${source.patientName}`;
   return source.providerName || source.patientName || source.displayName || hostLabel(source.fhirBaseUrl);
+}
+
+/** The portal's own name, without the patient (for where the patient is shown separately). */
+export function providerLabel(source: ConnectedSource): string {
+  return source.providerName || source.displayName || hostLabel(source.fhirBaseUrl);
 }
 
 function createSource(

@@ -54,12 +54,13 @@ const SECTIONS_PANEL_ID = "nav-sections";
  *  switches at the same one. */
 const SECTIONS_BREAKPOINT = { xs: "none", md: "flex" } as const;
 
-/** A level that stays in view while the page scrolls. */
+/** A level that stays in view while the page scrolls. It pins below the app
+ * header, which publishes its height as a CSS variable. */
 const STICKY_LEVEL_STYLE = {
   position: "sticky",
-  top: 16,
+  top: "calc(var(--app-header-h, 0px) + 16px)",
   alignSelf: "flex-start",
-  maxHeight: "calc(100vh - 32px)",
+  maxHeight: "calc(100vh - var(--app-header-h, 0px) - 32px)",
   overflowY: "auto"
 } as const;
 

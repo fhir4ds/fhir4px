@@ -5,12 +5,10 @@ import type { CohortResult } from "../lib/fhir/cohorts-runner";
 import type { QualityEvaluation } from "../lib/fhir/quality-run";
 import {
   getConnectionStatus,
-  sourceChipLabel,
   subscribeConnectionStatus,
   type ConnectionStatusState
 } from "../lib/app/connection-status";
 import { useDatasetEvaluation } from "../lib/app/use-dataset-evaluation";
-import ConnectionChip from "../components/ConnectionChip";
 
 const COHORTS_PATH = "/cohorts";
 
@@ -45,14 +43,6 @@ export default function CohortsPage() {
             <Typography variant="h2">Cohorts</Typography>
           </Stack>
 
-          {/* The same connection chip the Records page shows. */}
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-            {connected ? (
-              status.sources.map((source) => <ConnectionChip key={source.id} label={sourceChipLabel(source)} />)
-            ) : (
-              <ConnectionChip />
-            )}
-          </Stack>
 
           {busy && <LinearProgress />}
           {failed && (connected ? <Alert severity="error">{result.error}</Alert> : <Alert severity="info">Connect a portal to identify cohorts.</Alert>)}

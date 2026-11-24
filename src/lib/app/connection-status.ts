@@ -6,18 +6,23 @@
  */
 
 import type { CareGap } from "../fhir/care-gaps";
+import type { PatientHeaderInfo } from "../fhir/patient-header";
 import type { UsCoreCheckResult } from "../fhir/uscore-checks";
 
 export type ConnectionPhase = "disconnected" | "loading" | "evaluating" | "connected" | "warning";
 
 export interface ConnectionStatusSource {
   id: string;
+  /** Portal and patient, e.g. "SMART Dev Sandbox · Grace Mensah" (the menu lists this). */
   label: string;
+  /** The portal's own name, without the patient: the header shows the
+   * patient separately, so its chip uses this. */
+  providerLabel?: string;
   status: string;
   recordCount?: number;
 }
 
-/** Text for a connection chip: "<connection and patient> · <n> records". */
+/** Text for a connection chip: "<connection> · <n> records". */
 export function sourceChipLabel(source: Pick<ConnectionStatusSource, "label" | "recordCount">): string {
   if (source.recordCount === undefined) return source.label;
   const count = source.recordCount;
@@ -64,6 +69,9 @@ export interface ConnectionStatusState {
   careGaps?: CareGapsState | null;
   /** US Core data-presence checks for the loaded dataset (connection info). */
   usCore?: UsCoreCheckResult[] | null;
+  /** The loaded patient, shown in the app header on every page. Null while
+   * a different dataset is loading or when nothing is loaded. */
+  patient?: PatientHeaderInfo | null;
 }
 
 type Listener = (state: ConnectionStatusState) => void;
@@ -89,7 +97,10 @@ export function publishConnectionStatus(next: ConnectionStatusState): void {
     // Keep the previous working phase through inter-stage idle gaps.
     return;
   }
-  state = next;
+  // The patient belongs to publishPatient and completeConnection: a status
+  // publish that does not speak to it leaves it in place, so the header keeps
+  // showing the patient while the Records page reports grouping progress.
+  state = { ...next, patient: "patient" in next ? next.patient : state.patient };
   for (const listener of listeners) listener(state);
 }
 
@@ -124,22 +135,33 @@ export function publishConnections(sources: ConnectionStatusSource[]): void {
 
 /**
  * Fill in what a stored connection was missing. Until the Records page has
- * fetched it, a connection holds neither its patient nor its record count;
+ * fetched it, a connection holds neither its record count nor its patient;
  * the dataset evaluation knows both. Only safe with a single connection,
- * whose records are the ones that were evaluated.
+ * whose records are the ones that were evaluated. A patient the Records
+ * page published wins over the evaluation's.
  */
-export function completeConnection(details: { patientName: string | null; recordCount: number }): void {
+export function completeConnection(details: { patient: PatientHeaderInfo | null; recordCount: number }): void {
   const [source] = state.sources;
   if (!source || state.sources.length !== 1) return;
-  // A label built from a patient already has the separator.
-  const label = details.patientName && !source.label.includes(" · ") ? `${source.label} · ${details.patientName}` : source.label;
   const recordCount = source.recordCount ?? details.recordCount;
-  if (label === source.label && recordCount === source.recordCount) return;
+  if (recordCount === source.recordCount && state.patient === details.patient) return;
   state = {
     ...state,
-    label: state.phase === "connected" ? sourceChipLabel({ label, recordCount }) : state.label,
-    sources: [{ ...source, label, recordCount }]
+    label: state.phase === "connected" ? sourceChipLabel({ label: source.label, recordCount }) : state.label,
+    sources: [{ ...source, recordCount }],
+    patient: state.patient ?? details.patient
   };
+  for (const listener of listeners) listener(state);
+}
+
+/**
+ * Set the patient the app header shows. Published by the Records page as its
+ * datasets change. Not subject to the working-phase latch: the header must
+ * not keep showing the previous patient while the next one loads.
+ */
+export function publishPatient(patient: PatientHeaderInfo | null): void {
+  if (state.patient === patient) return;
+  state = { ...state, patient };
   for (const listener of listeners) listener(state);
 }
 

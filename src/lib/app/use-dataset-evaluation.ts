@@ -32,7 +32,7 @@ export function useDatasetEvaluation<T>(path: string, select: (evaluation: Quali
       // The connection menu summarizes these; the Records page publishes
       // them too when it is open, which is not the case after a reload here.
       publishUsCore(evaluation.checks);
-      completeConnection({ patientName: evaluation.patientName, recordCount: evaluation.resourceCount });
+      completeConnection({ patient: evaluation.patient, recordCount: evaluation.resourceCount });
       setResult({ value: selectRef.current(evaluation), error: null });
     } catch (caught) {
       setResult({ value: null, error: caught instanceof Error ? caught.message : "Evaluation failed" });

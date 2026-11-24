@@ -8,7 +8,8 @@ const MEASURE_IDS = ["CMS122", "CMS124", "CMS125", "CMS130", "CMS159", "CMS349",
 
 /**
  * The Quality and Cohorts areas run off the dataset evaluation that happens
- * when a patient loads, and all three pages share one connection chip.
+ * when a patient loads, and the app header shows the patient and the
+ * connection chip on every page.
  *
  * This is also the regression for CMS159 (card FHIR4-15): its translated SQL
  * failed to bind until translation started pre-calling translate_library, and
@@ -41,8 +42,13 @@ test.describe("Quality and Cohorts", () => {
     await expect(navigation.getByRole("button", { name: /^Care gaps/ })).toBeVisible();
     await expect(navigation.getByRole("button", { name: /^Quality measures/ })).toBeVisible();
 
-    // The same connection chip the Records page shows, once the evaluation is done.
-    await expect(page.getByText(/SMART Dev Sandbox · .* · \d+ records?/).first()).toBeVisible({ timeout: 180_000 });
+    // The app header carries the patient and the connection chip, once the
+    // evaluation is done. The chip names the portal without the patient.
+    const header = page.getByRole("banner");
+    const chip = header.getByText(/^SMART Dev Sandbox · \d+ records?$/);
+    await expect(chip).toBeVisible({ timeout: 180_000 });
+    await expect(header.getByRole("heading", { level: 2 })).toBeVisible();
+    await expect(header.getByText(/^DOB /)).toBeVisible();
     await expect(page.getByText(/From the CDC adult immunization schedule and the CMS quality measures/)).toBeVisible();
 
     // Nothing may end on an error branch: not the conformance checks, not a measure.
@@ -51,7 +57,7 @@ test.describe("Quality and Cohorts", () => {
     await expect(page.getByText(/Binder Error|TranslationError|ParseError/)).toHaveCount(0);
 
     // US Core data presence lives in the connection menu.
-    await page.getByText(/SMART Dev Sandbox · .* · \d+ records?/).first().click();
+    await chip.click();
     await expect(page.getByRole("button", { name: "US Core data presence" })).toContainText(/US Core data: \d+ of \d+ checks passed/);
     await page.getByRole("button", { name: "US Core data presence" }).click();
     await expect(page.getByRole("heading", { name: "US Core data presence" })).toBeVisible();

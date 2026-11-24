@@ -5,13 +5,11 @@ import type { MeasureResult } from "../lib/fhir/measures";
 import type { QualityEvaluation } from "../lib/fhir/quality-run";
 import {
   getConnectionStatus,
-  sourceChipLabel,
   subscribeConnectionStatus,
   type ConnectionStatusState
 } from "../lib/app/connection-status";
 import { getQualityView, setQualityView, subscribeQualityView, type QualityView } from "../lib/app/quality-view";
 import { useDatasetEvaluation } from "../lib/app/use-dataset-evaluation";
-import ConnectionChip from "../components/ConnectionChip";
 import CareGapsView from "../components/CareGapsView";
 import QualityMeasuresView from "../components/QualityMeasuresView";
 
@@ -68,14 +66,6 @@ export default function QualityPage() {
             </ToggleButtonGroup>
           </Stack>
 
-          {/* The same connection chip the Records page shows. */}
-          <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-            {connected ? (
-              status.sources.map((source) => <ConnectionChip key={source.id} label={sourceChipLabel(source)} />)
-            ) : (
-              <ConnectionChip />
-            )}
-          </Stack>
 
           {busy && <LinearProgress />}
           {failed && (connected ? <Alert severity="error">{result.error}</Alert> : <Alert severity="info">Connect a portal to see quality results.</Alert>)}

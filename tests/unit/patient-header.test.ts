@@ -1,0 +1,93 @@
+import { describe, expect, it } from "vitest";
+import { headerPatientFor, patientHeaderInfo } from "../../src/lib/fhir/patient-header";
+import type { FhirResource } from "../../src/lib/smart/data";
+
+/** A local-calendar birth date that makes the patient an exact number of
+ * years old today (the age is computed on local dates). */
+function birthDateYearsAgo(years: number): string {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - years);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function patient(overrides: Partial<FhirResource> & Record<string, unknown>): FhirResource {
+  return {
+    resourceType: "Patient",
+    id: "p1",
+    name: [{ family: "Mensah", given: ["Grace"], use: "official" }],
+    gender: "female",
+    birthDate: birthDateYearsAgo(68),
+    address: [{ line: ["912 Highway 14"], city: "Cadillac", state: "MI", postalCode: "49601" }],
+    telecom: [
+      { system: "phone", use: "mobile", value: "+1 231-666-6666" },
+      { system: "email", value: "grace@example.org" }
+    ],
+    ...overrides
+  } as FhirResource;
+}
+
+describe("patientHeaderInfo", () => {
+  it("collects the identity and contact chips the header shows", () => {
+    expect(patientHeaderInfo(patient({}))).toEqual({
+      name: "Grace Mensah",
+      birthDate: `${birthDateYearsAgo(68)} (68)`,
+      gender: "female",
+      address: "912 Highway 14 · Cadillac, MI, 49601",
+      telecoms: ["phone: mobile: +1 231-666-6666", "email: grace@example.org"],
+      profileCount: 1,
+      otherPatients: 0
+    });
+  });
+
+  it("leaves out what the record does not carry", () => {
+    const info = patientHeaderInfo(patient({ name: [{ family: "Longitudinal" }], gender: undefined }));
+
+    expect(info).toMatchObject({
+      name: "Longitudinal",
+      gender: undefined,
+      telecoms: ["phone: mobile: +1 231-666-6666", "email: grace@example.org"]
+    });
+  });
+
+  it("is null without a patient", () => {
+    expect(patientHeaderInfo(null)).toBeNull();
+  });
+});
+
+describe("headerPatientFor", () => {
+  const birthDate = birthDateYearsAgo(68);
+
+  it("is null when no portal has produced a patient", () => {
+    expect(headerPatientFor([])).toBeNull();
+  });
+
+  it("shows one portal's patient", () => {
+    expect(headerPatientFor([patient({ birthDate })])).toMatchObject({
+      name: "Grace Mensah",
+      profileCount: 1,
+      otherPatients: 0
+    });
+  });
+
+  it("treats portals that resolve to the same person as one patient", () => {
+    const otherPortalCopy = patient({ id: "p2", name: [{ family: "mensah", given: ["Grace"] }], birthDate });
+
+    expect(headerPatientFor([patient({ birthDate }), otherPortalCopy])).toMatchObject({
+      name: "Grace Mensah",
+      profileCount: 2,
+      otherPatients: 0
+    });
+  });
+
+  it("counts portals that belong to someone else", () => {
+    const someoneElse = patient({ id: "p2", name: [{ family: "Ross", given: ["Linda"] }], birthDate: "1969-04-27" });
+
+    expect(headerPatientFor([patient({ birthDate }), someoneElse])).toMatchObject({
+      name: "Grace Mensah",
+      profileCount: 2,
+      otherPatients: 1
+    });
+  });
+});

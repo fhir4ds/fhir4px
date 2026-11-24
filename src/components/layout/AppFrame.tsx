@@ -1,6 +1,5 @@
-import { Box, Button, Container, Stack, Typography } from "@mui/material";
-import { Database, Settings } from "lucide-react";
-import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import { Box, Container } from "@mui/material";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, type PropsWithChildren } from "react";
 import {
   dispatchSmartAuthPopupEvent,
@@ -11,19 +10,12 @@ import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
 import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 import { preloadAssociations } from "../../lib/associations/bundle";
-import { publishConnections } from "../../lib/app/connection-status";
-import { listConnectedSources, sourceLabel } from "../../lib/smart/sources";
+import { publishConnections, publishPatient } from "../../lib/app/connection-status";
+import { headerPatientFor } from "../../lib/fhir/patient-header";
+import { getSourceDataset, listConnectedSources, providerLabel, sourceLabel } from "../../lib/smart/sources";
 import { getOrCreateSessionVaultKey } from "../../lib/vault/keys";
+import AppHeader from "../AppHeader";
 import AppNav from "../AppNav";
-import ConnectionPill from "../ConnectionPill";
-
-// The top bar holds the tools that apply across the product; the product
-// pages (Records, Quality, Cohorts, LLM Lab, Providers) live in the
-// persistent side navigation.
-const navItems = [
-  { to: "/export", label: "Export", icon: <Database size={18} /> },
-  { to: "/settings", label: "Settings", icon: <Settings size={18} /> }
-];
 
 export function AppFrame({ children }: PropsWithChildren) {
   const location = useLocation();
@@ -66,10 +58,11 @@ export function AppFrame({ children }: PropsWithChildren) {
     return () => window.clearTimeout(timer);
   }, []);
 
-  // The connection controls read the status store, which the Records page
-  // publishes. After a reload onto another page that page has not run yet,
-  // so make the stored connections known from the vault. Best-effort: a
-  // vault that cannot be read leaves the controls showing no connection.
+  // The connection controls and the header patient read the status store,
+  // which the Records page publishes. After a reload onto another page that
+  // page has not run yet, so make the stored connections and their patients
+  // known from the vault. Best-effort: a vault that cannot be read leaves the
+  // controls showing no connection and the header without a patient.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -80,10 +73,15 @@ export function AppFrame({ children }: PropsWithChildren) {
         connected.map((source) => ({
           id: source.id,
           label: sourceLabel(source),
+          providerLabel: providerLabel(source),
           status: source.status,
           recordCount: source.recordCount
         }))
       );
+      // Each stored dataset holds its portal's Patient resource.
+      const datasets = await Promise.all(connected.map((source) => getSourceDataset(key, source.id)));
+      if (cancelled) return;
+      publishPatient(headerPatientFor(datasets.flatMap((dataset) => (dataset?.patient ? [dataset.patient] : []))));
     })().catch(() => {
       console.warn("[fhir4px:connections] stored connections could not be read");
     });
@@ -120,10 +118,6 @@ export function AppFrame({ children }: PropsWithChildren) {
     };
   }, [location.pathname, navigate]);
 
-  // On Records the page's card header carries the connection chip, so the
-  // top bar leaves the pill out there.
-  const onRecords = location.pathname === "/records";
-
   return (
     <Box
       minHeight="100vh"
@@ -133,33 +127,7 @@ export function AppFrame({ children }: PropsWithChildren) {
         background: "linear-gradient(180deg, #0d1b2a 0%, #09131e 100%)"
       }}
     >
-      <Container maxWidth="lg" sx={{ pt: 3 }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }}>
-          <Typography
-            component={RouterLink}
-            to="/providers"
-            variant="h1"
-            sx={{ color: "text.primary", textDecoration: "none", flexGrow: 1 }}
-          >
-            fhir4px
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-            {navItems.map((item) => (
-              <Button
-                key={item.to}
-                component={RouterLink}
-                to={item.to}
-                startIcon={item.icon}
-                variant={location.pathname === item.to ? "contained" : "outlined"}
-                size="small"
-              >
-                {item.label}
-              </Button>
-            ))}
-            {!onRecords && <ConnectionPill />}
-          </Stack>
-        </Stack>
-      </Container>
+      <AppHeader />
       {/* The body fills the rest of the viewport, so the side navigation
           stretches the full height of the page. */}
       <Container

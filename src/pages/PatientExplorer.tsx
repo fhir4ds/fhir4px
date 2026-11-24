@@ -143,15 +143,15 @@ import { invalidateCareGaps } from "../lib/fhir/care-gaps-run";
 import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
 import type { MeasureResult } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
-import ConnectionChip from "../components/ConnectionChip";
 import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
 import {
   publishConnectionStatus,
+  publishPatient,
   registerRecordsPageActions,
-  sourceChipLabel,
   type ConnectionPhase,
   type ConnectionStatusSource
 } from "../lib/app/connection-status";
+import { headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
 import type { UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
@@ -244,6 +244,7 @@ import {
   ensureConnectedSources,
   fetchAndStoreSourceDataset,
   getSourceDataset,
+  providerLabel,
   sourceLabel,
   type ConnectedSource
 } from "../lib/smart/sources";
@@ -750,85 +751,12 @@ interface PatientProfile {
   patient: FhirResource;
 }
 
-function patientDisplayName(patient: FhirResource | null | undefined): string {
-  const names = Array.isArray(patient?.name) ? patient.name : [];
-  const official = names.find((name) => (name as { use?: unknown }).use === "official");
-  const selected = (official ?? names[0]) as
-    | {
-        text?: unknown;
-        given?: unknown;
-        family?: unknown;
-      }
-    | undefined;
-  if (typeof selected?.text === "string" && selected.text.trim()) return selected.text.trim();
-  const given = Array.isArray(selected?.given)
-    ? selected.given.filter((value): value is string => typeof value === "string")
-    : [];
-  const family = typeof selected?.family === "string" ? selected.family : "";
-  return [...given, family].filter(Boolean).join(" ").replace(/\s+/g, " ").trim() || "Patient";
-}
-
-function patientAge(birthDate?: unknown): number | undefined {
-  if (typeof birthDate !== "string") return undefined;
-  const parsed = new Date(`${birthDate}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  const today = new Date();
-  let age = today.getFullYear() - parsed.getFullYear();
-  const monthDelta = today.getMonth() - parsed.getMonth();
-  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < parsed.getDate())) age -= 1;
-  return age >= 0 && age < 130 ? age : undefined;
-}
-
-function patientBirthDateLabel(patient: FhirResource): string | undefined {
-  if (typeof patient.birthDate !== "string") return undefined;
-  const age = patientAge(patient.birthDate);
-  return age === undefined ? patient.birthDate : `${patient.birthDate} (${age})`;
-}
-
-function patientGenderLabel(patient: FhirResource): string | undefined {
-  return typeof patient.gender === "string" && patient.gender.trim() ? patient.gender : undefined;
-}
-
 function formatGroupReferenceRange(range: GroupReferenceRange): string {
   if (range.text) return range.text;
   const low = Number.isFinite(range.low) ? String(range.low) : "—";
   const high = Number.isFinite(range.high) ? String(range.high) : "—";
   const unit = range.unit ? ` ${range.unit}` : "";
   return `Normal range: ${low}–${high}${unit}`;
-}
-
-function patientAddressLabel(patient: FhirResource): string | undefined {
-  const addresses = Array.isArray(patient.address) ? patient.address : [];
-  const selected = addresses[0] as
-    | {
-        line?: unknown;
-        city?: unknown;
-        state?: unknown;
-        postalCode?: unknown;
-      }
-    | undefined;
-  if (!selected) return undefined;
-  const lines = Array.isArray(selected.line)
-    ? selected.line.filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
-    : [];
-  const city = typeof selected.city === "string" ? selected.city : undefined;
-  const state = typeof selected.state === "string" ? selected.state : undefined;
-  const postalCode = typeof selected.postalCode === "string" ? selected.postalCode : undefined;
-  const locality = [city, state, postalCode].filter(Boolean).join(", ").replace(", ,", ",");
-  return [...lines, locality].filter(Boolean).join(" · ") || undefined;
-}
-
-function patientTelecomLabels(patient: FhirResource): string[] {
-  const telecoms = Array.isArray(patient.telecom) ? patient.telecom : [];
-  return telecoms
-    .flatMap((entry) => {
-      const telecom = entry as { system?: unknown; value?: unknown; use?: unknown };
-      if (typeof telecom.value !== "string" || !telecom.value.trim()) return [];
-      const system = typeof telecom.system === "string" ? telecom.system : "contact";
-      const use = typeof telecom.use === "string" ? telecom.use : undefined;
-      return [[system, use, telecom.value].filter(Boolean).join(": ")];
-    })
-    .slice(0, 3);
 }
 
 function sourceScopedSummary(source: ConnectedSource, dataset: FhirDataset): ReferralSummary {
@@ -4047,22 +3975,27 @@ export function PatientExplorer() {
 
   function renderDataToolbar() {
     // Add record lives in the side navigation's second level, which is hidden
-    // below the md breakpoint (the same one the nav panel appears at) — so the
-    // header carries the button only there. Without a loaded patient there is
-    // no profile chip, so the header also carries the connection control.
-    // Source selection and Refresh live in that control's menu.
+    // below the md breakpoint (the same one the nav panel appears at) — so
+    // this toolbar carries the button only there. The app header holds the
+    // patient and the connection control; source selection and Refresh live
+    // in that control's menu.
     return (
-      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        flexWrap="wrap"
+        useFlexGap
+        sx={{ display: { xs: "flex", md: "none" } }}
+      >
         <Button
           variant="outlined"
           size="small"
           startIcon={<Plus size={16} />}
           onClick={openAddRecordDialog}
-          sx={{ display: { xs: "inline-flex", md: "none" } }}
         >
           Add record
         </Button>
-        {patientProfiles.length === 0 && <ConnectionChip />}
       </Stack>
     );
   }
@@ -4196,6 +4129,7 @@ export function PatientExplorer() {
     const sourcesForPill: ConnectionStatusSource[] = sources.map((source) => ({
       id: source.id,
       label: sourceLabel(source),
+      providerLabel: providerLabel(source),
       status: source.status,
       recordCount: sourceRecordCount(source)
     }));
@@ -4247,6 +4181,13 @@ export function PatientExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, activeSourceId, records, patientProfiles, openCareGaps, dismissedGaps, usCoreChecks]);
 
+  // The app header shows the loaded patient on every page. It is cleared as
+  // soon as a new dataset starts loading, so the previous patient is never
+  // shown over the next one's records.
+  useEffect(() => {
+    publishPatient(busy ? null : headerPatientFor(patientProfiles.map((profile) => profile.patient)));
+  }, [busy, patientProfiles]);
+
   function renderCareGaps() {
     if (careGaps.length === 0 && !measureGapsBusy) return null;
     return (
@@ -4269,63 +4210,6 @@ export function PatientExplorer() {
           }}
         />
       </Stack>
-    );
-  }
-
-  function renderPatientProfile() {
-    const primary = patientProfiles[0]?.patient ?? summary?.patient;
-    if (!primary) return null;
-
-    const name = patientDisplayName(primary);
-    const birthDate = patientBirthDateLabel(primary);
-    const gender = patientGenderLabel(primary);
-    const address = patientAddressLabel(primary);
-    const telecoms = patientTelecomLabels(primary);
-
-    return (
-      <Box sx={{ px: { xs: 0, sm: 0.5 }, py: 0.5 }}>
-        <Stack spacing={1.25}>
-          <Stack direction="row" justifyContent="space-between" gap={1} alignItems="flex-start" flexWrap="wrap" useFlexGap>
-            <Stack spacing={0.25} minWidth={0}>
-              <Typography variant="h3" fontWeight={700} sx={{ overflowWrap: "anywhere" }}>
-                {name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Patient profile
-              </Typography>
-            </Stack>
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap justifyContent="flex-end">
-              {birthDate && <Chip size="small" variant="outlined" label={`DOB ${birthDate}`} />}
-              {gender && <Chip size="small" variant="outlined" label={gender} />}
-              {patientProfiles.length > 1 && <Chip size="small" label={`${patientProfiles.length} portal profiles`} />}
-            </Stack>
-          </Stack>
-          {(address || telecoms.length > 0) && (
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-              {address && <Chip size="small" variant="outlined" label={address} />}
-              {telecoms.map((label) => (
-                <Chip key={label} size="small" variant="outlined" label={label} />
-              ))}
-            </Stack>
-          )}
-          {patientProfiles.length > 0 && (
-            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-              {patientProfiles.map((profile) => {
-                const source = sources.find((candidate) => candidate.id === profile.sourceId);
-                return (
-                  <ConnectionChip
-                    key={profile.sourceId}
-                    label={sourceChipLabel({
-                      label: profile.sourceName,
-                      recordCount: source ? sourceRecordCount(source) : undefined
-                    })}
-                  />
-                );
-              })}
-            </Stack>
-          )}
-        </Stack>
-      </Box>
     );
   }
 
@@ -6646,7 +6530,6 @@ export function PatientExplorer() {
         <CardContent>
           <Stack spacing={2.5}>
             {renderDataToolbar()}
-            {renderPatientProfile()}
             {error && <Alert severity="warning">{error}</Alert>}
 
             <Divider />

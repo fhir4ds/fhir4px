@@ -16,12 +16,12 @@ import {
   type MeasureResult
 } from "./measures";
 import { COHORT_DEFINITIONS, executeCohort, type CohortResult } from "./cohorts-runner";
-import { patientName } from "../smart/sources";
+import { headerPatientFor, type PatientHeaderInfo } from "./patient-header";
 
 export interface QualityEvaluation {
   resourceCount: number;
-  /** Name on the loaded Patient resource, when there is one. */
-  patientName: string | null;
+  /** The loaded patient, for the app header (null without a Patient resource). */
+  patient: PatientHeaderInfo | null;
   checks: UsCoreCheckResult[];
   measures: MeasureResult[];
   /** Authored cohort definitions, executed after the measures. */
@@ -40,10 +40,9 @@ async function executeQualityEvaluation(): Promise<QualityEvaluation> {
   for (const definition of COHORT_DEFINITIONS) {
     cohorts.push(await executeCohort(definition));
   }
-  const patient = resources.find((resource) => resource.resourceType === "Patient") ?? null;
   return {
     resourceCount: resources.length,
-    patientName: patient ? patientName(patient) ?? null : null,
+    patient: headerPatientFor(resources.filter((resource) => resource.resourceType === "Patient")),
     checks,
     measures,
     cohorts
