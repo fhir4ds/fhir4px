@@ -4122,15 +4122,22 @@ export function PatientExplorer() {
   }
 
   function renderDataToolbar() {
-    // Source selection and Refresh live in the connection menu; Add portal is
-    // on the Providers page and in that menu too.
+    // Add record lives in the side navigation's second level, which is hidden
+    // below the md breakpoint (the same one the nav panel appears at) — so the
+    // header carries the button only there. Without a loaded patient there is
+    // no profile chip, so the header also carries the connection control.
+    // Source selection and Refresh live in that control's menu.
     return (
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-        <Button variant="outlined" size="small" startIcon={<Plus size={16} />} onClick={openAddRecordDialog}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<Plus size={16} />}
+          onClick={openAddRecordDialog}
+          sx={{ display: { xs: "inline-flex", md: "none" } }}
+        >
           Add record
         </Button>
-        {/* Without a loaded patient there is no profile chip, so the header
-            carries the connection control itself. */}
         {patientProfiles.length === 0 && <ConnectionChip />}
       </Stack>
     );
