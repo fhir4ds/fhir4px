@@ -1,7 +1,7 @@
 import { Box, Button, Container, IconButton, Stack, Typography } from "@mui/material";
 import { Database, FlaskConical, Menu, Settings } from "lucide-react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState, type PropsWithChildren } from "react";
+import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
 import {
   dispatchSmartAuthPopupEvent,
   isSmartAuthPopupMessage,
@@ -12,6 +12,19 @@ import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 import { preloadAssociations } from "../../lib/associations/bundle";
 import AppNavDrawer from "../AppNavDrawer";
+
+const RECORDS_PATH = "/records";
+
+/**
+ * Opens the slide-out navigation. The Records page places its own menu
+ * button inside its card header, so it reaches the app frame's drawer
+ * through this context. Pages rendered outside the frame get a no-op.
+ */
+const OpenNavDrawerContext = createContext<() => void>(() => {});
+
+export function useOpenNavDrawer(): () => void {
+  return useContext(OpenNavDrawerContext);
+}
 import ConnectionPill from "../ConnectionPill";
 
 // Top-bar destinations are the tools that apply across the product. The
@@ -93,7 +106,13 @@ export function AppFrame({ children }: PropsWithChildren) {
     };
   }, [location.pathname, navigate]);
 
+  // On Records the page's card header carries the menu button and the
+  // connection chip, so the top bar leaves both out there.
+  const onRecords = location.pathname === RECORDS_PATH;
+  const openNavDrawer = () => setNavOpen(true);
+
   return (
+    <OpenNavDrawerContext.Provider value={openNavDrawer}>
     <Box minHeight="100vh" sx={{ background: "linear-gradient(180deg, #0d1b2a 0%, #09131e 100%)" }}>
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} mb={3}>
@@ -106,14 +125,16 @@ export function AppFrame({ children }: PropsWithChildren) {
             fhir4px
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-            <IconButton
-              size="small"
-              aria-label="Open navigation"
-              aria-expanded={navOpen ? "true" : undefined}
-              onClick={() => setNavOpen(true)}
-            >
-              <Menu size={20} />
-            </IconButton>
+            {!onRecords && (
+              <IconButton
+                size="small"
+                aria-label="Open navigation"
+                aria-expanded={navOpen ? "true" : undefined}
+                onClick={openNavDrawer}
+              >
+                <Menu size={20} />
+              </IconButton>
+            )}
             {navItems.map((item) => (
               <Button
                 key={item.to}
@@ -126,12 +147,13 @@ export function AppFrame({ children }: PropsWithChildren) {
                 {item.label}
               </Button>
             ))}
-            <ConnectionPill />
+            {!onRecords && <ConnectionPill />}
           </Stack>
         </Stack>
         {children}
       </Container>
       <AppNavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
     </Box>
+    </OpenNavDrawerContext.Provider>
   );
 }

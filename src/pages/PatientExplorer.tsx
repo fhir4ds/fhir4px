@@ -55,6 +55,7 @@ import {
   LayoutDashboard,
   List,
   ListCollapse,
+  Menu as MenuIcon,
   Pill,
   Plus,
   RefreshCcw,
@@ -143,6 +144,8 @@ import { buildImmunizationGaps, buildMeasureGaps, rankCareGaps, type CareGap } f
 import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
 import { evaluateMeasureGaps } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
+import ConnectionChip from "../components/ConnectionChip";
+import { useOpenNavDrawer } from "../components/layout/AppFrame";
 import {
   publishConnectionStatus,
   registerRecordsPageActions,
@@ -4120,13 +4123,28 @@ export function PatientExplorer() {
     return null;
   }
 
+  const openNavDrawer = useOpenNavDrawer();
+
   function renderDataToolbar() {
-    // Source selection and Refresh live in the connection popover; Add portal
-    // is on the Providers page and in that popover too.
+    // Source selection and Refresh live in the connection menu; Add portal is
+    // on the Providers page and in that menu too.
     return (
-      <Button variant="outlined" size="small" startIcon={<Plus size={16} />} onClick={openAddRecordDialog}>
-        Add record
-      </Button>
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        <IconButton
+          size="small"
+          aria-label="Open navigation"
+          onClick={openNavDrawer}
+          sx={{ ml: -1 }}
+        >
+          <MenuIcon size={20} />
+        </IconButton>
+        <Button variant="outlined" size="small" startIcon={<Plus size={16} />} onClick={openAddRecordDialog}>
+          Add record
+        </Button>
+        {/* Without a loaded patient there is no profile chip, so the header
+            carries the connection control itself. */}
+        {patientProfiles.length === 0 && <ConnectionChip />}
+      </Stack>
     );
   }
 
@@ -4303,7 +4321,7 @@ export function PatientExplorer() {
           {patientProfiles.length > 0 && (
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
               {patientProfiles.map((profile) => (
-                <Chip key={profile.sourceId} size="small" label={profile.sourceName} />
+                <ConnectionChip key={profile.sourceId} label={profile.sourceName} />
               ))}
             </Stack>
           )}
