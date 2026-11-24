@@ -1,6 +1,6 @@
 /**
  * Connection status store — shared between PatientExplorer (which computes
- * the state) and the ConnectionPill / AppNavDrawer in the app frame (which
+ * the state) and the ConnectionPill / AppNav in the app frame (which
  * render it). Small pub/sub; PatientExplorer publishes on state changes,
  * the app-frame components subscribe and re-render.
  */

@@ -1,7 +1,7 @@
-import { Box, Button, Container, IconButton, Stack, Typography } from "@mui/material";
-import { Database, FlaskConical, Menu, Settings } from "lucide-react";
+import { Box, Button, Container, Stack, Typography } from "@mui/material";
+import { Database, Settings } from "lucide-react";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from "react";
+import { useEffect, type PropsWithChildren } from "react";
 import {
   dispatchSmartAuthPopupEvent,
   isSmartAuthPopupMessage,
@@ -11,35 +11,20 @@ import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
 import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 import { preloadAssociations } from "../../lib/associations/bundle";
-import AppNavDrawer from "../AppNavDrawer";
-
-const RECORDS_PATH = "/records";
-
-/**
- * Opens the slide-out navigation. The Records page places its own menu
- * button inside its card header, so it reaches the app frame's drawer
- * through this context. Pages rendered outside the frame get a no-op.
- */
-const OpenNavDrawerContext = createContext<() => void>(() => {});
-
-export function useOpenNavDrawer(): () => void {
-  return useContext(OpenNavDrawerContext);
-}
+import AppNav from "../AppNav";
 import ConnectionPill from "../ConnectionPill";
 
-// Top-bar destinations are the tools that apply across the product. The
-// product pages themselves (Records, Quality, Cohorts, Providers) live in
-// the two-level slide-out opened by the menu button.
+// The top bar holds the tools that apply across the product; the product
+// pages (Records, Quality, Cohorts, LLM Lab, Providers) live in the
+// persistent side navigation.
 const navItems = [
   { to: "/export", label: "Export", icon: <Database size={18} /> },
-  { to: "/llm-playground", label: "LLM Lab", icon: <FlaskConical size={18} /> },
   { to: "/settings", label: "Settings", icon: <Settings size={18} /> }
 ];
 
 export function AppFrame({ children }: PropsWithChildren) {
   const location = useLocation();
   const navigate = useNavigate();
-  const [navOpen, setNavOpen] = useState(false);
 
   // Preload embedding model eagerly (needed for classification) and patient-
   // friendly lookup tables lazily (needed for deterministic naming). The model
@@ -106,13 +91,11 @@ export function AppFrame({ children }: PropsWithChildren) {
     };
   }, [location.pathname, navigate]);
 
-  // On Records the page's card header carries the menu button and the
-  // connection chip, so the top bar leaves both out there.
-  const onRecords = location.pathname === RECORDS_PATH;
-  const openNavDrawer = () => setNavOpen(true);
+  // On Records the page's card header carries the connection chip, so the
+  // top bar leaves the pill out there.
+  const onRecords = location.pathname === "/records";
 
   return (
-    <OpenNavDrawerContext.Provider value={openNavDrawer}>
     <Box minHeight="100vh" sx={{ background: "linear-gradient(180deg, #0d1b2a 0%, #09131e 100%)" }}>
       <Container maxWidth="lg" sx={{ py: 3 }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} mb={3}>
@@ -125,16 +108,6 @@ export function AppFrame({ children }: PropsWithChildren) {
             fhir4px
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-            {!onRecords && (
-              <IconButton
-                size="small"
-                aria-label="Open navigation"
-                aria-expanded={navOpen ? "true" : undefined}
-                onClick={openNavDrawer}
-              >
-                <Menu size={20} />
-              </IconButton>
-            )}
             {navItems.map((item) => (
               <Button
                 key={item.to}
@@ -150,10 +123,11 @@ export function AppFrame({ children }: PropsWithChildren) {
             {!onRecords && <ConnectionPill />}
           </Stack>
         </Stack>
-        {children}
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          <AppNav />
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>{children}</Box>
+        </Stack>
       </Container>
-      <AppNavDrawer open={navOpen} onClose={() => setNavOpen(false)} />
     </Box>
-    </OpenNavDrawerContext.Provider>
   );
 }

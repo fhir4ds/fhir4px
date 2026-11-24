@@ -20,6 +20,10 @@ peer-to-peer.
   H2 volume can corrupt ("Negative position") — fix: `docker compose rm -f r4`,
   delete volume `smart-dev-sandbox_r4-database`, `up -d r4`, then reload all
   fixture sets (defaults + chronic + epic-sandbox) via sandbox:load-fixtures.
+  A machine restart only stops the containers and keeps the data volume:
+  `docker compose up -d r4` in that directory brings the server back with
+  every loaded fixture intact (no reload needed). Check
+  localhost:4004/.../fhir/metadata before loading a patient in tests.
 - Epic sandbox API pulls need the full SMART auth-code flow (PKCE, redirect
   http://localhost:3000, MyChart two-step login, "Allow access" consent) with
   the registered non-prod client ID; plain Epic-Client-ID calls now 401.

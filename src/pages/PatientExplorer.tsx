@@ -55,7 +55,6 @@ import {
   LayoutDashboard,
   List,
   ListCollapse,
-  Menu as MenuIcon,
   Pill,
   Plus,
   RefreshCcw,
@@ -145,7 +144,6 @@ import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/q
 import { evaluateMeasureGaps } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
 import ConnectionChip from "../components/ConnectionChip";
-import { useOpenNavDrawer } from "../components/layout/AppFrame";
 import {
   publishConnectionStatus,
   registerRecordsPageActions,
@@ -4123,21 +4121,11 @@ export function PatientExplorer() {
     return null;
   }
 
-  const openNavDrawer = useOpenNavDrawer();
-
   function renderDataToolbar() {
     // Source selection and Refresh live in the connection menu; Add portal is
     // on the Providers page and in that menu too.
     return (
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-        <IconButton
-          size="small"
-          aria-label="Open navigation"
-          onClick={openNavDrawer}
-          sx={{ ml: -1 }}
-        >
-          <MenuIcon size={20} />
-        </IconButton>
         <Button variant="outlined" size="small" startIcon={<Plus size={16} />} onClick={openAddRecordDialog}>
           Add record
         </Button>
@@ -6653,8 +6641,8 @@ export function PatientExplorer() {
             <Divider />
 
             <Stack spacing={2.25} minWidth={0}>
-                {/* Resource tabs live in the app-frame drawer (☰); this
-                    horizontal strip is the narrow-screen fallback. */}
+                {/* Resource tabs live in the app frame's side navigation at
+                    md and up — the breakpoint this strip hides at. */}
                 <Box sx={{ display: { xs: "block", md: "none" } }}>{renderResourceNavigation("horizontal")}</Box>
 
                 {renderRecordViewToolbar()}
