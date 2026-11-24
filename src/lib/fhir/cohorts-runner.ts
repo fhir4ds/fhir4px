@@ -21,10 +21,58 @@ export interface CohortResult {
   /** Member rows only — patients whose InInitialPopulation is true. */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rows: any[][];
+  /** Every loaded patient: member or not, and which criteria were met. */
+  patients: CohortPatient[];
   error?: string;
   executionMs: number;
   /** Generated SQL (the fhir4ds translator output) for the SQL viewer. */
   sql?: string;
+}
+
+export interface CohortCriterion {
+  define: string;
+  label: string;
+  met: boolean;
+  /** References of the records that satisfied the criterion. */
+  references: string[];
+}
+
+/** One loaded patient's result for a cohort. */
+export interface CohortPatient {
+  patientId: string;
+  member: boolean;
+  criteria: CohortCriterion[];
+}
+
+/** A criterion is met when its list of matching records is not empty; a
+ * boolean define counts as met when it is true. */
+function criterionMet(cell: unknown): boolean {
+  return Array.isArray(cell) ? cell.length > 0 : cell === true;
+}
+
+/**
+ * Per-patient breakdown of a cohort's population rows. The SQL yields one
+ * row per loaded patient: a list define comes back as the array of matching
+ * record references (empty when nothing matched), membership as a boolean.
+ */
+export function cohortPatients(definition: CohortDefinition, columns: string[], rows: unknown[][]): CohortPatient[] {
+  const patientIndex = columns.indexOf("patient_id");
+  if (patientIndex < 0) {
+    throw new Error(`Cohort "${definition.title}" result has no patient_id column`);
+  }
+  return rows.map((row) => ({
+    patientId: String(row[patientIndex]),
+    member: boolAt(row, columns, COHORT_MEMBERSHIP_DEFINE) === true,
+    criteria: definition.criteria.map(({ define, label }) => {
+      const cell = row[columns.indexOf(define)];
+      return {
+        define,
+        label,
+        met: criterionMet(cell),
+        references: Array.isArray(cell) ? cell.map(String) : []
+      };
+    })
+  }));
 }
 
 /**
@@ -37,12 +85,21 @@ export interface CohortResult {
  */
 export async function executeCohort(definition: CohortDefinition): Promise<CohortResult> {
   const started = performance.now();
+  const empty: CohortResult = {
+    definition,
+    columns: [],
+    rows: [],
+    patients: [],
+    executionMs: 0
+  };
   try {
     const sql = await translateCqlToSql(definition.cql);
     const result = (await engineQuery(sql)) as EngineQueryResult;
-    if (!result.columns.includes(COHORT_MEMBERSHIP_DEFINE)) {
+    const expected = [COHORT_MEMBERSHIP_DEFINE, ...definition.criteria.map((criterion) => criterion.define)];
+    const missing = expected.filter((name) => !result.columns.includes(name));
+    if (missing.length > 0) {
       throw new Error(
-        `Cohort "${definition.title}" defines no "${COHORT_MEMBERSHIP_DEFINE}" — cannot determine membership`
+        `Cohort "${definition.title}" result is missing column(s): ${missing.join(", ")} — cannot determine membership`
       );
     }
     const memberRows = result.rows.filter(
@@ -52,14 +109,13 @@ export async function executeCohort(definition: CohortDefinition): Promise<Cohor
       definition,
       columns: result.columns,
       rows: memberRows,
+      patients: cohortPatients(definition, result.columns, result.rows),
       sql,
       executionMs: Math.round(performance.now() - started)
     };
   } catch (error) {
     return {
-      definition,
-      columns: [],
-      rows: [],
+      ...empty,
       error: error instanceof Error ? error.message : String(error),
       executionMs: Math.round(performance.now() - started)
     };

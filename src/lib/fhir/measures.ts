@@ -250,6 +250,16 @@ function deriveMeasurementYear(resources: Record<string, unknown>[]): number {
 }
 
 
+/** How a measure came out for a patient who is in its initial population. */
+export type MeasureStatus = "care-gap" | "met" | "excluded" | "not-in-denominator";
+
+export function measureStatus(evaluation: MeasureEvaluation): MeasureStatus {
+  if (evaluation.negative) return "care-gap";
+  if (evaluation.denominator && evaluation.excluded) return "excluded";
+  if (evaluation.denominator) return "met";
+  return "not-in-denominator";
+}
+
 /** A measure evaluated for the loaded patient, with full population pathway. */
 export interface MeasureEvaluation {
   id: string;

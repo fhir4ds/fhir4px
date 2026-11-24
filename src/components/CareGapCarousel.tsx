@@ -1,24 +1,14 @@
 /**
- * Care-gap carousel for the Patient Summary band. Shows up to a few gaps
- * at a time (3 on md+, 1 on xs) with paging arrows and dots. Card body
- * click toggles evidence expansion; the inline "View" button deep-links
- * to the gap's target tab via onSelect.
+ * Care-gap carousel for the Records summary band. Shows a few gaps at a time
+ * (3 on md+, 1 on xs) with paging arrows and dots. The cards themselves are
+ * CareGapCard, shared with the Quality area's Care gaps view.
  */
 
 import { useState } from "react";
-import { Box, Card, CardContent, Chip, IconButton, Skeleton, Stack, Tooltip, Typography, useMediaQuery, useTheme } from "@mui/material";
-import { AlarmClockOff, CalendarClock, ChevronLeft, ChevronRight, ExternalLink, RotateCcw, X } from "lucide-react";
-import type { CareGap, CareGapSeverity } from "../lib/fhir/care-gaps";
-
-const SEVERITY_COLOR: Record<CareGapSeverity, "error" | "warning"> = {
-  high: "error",
-  moderate: "warning"
-};
-
-const SOURCE_LABEL: Record<CareGap["source"], string> = {
-  immunization: "CDC schedule",
-  measure: "CMS measure"
-};
+import { Box, Card, CardContent, Chip, IconButton, Skeleton, Stack, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import type { CareGap } from "../lib/fhir/care-gaps";
+import CareGapCard from "./CareGapCard";
 
 interface CareGapCarouselProps {
   gaps: CareGap[];
@@ -60,80 +50,22 @@ export default function CareGapCarousel({ gaps, busy = false, onSelect, dismisse
   return (
     <Stack spacing={0.75} alignItems="center">
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 1.5, width: "100%" }}>
-        {visible.map((gap) => {
-          const expanded = expandedId === gap.id;
-          return (
-            <Card
-              key={gap.id}
-              variant="outlined"
-              onClick={() => setExpandedId(expanded ? null : gap.id)}
-              sx={{
-                minWidth: 0,
-                cursor: "pointer",
-                borderColor: gap.severity === "high" ? "error.light" : "warning.light",
-                "&:hover": { borderColor: gap.severity === "high" ? "error.main" : "warning.main" }
-              }}
-            >
-              <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-                  {gap.severity === "high" ? (
-                    <AlarmClockOff size={16} color={theme.palette.error.main} />
-                  ) : (
-                    <CalendarClock size={16} color={theme.palette.warning.main} />
-                  )}
-                  <Chip size="small" color={SEVERITY_COLOR[gap.severity]} variant="outlined" label={gap.severity === "high" ? "Overdue" : "Due"} />
-                  <Chip size="small" variant="outlined" label={SOURCE_LABEL[gap.source]} />
-                  <Box onClick={(event) => event.stopPropagation()} sx={{ ml: "auto" }}>
-                    <Stack direction="row" spacing={0.25}>
-                      {gap.targetTab && onSelect && (
-                        <Tooltip title="View records">
-                          <IconButton
-                            size="small"
-                            aria-label={`View records for ${gap.title}`}
-                            onClick={() => onSelect(gap)}
-                          >
-                            <ExternalLink size={14} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {onDismiss && (
-                        <Tooltip title="Dismiss">
-                          <IconButton
-                            size="small"
-                            aria-label={`Dismiss ${gap.title}`}
-                            onClick={() => onDismiss(gap)}
-                          >
-                            <X size={14} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
-                  </Box>
-                </Stack>
-                <Typography fontWeight={700} sx={{ mt: 0.75, overflowWrap: "anywhere" }}>
-                  {gap.title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                  {gap.summary}
-                </Typography>
-                {expanded && gap.details.length > 0 && (
-                  <Stack spacing={0.25} sx={{ mt: 1 }}>
-                    {gap.details.map((detail, index) => (
-                      <Typography key={index} variant="caption" color="text.secondary">
-                        • {detail}
-                      </Typography>
-                    ))}
-                  </Stack>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+        {visible.map((gap) => (
+          <CareGapCard
+            key={gap.id}
+            gap={gap}
+            expanded={expandedId === gap.id}
+            onToggleExpanded={(toggled) => setExpandedId((current) => (current === toggled.id ? null : toggled.id))}
+            selectLabel={gap.targetTab ? "View records" : undefined}
+            onSelect={onSelect}
+            onDismiss={onDismiss}
+          />
+        ))}
         {visible.length < 3 && isWide &&
           Array.from({ length: 3 - visible.length }, (_, fillerIndex) => <Box key={`filler-${fillerIndex}`} />)}
       </Box>
       {dismissed.length > 0 && (
-        <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap sx={{ alignSelf: "stretch" }}>
           <Typography variant="caption" color="text.secondary">
             Dismissed:
           </Typography>

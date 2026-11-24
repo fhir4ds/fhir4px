@@ -48,7 +48,7 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-function patientName(patient: FhirResource | null | undefined): string | undefined {
+export function patientName(patient: FhirResource | null | undefined): string | undefined {
   const names = Array.isArray(patient?.name) ? patient.name : [];
   const official = names.find((name) => {
     const use = (name as { use?: unknown }).use;

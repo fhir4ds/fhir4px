@@ -132,17 +132,27 @@ import { findRelatedGroups, relationshipLabel, type RelatedMatch } from "../lib/
 import { loadLabPartCrosswalk } from "../lib/associations/bundle";
 import { matchPanels, type MatchedPanel } from "../lib/fhir/panels";
 import { runImmunizationForecast, type ImmunizationForecastItem } from "../lib/fhir/immunization-forecast";
-import { buildImmunizationGaps, buildMeasureGaps, rankCareGaps, type CareGap } from "../lib/fhir/care-gaps";
+import {
+  assembleCareGaps,
+  careGapDismissalId,
+  dismissedGapIdsFor,
+  type CareGap,
+  type CareGapDismissal
+} from "../lib/fhir/care-gaps";
+import { invalidateCareGaps } from "../lib/fhir/care-gaps-run";
 import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
-import { evaluateMeasureGaps } from "../lib/fhir/measures";
+import type { MeasureResult } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
 import ConnectionChip from "../components/ConnectionChip";
 import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
 import {
   publishConnectionStatus,
   registerRecordsPageActions,
-  type ConnectionPhase
+  sourceChipLabel,
+  type ConnectionPhase,
+  type ConnectionStatusSource
 } from "../lib/app/connection-status";
+import type { UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
   collapsedFamilyLabel,
@@ -1300,6 +1310,10 @@ async function saveRelationshipCache(key: CryptoKey, cache: RelationshipCacheRec
   await localVault.putJson(key, { type: "relationship-cache", id: RELATIONSHIP_CACHE_ID }, cache);
 }
 
+/** How many care gaps the summary band shows; the Quality area's Care gaps
+ *  view lists all of them. */
+const SUMMARY_CARE_GAP_CAP = 5;
+
 export function PatientExplorer() {
   const [status, setStatus] = useState("Ready");
   const [busy, setBusy] = useState(false);
@@ -1362,8 +1376,11 @@ export function PatientExplorer() {
   const [labPartCrosswalk, setLabPartCrosswalk] = useState<Record<string, string[]> | null>(null);
   const [panelsSectionExpanded, setPanelsSectionExpanded] = useState(true);
   const [immunizationForecast, setImmunizationForecast] = useState<ImmunizationForecastItem[] | null>(null);
-  const [measureGaps, setMeasureGaps] = useState<CareGap[]>([]);
+  /** The dataset's CMS measure results; the care gaps are assembled from them. */
+  const [qualityMeasures, setQualityMeasures] = useState<MeasureResult[]>([]);
   const [measureGapsBusy, setMeasureGapsBusy] = useState(false);
+  /** US Core data-presence checks of the loaded dataset; null until known. */
+  const [usCoreChecks, setUsCoreChecks] = useState<UsCoreCheckResult[] | null>(null);
   const [viewerDocument, setViewerDocument] = useState<{ resource: FhirResource; label: string; sourceBaseUrl?: string } | null>(null);
   const [viewerBlob, setViewerBlob] = useState<Blob | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
@@ -3981,68 +3998,17 @@ export function PatientExplorer() {
     return ["preparing", "downloading", "loading"].includes(webLlmWarmupStatus.phase);
   }
 
-  // Publish connection status for the top-bar ConnectionPill.
-  useEffect(() => {
-    const sourcesForPill = sources.map((source) => ({
-      id: source.id,
-      label: sourceLabel(source),
-      status: source.status,
-      recordCount: sourceDatasets[source.id]?.resources.length ?? source.recordCount
-    }));
-    const hasError = filteredSources.some((source) => source.status === "error" || source.status === "needs-reconnect");
-    const phase: ConnectionPhase =
-      busy || modelBusy || appDataIsLoading()
-        ? "loading"
-        : measureGapsBusy
-          ? "evaluating"
-          : sources.length === 0
-            ? "disconnected"
-            : hasError
-              ? "warning"
-              : "connected";
-    publishConnectionStatus({
-      phase,
-      label:
-        phase === "disconnected"
-          ? "No portal connected"
-          : phase === "evaluating"
-            ? "Evaluating quality measures"
-            : phase === "loading"
-              ? dataStatusPrimaryText()
-              : dataStatusSummary(),
-      detail:
-        phase === "loading" || phase === "evaluating"
-          ? dataStatusSummary()
-          : groupingDiagnostics.length > 0
-            ? "Some records used AI model fallback names."
-            : null,
-      progressValue: null,
-      sources: sourcesForPill,
-      recordTabs: {
-        patientLabel: patientProfiles[0]?.patient ? patientDisplayName(patientProfiles[0].patient) : null,
-        activeTabId: activeTab,
-        activeSourceId,
-        tabs: [
-          { id: "PatientSummary", label: RESOURCE_LABELS.PatientSummary, count: records.length },
-          ...EXPLORER_TABS.map((type) => ({
-            id: type,
-            label: RESOURCE_LABELS[type],
-            count: recordsByType(records, type).length
-          }))
-        ]
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, activeSourceId, records, patientProfiles]);
-
-  // The app frame (drawer, connection popover) drives this page through the
-  // records-page command registry; it queues commands until we register.
+  // The app frame (drawer, connection popover, Care gaps view) drives this
+  // page through the records-page command registry; it queues commands
+  // until we register.
   useEffect(() => {
     registerRecordsPageActions({
       selectTab: (tabId) => setActiveTab(tabId as ExplorerTab),
       selectSource: (sourceId) => switchSource(sourceId),
       refreshSources: () => void refreshSources(),
-      addRecord: () => openAddRecordDialog()
+      addRecord: () => openAddRecordDialog(),
+      dismissCareGap: (gapId) => void dismissCareGap(gapId),
+      restoreCareGap: (gapId) => void restoreCareGap(gapId)
     });
     return () => registerRecordsPageActions(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4066,7 +4032,7 @@ export function PatientExplorer() {
         : "Organizing medical records...";
     }
     if (appDataIsLoading()) return "Loading app data...";
-    if (measureGapsBusy) return "Evaluating quality measures...";
+    if (measureGapsBusy) return "Evaluating quality measures and cohorts...";
     return dataStatusSummary();
   }
 
@@ -4134,25 +4100,28 @@ export function PatientExplorer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary, resourceByKey]);
 
-  // Quality evaluation (US Core checks + CMS measures): runs once per
-  // dataset load, together with the care gaps — the Quality page displays
-  // the same shared results. This is a best-effort enrichment — the engine
-  // (and its cold boot) may fail or be unavailable, in which case the band
-  // simply shows no measure gaps.
+  // Quality evaluation (US Core checks + CMS measures + cohorts): runs once
+  // per dataset load. The Quality and Cohorts pages display the same shared
+  // results, and the care gaps here are built from its measures. This is a
+  // best-effort enrichment — the engine (and its cold boot) may fail or be
+  // unavailable, in which case the band simply shows no measure gaps.
   useEffect(() => {
     if (!summary) return;
     let cancelled = false;
     setMeasureGapsBusy(true);
+    setUsCoreChecks(null);
     invalidateQualityEvaluation(); // dataset changed — recalculate
+    invalidateCareGaps();
     void runQualityEvaluation()
       .then((evaluation) => {
         if (cancelled) return;
-        setMeasureGaps(buildMeasureGaps(evaluateMeasureGaps(evaluation.measures)));
+        setQualityMeasures(evaluation.measures);
+        setUsCoreChecks(evaluation.checks);
       })
       .catch((caught) => {
         // Best-effort path (see comment above) — log and leave gaps empty.
         console.warn("[fhir4px:care-gaps] measure evaluation unavailable", caught);
-        if (!cancelled) setMeasureGaps([]);
+        if (!cancelled) setQualityMeasures([]);
       })
       .finally(() => {
         if (!cancelled) setMeasureGapsBusy(false);
@@ -4162,53 +4131,121 @@ export function PatientExplorer() {
     };
   }, [summary]);
 
-  const immunizationGaps = useMemo(
-    () => buildImmunizationGaps(immunizationForecast ?? []),
-    [immunizationForecast]
-  );
   const [dismissedGapIds, setDismissedGapIds] = useState<Set<string>>(new Set());
   const [dismissedGaps, setDismissedGaps] = useState<CareGap[]>([]);
+  // Every gap, most urgent first. The Quality area's Care gaps view lists
+  // them all; the summary band below shows only the first few.
   const allRankedGaps = useMemo(
-    () => rankCareGaps([...immunizationGaps, ...measureGaps]),
-    [immunizationGaps, measureGaps]
+    () => assembleCareGaps(immunizationForecast ?? [], qualityMeasures),
+    [immunizationForecast, qualityMeasures]
   );
-  const careGaps = useMemo(
+  const openCareGaps = useMemo(
     () => allRankedGaps.filter((gap) => !dismissedGapIds.has(gap.id)),
     [allRankedGaps, dismissedGapIds]
   );
+  const careGaps = useMemo(() => openCareGaps.slice(0, SUMMARY_CARE_GAP_CAP), [openCareGaps]);
   useEffect(() => {
     setDismissedGaps(allRankedGaps.filter((gap) => dismissedGapIds.has(gap.id)));
   }, [allRankedGaps, dismissedGapIds]);
 
-  // Care-gap dismissals persist in the vault (patient-session scoped).
+  // Care-gap dismissals persist in the vault, per patient.
+  const dismissalPatientId = summary?.patient?.id ?? "unknown";
   useEffect(() => {
     if (!summary) return;
     let cancelled = false;
     void (async () => {
       const key = await getOrCreateSessionVaultKey();
-      const records = await localVault.listJson<{ id: string; dismissedAt: string }>(key, "care-gap-dismissal");
-      if (!cancelled) setDismissedGapIds(new Set(records.map((record) => record.id)));
+      const dismissals = await localVault.listJson<CareGapDismissal>(key, "care-gap-dismissal");
+      if (!cancelled) setDismissedGapIds(dismissedGapIdsFor(dismissals, dismissalPatientId));
     })();
     return () => {
       cancelled = true;
     };
-  }, [summary]);
+  }, [summary, dismissalPatientId]);
 
-  async function dismissCareGap(gap: CareGap) {
-    setDismissedGapIds((current) => new Set([...current, gap.id]));
+  async function dismissCareGap(gapId: string) {
+    setDismissedGapIds((current) => new Set([...current, gapId]));
     const key = await getOrCreateSessionVaultKey();
-    await localVault.putJson(key, { type: "care-gap-dismissal", id: gap.id }, { id: gap.id, dismissedAt: new Date().toISOString() });
+    await localVault.putJson(
+      key,
+      { type: "care-gap-dismissal", id: careGapDismissalId(dismissalPatientId, gapId) },
+      { id: gapId, patientId: dismissalPatientId, dismissedAt: new Date().toISOString() }
+    );
   }
 
-  async function restoreCareGap(gap: CareGap) {
+  async function restoreCareGap(gapId: string) {
     setDismissedGapIds((current) => {
       const next = new Set(current);
-      next.delete(gap.id);
+      next.delete(gapId);
       return next;
     });
     const key = await getOrCreateSessionVaultKey();
-    await localVault.delete({ type: "care-gap-dismissal", id: gap.id });
+    await localVault.delete({ type: "care-gap-dismissal", id: careGapDismissalId(dismissalPatientId, gapId) });
   }
+
+  /** Records loaded for a source: the fetched dataset's size, or the count
+   *  the connection stored before the fetch. */
+  function sourceRecordCount(source: { id: string; recordCount?: number }): number | undefined {
+    return sourceDatasets[source.id]?.resources.length ?? source.recordCount;
+  }
+
+  // Publish connection status for the app frame: the connection controls,
+  // the navigation's second level, the Quality area's Care gaps view and
+  // the US Core summary in the connection menu all read this.
+  useEffect(() => {
+    const sourcesForPill: ConnectionStatusSource[] = sources.map((source) => ({
+      id: source.id,
+      label: sourceLabel(source),
+      status: source.status,
+      recordCount: sourceRecordCount(source)
+    }));
+    const hasError = filteredSources.some((source) => source.status === "error" || source.status === "needs-reconnect");
+    const phase: ConnectionPhase =
+      busy || modelBusy || appDataIsLoading()
+        ? "loading"
+        : measureGapsBusy
+          ? "evaluating"
+          : sources.length === 0
+            ? "disconnected"
+            : hasError
+              ? "warning"
+              : "connected";
+    publishConnectionStatus({
+      phase,
+      label:
+        phase === "disconnected"
+          ? "No portal connected"
+          : phase === "evaluating"
+            ? "Evaluating quality measures and cohorts"
+            : phase === "loading"
+              ? dataStatusPrimaryText()
+              : dataStatusSummary(),
+      detail:
+        phase === "loading" || phase === "evaluating"
+          ? dataStatusSummary()
+          : groupingDiagnostics.length > 0
+            ? "Some records used AI model fallback names."
+            : null,
+      progressValue: null,
+      sources: sourcesForPill,
+      careGaps: { open: openCareGaps, dismissed: dismissedGaps },
+      usCore: usCoreChecks,
+      recordTabs: {
+        patientLabel: patientProfiles[0]?.patient ? patientDisplayName(patientProfiles[0].patient) : null,
+        activeTabId: activeTab,
+        activeSourceId,
+        tabs: [
+          { id: "PatientSummary", label: RESOURCE_LABELS.PatientSummary, count: records.length },
+          ...EXPLORER_TABS.map((type) => ({
+            id: type,
+            label: RESOURCE_LABELS[type],
+            count: recordsByType(records, type).length
+          }))
+        ]
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, activeSourceId, records, patientProfiles, openCareGaps, dismissedGaps, usCoreChecks]);
 
   function renderCareGaps() {
     if (careGaps.length === 0 && !measureGapsBusy) return null;
@@ -4225,8 +4262,8 @@ export function PatientExplorer() {
           gaps={careGaps}
           busy={measureGapsBusy}
           dismissed={dismissedGaps}
-          onDismiss={(gap) => void dismissCareGap(gap)}
-          onRestore={(gap) => void restoreCareGap(gap)}
+          onDismiss={(gap) => void dismissCareGap(gap.id)}
+          onRestore={(gap) => void restoreCareGap(gap.id)}
           onSelect={(gap) => {
             if (gap.targetTab) setActiveTab(gap.targetTab as ExplorerTab);
           }}
@@ -4273,9 +4310,18 @@ export function PatientExplorer() {
           )}
           {patientProfiles.length > 0 && (
             <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-              {patientProfiles.map((profile) => (
-                <ConnectionChip key={profile.sourceId} label={profile.sourceName} />
-              ))}
+              {patientProfiles.map((profile) => {
+                const source = sources.find((candidate) => candidate.id === profile.sourceId);
+                return (
+                  <ConnectionChip
+                    key={profile.sourceId}
+                    label={sourceChipLabel({
+                      label: profile.sourceName,
+                      recordCount: source ? sourceRecordCount(source) : undefined
+                    })}
+                  />
+                );
+              })}
             </Stack>
           )}
         </Stack>

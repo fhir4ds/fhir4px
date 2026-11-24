@@ -61,7 +61,24 @@ export function ensurePyodide(): Promise<void> {
  * parse_cql → CQLToSQLTranslator → population SQL), executed verbatim on
  * the engine's DuckDB over the `resources` table.
  */
-export async function translateCqlToSql(cqlText: string): Promise<string> {
+// A library without parameters (the authored cohorts) translates to the same
+// SQL every time, so it is translated once per CQL text and reused across
+// patients. A failed translation is not kept.
+const cqlSqlCache = new Map<string, Promise<string>>();
+
+export function translateCqlToSql(cqlText: string): Promise<string> {
+  let cached = cqlSqlCache.get(cqlText);
+  if (!cached) {
+    cached = translateCqlToSqlUncached(cqlText).catch((error: unknown) => {
+      cqlSqlCache.delete(cqlText);
+      throw error;
+    });
+    cqlSqlCache.set(cqlText, cached);
+  }
+  return cached;
+}
+
+async function translateCqlToSqlUncached(cqlText: string): Promise<string> {
   await ensurePyodide();
   pyodide.globals.set("_cql_input", cqlText);
   const pyResult = pyodide.runPython(`

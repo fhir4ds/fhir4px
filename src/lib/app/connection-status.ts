@@ -5,6 +5,9 @@
  * the app-frame components subscribe and re-render.
  */
 
+import type { CareGap } from "../fhir/care-gaps";
+import type { UsCoreCheckResult } from "../fhir/uscore-checks";
+
 export type ConnectionPhase = "disconnected" | "loading" | "evaluating" | "connected" | "warning";
 
 export interface ConnectionStatusSource {
@@ -12,6 +15,21 @@ export interface ConnectionStatusSource {
   label: string;
   status: string;
   recordCount?: number;
+}
+
+/** Text for a connection chip: "<connection and patient> · <n> records". */
+export function sourceChipLabel(source: Pick<ConnectionStatusSource, "label" | "recordCount">): string {
+  if (source.recordCount === undefined) return source.label;
+  const count = source.recordCount;
+  return `${source.label} · ${count.toLocaleString()} ${count === 1 ? "record" : "records"}`;
+}
+
+/** The patient's care gaps as the Records page computed them. */
+export interface CareGapsState {
+  /** Open gaps, most urgent first (not capped). */
+  open: CareGap[];
+  /** Gaps the patient dismissed; they can be restored. */
+  dismissed: CareGap[];
 }
 
 /** A Records sub-navigation entry (resource-type tab). */
@@ -42,6 +60,10 @@ export interface ConnectionStatusState {
   /** Present while a Records page is mounted (keep-alive) — drives the
    * drawer's second level. */
   recordTabs?: RecordTabsState | null;
+  /** Set once the dataset's care gaps are known; null while unknown. */
+  careGaps?: CareGapsState | null;
+  /** US Core data-presence checks for the loaded dataset (connection info). */
+  usCore?: UsCoreCheckResult[] | null;
 }
 
 type Listener = (state: ConnectionStatusState) => void;
@@ -83,6 +105,54 @@ export function subscribeConnectionStatus(listener: Listener): () => void {
   };
 }
 
+/**
+ * Make the stored connections known before the Records page has published
+ * them. That page is only mounted after its first visit, so a reload
+ * straight onto another page would otherwise report no portal. Leaves alone
+ * whatever the Records page published: its view is the live one.
+ */
+export function publishConnections(sources: ConnectionStatusSource[]): void {
+  if (sources.length === 0 || state.sources.length > 0) return;
+  state = {
+    ...state,
+    phase: "connected",
+    label: sources.length === 1 ? sourceChipLabel(sources[0]) : `${sources.length} portals connected`,
+    sources
+  };
+  for (const listener of listeners) listener(state);
+}
+
+/**
+ * Fill in what a stored connection was missing. Until the Records page has
+ * fetched it, a connection holds neither its patient nor its record count;
+ * the dataset evaluation knows both. Only safe with a single connection,
+ * whose records are the ones that were evaluated.
+ */
+export function completeConnection(details: { patientName: string | null; recordCount: number }): void {
+  const [source] = state.sources;
+  if (!source || state.sources.length !== 1) return;
+  // A label built from a patient already has the separator.
+  const label = details.patientName && !source.label.includes(" · ") ? `${source.label} · ${details.patientName}` : source.label;
+  const recordCount = source.recordCount ?? details.recordCount;
+  if (label === source.label && recordCount === source.recordCount) return;
+  state = {
+    ...state,
+    label: state.phase === "connected" ? sourceChipLabel({ label, recordCount }) : state.label,
+    sources: [{ ...source, label, recordCount }]
+  };
+  for (const listener of listeners) listener(state);
+}
+
+/**
+ * Make the dataset's US Core data-presence checks known; the connection
+ * menu summarizes them.
+ */
+export function publishUsCore(usCore: UsCoreCheckResult[]): void {
+  if (state.usCore === usCore) return;
+  state = { ...state, usCore };
+  for (const listener of listeners) listener(state);
+}
+
 // ── Records-page actions ──────────────────────────────────────────────────
 // PatientExplorer is keep-alive mounted, but only after its first visit.
 // The app frame (drawer, connection popover) registers nothing itself: it
@@ -94,13 +164,17 @@ export type RecordsPageCommand =
   | { kind: "selectTab"; tabId: string }
   | { kind: "selectSource"; sourceId: string }
   | { kind: "refreshSources" }
-  | { kind: "addRecord" };
+  | { kind: "addRecord" }
+  | { kind: "dismissCareGap"; gapId: string }
+  | { kind: "restoreCareGap"; gapId: string };
 
 export interface RecordsPageHandlers {
   selectTab: (tabId: string) => void;
   selectSource: (sourceId: string) => void;
   refreshSources: () => void;
   addRecord: () => void;
+  dismissCareGap: (gapId: string) => void;
+  restoreCareGap: (gapId: string) => void;
 }
 
 let recordsPageHandlers: RecordsPageHandlers | null = null;
@@ -123,6 +197,12 @@ function run(command: RecordsPageCommand): void {
       break;
     case "addRecord":
       recordsPageHandlers.addRecord();
+      break;
+    case "dismissCareGap":
+      recordsPageHandlers.dismissCareGap(command.gapId);
+      break;
+    case "restoreCareGap":
+      recordsPageHandlers.restoreCareGap(command.gapId);
       break;
   }
 }

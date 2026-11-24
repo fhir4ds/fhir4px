@@ -2,11 +2,12 @@
  * Connection menu — the popover and its clear-data confirmation, shared by
  * every connection control: the patient profile's connection chip on the
  * Records page, and the top-bar pill on pages without one. It lists the
- * connections and offers the Records page's source filter ("Viewing") and
+ * connections, with a one-line US Core data summary that opens the full
+ * table, and offers the Records page's source filter ("Viewing") and
  * refresh, Add portal, and Clear local data (with the no-undo confirmation).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -32,6 +33,8 @@ import {
   type ConnectionStatusState
 } from "../lib/app/connection-status";
 import { clearAllLocalData } from "../lib/vault/clear-local";
+import { summarizeUsCore, usCoreSummaryText } from "../lib/fhir/uscore-summary";
+import UsCoreDataTable from "./UsCoreDataTable";
 
 interface ConnectionMenuProps {
   open: boolean;
@@ -42,9 +45,12 @@ interface ConnectionMenuProps {
 export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMenuProps) {
   const [status, setStatus] = useState<ConnectionStatusState>(getConnectionStatus);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [usCoreOpen, setUsCoreOpen] = useState(false);
   useEffect(() => subscribeConnectionStatus(setStatus), []);
 
   const working = status.phase === "loading" || status.phase === "evaluating";
+  const usCore = status.usCore && status.usCore.length > 0 ? status.usCore : null;
+  const usCoreLine = useMemo(() => (usCore ? usCoreSummaryText(summarizeUsCore(usCore)) : null), [usCore]);
 
   return (
     <>
@@ -84,6 +90,23 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                   </Stack>
                 ))}
               </Stack>
+            </>
+          )}
+
+          {usCore && (
+            <>
+              <Divider />
+              <Button
+                size="small"
+                aria-label="US Core data presence"
+                onClick={() => {
+                  onClose();
+                  setUsCoreOpen(true);
+                }}
+                sx={{ textTransform: "none", justifyContent: "flex-start", px: 0, color: "text.primary" }}
+              >
+                US Core data: {usCoreLine}
+              </Button>
             </>
           )}
 
@@ -151,6 +174,14 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
           </Typography>
         </Stack>
       </Popover>
+
+      <Dialog open={usCoreOpen} onClose={() => setUsCoreOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>US Core data presence</DialogTitle>
+        <DialogContent dividers>{usCore && <UsCoreDataTable checks={usCore} />}</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUsCoreOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Clear all local data?</DialogTitle>

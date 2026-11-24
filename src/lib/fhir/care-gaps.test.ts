@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildImmunizationGaps, buildMeasureGaps, rankCareGaps, type CareGap } from "./care-gaps";
+import {
+  buildImmunizationGaps,
+  buildMeasureGaps,
+  careGapDismissalId,
+  dismissedGapIdsFor,
+  assembleCareGaps,
+  rankCareGaps,
+  type CareGap
+} from "./care-gaps";
+import type { MeasureResult } from "./measures";
 import type { ImmunizationForecastItem } from "./immunization-forecast";
 import type { MeasureGapResult } from "./measures";
 
@@ -105,5 +114,50 @@ describe("rankCareGaps", () => {
     const many = Array.from({ length: 8 }, (_, index) => high(`gap-${index}`));
     expect(rankCareGaps(many)).toHaveLength(5);
     expect(rankCareGaps(many, 2)).toHaveLength(2);
+  });
+});
+
+describe("care gap dismissals", () => {
+  const dismissedAt = "2026-01-01T00:00:00.000Z";
+
+  it("keys a dismissal by patient as well as gap", () => {
+    expect(careGapDismissalId("patient-1", "imm:207")).not.toBe(careGapDismissalId("patient-2", "imm:207"));
+  });
+
+  it("applies only the dismissals of the patient in question", () => {
+    // Dismissing a vaccine gap for one patient must not hide it for the next.
+    const dismissals = [
+      { id: "imm:207", patientId: "patient-1", dismissedAt },
+      { id: "imm:207", patientId: "patient-2", dismissedAt },
+      { id: "measure:CMS130", patientId: "patient-1", dismissedAt }
+    ];
+
+    expect([...dismissedGapIdsFor(dismissals, "patient-1")].sort()).toEqual(["imm:207", "measure:CMS130"]);
+    expect([...dismissedGapIdsFor(dismissals, "patient-2")]).toEqual(["imm:207"]);
+    expect(dismissedGapIdsFor(dismissals, "patient-3").size).toBe(0);
+  });
+});
+
+describe("assembleCareGaps", () => {
+  it("joins the immunization and measure gaps without a cap", () => {
+    // More immunization gaps than the summary band shows: none may be dropped.
+    const forecast = Array.from({ length: 7 }, (_, index) =>
+      forecastItem({ vaccineCodes: [String(200 + index)], status: "pastDue", pastDueDate: "2026-06-01" })
+    );
+    const measures: MeasureResult[] = [
+      {
+        id: "CMS130",
+        title: "Colorectal Cancer Screening",
+        columns: ["patient_id", "Initial Population", "Denominator", "Denominator Exclusions", "Numerator"],
+        rows: [["p1", true, true, false, false]],
+        executionMs: 1
+      }
+    ];
+
+    const gaps = assembleCareGaps(forecast, measures);
+
+    expect(gaps).toHaveLength(8);
+    expect(gaps.map((gap) => gap.source)).toEqual(["measure", ...Array(7).fill("immunization")]);
+    expect(gaps.every((gap) => gap.severity === "high")).toBe(true);
   });
 });

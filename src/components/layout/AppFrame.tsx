@@ -11,6 +11,9 @@ import { SMART_AUTH_CHANNEL } from "../../lib/smart/transient-state";
 import { preloadEmbedder } from "../../lib/embeddings/embedder";
 import { loadShard } from "../../lib/fhir/patient-friendly-lookup";
 import { preloadAssociations } from "../../lib/associations/bundle";
+import { publishConnections } from "../../lib/app/connection-status";
+import { listConnectedSources, sourceLabel } from "../../lib/smart/sources";
+import { getOrCreateSessionVaultKey } from "../../lib/vault/keys";
 import AppNav from "../AppNav";
 import ConnectionPill from "../ConnectionPill";
 
@@ -61,6 +64,32 @@ export function AppFrame({ children }: PropsWithChildren) {
     }
 
     return () => window.clearTimeout(timer);
+  }, []);
+
+  // The connection controls read the status store, which the Records page
+  // publishes. After a reload onto another page that page has not run yet,
+  // so make the stored connections known from the vault. Best-effort: a
+  // vault that cannot be read leaves the controls showing no connection.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const key = await getOrCreateSessionVaultKey();
+      const connected = await listConnectedSources(key);
+      if (cancelled) return;
+      publishConnections(
+        connected.map((source) => ({
+          id: source.id,
+          label: sourceLabel(source),
+          status: source.status,
+          recordCount: source.recordCount
+        }))
+      );
+    })().catch(() => {
+      console.warn("[fhir4px:connections] stored connections could not be read");
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {

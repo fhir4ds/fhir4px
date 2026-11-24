@@ -6,13 +6,27 @@
  *   - Quality measures: negative CMS measure results (denominator met,
  *     not excluded, numerator not met)
  *
- * Gaps live exclusively in the carousel band — they deliberately do NOT
- * feed the main priority list (no double surfacing). Ranking: severity
- * first, then most-overdue date, capped for the carousel.
+ * Gaps feed the Records summary band (the top few) and the Quality area's
+ * Care gaps view (the full list) — they deliberately do NOT feed the main
+ * priority list (no double surfacing). Ranking: severity first, then
+ * most-overdue date.
  */
 
 import type { ImmunizationForecastItem } from "./immunization-forecast";
-import type { MeasureGapResult } from "./measures";
+import { evaluateMeasureGaps, type MeasureGapResult, type MeasureResult } from "./measures";
+
+/**
+ * Every care gap for the loaded records, most urgent first and not capped:
+ * the immunization forecast's gaps plus the negative quality measures.
+ * One assembly rule for the Records summary band (which shows the first
+ * few) and the Quality area's Care gaps view (which lists them all).
+ */
+export function assembleCareGaps(forecast: ImmunizationForecastItem[], measures: MeasureResult[]): CareGap[] {
+  return rankCareGaps(
+    [...buildImmunizationGaps(forecast), ...buildMeasureGaps(evaluateMeasureGaps(measures))],
+    Number.POSITIVE_INFINITY
+  );
+}
 
 export type CareGapSource = "immunization" | "measure";
 export type CareGapSeverity = "high" | "moderate";
@@ -30,6 +44,29 @@ export interface CareGap {
   date?: string;
   /** ExplorerTab value to deep-link to, if any. */
   targetTab?: string;
+  /** The CMS measure a measure gap comes from. */
+  measureId?: string;
+}
+
+/** A care-gap dismissal as stored in the vault. */
+export interface CareGapDismissal {
+  id: string;
+  patientId: string;
+  dismissedAt: string;
+}
+
+/** Vault id of one dismissal. Dismissals belong to a patient: dismissing a
+ *  gap for one patient must not hide it for the next one. */
+export function careGapDismissalId(patientId: string, gapId: string): string {
+  return `${patientId}|${gapId}`;
+}
+
+/** Ids of the gaps this patient dismissed. A record without a patient is
+ *  ignored: it predates per-patient dismissals and applied to everyone. */
+export function dismissedGapIdsFor(dismissals: CareGapDismissal[], patientId: string): Set<string> {
+  return new Set(
+    dismissals.filter((dismissal) => dismissal.patientId === patientId).map((dismissal) => dismissal.id)
+  );
 }
 
 function isPast(isoDate: string | undefined, now: Date): boolean {
@@ -94,9 +131,10 @@ export function buildMeasureGaps(results: MeasureGapResult[]): CareGap[] {
       summary: "Measure not met — patient is in the denominator but the numerator requirement is not documented in the measurement period.",
       details: [
         "Population: in denominator, not excluded, numerator not met.",
-        "CMS eCQM evaluated locally against the loaded records (pre-translated CQL→SQL via fhir4ds)."
+        "CMS eCQM evaluated locally against the loaded records (CQL translated to SQL at run time by fhir4ds)."
       ],
-      targetTab: undefined
+      targetTab: undefined,
+      measureId: result.id
     }));
 }
 

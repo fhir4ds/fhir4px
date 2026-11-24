@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { evaluateMeasureGaps, evaluateMeasures, type MeasureResult } from "./measures";
+import {
+  evaluateMeasureGaps,
+  evaluateMeasures,
+  measureStatus,
+  type MeasureEvaluation,
+  type MeasureResult
+} from "./measures";
 
 const COLUMNS = ["patient_id", "Initial Population", "Denominator", "Denominator Exclusions", "Numerator"];
 
@@ -81,5 +87,36 @@ describe("evaluateMeasures", () => {
       measure({ polarity: "inverse", rows: [["p1", true, true, false, false]] })
     ]);
     expect(controlled.negative).toBe(false);
+  });
+});
+
+describe("measureStatus", () => {
+  // A patient who is in the initial population.
+  const inPopulation = (overrides: Partial<MeasureEvaluation>): MeasureEvaluation => ({
+    id: "CMS124",
+    title: "Cervical Cancer Screening",
+    initialPopulation: true,
+    denominator: true,
+    excluded: false,
+    numerator: false,
+    negative: true,
+    polarity: "proportion",
+    ...overrides
+  });
+
+  it("calls a negative measure a care gap", () => {
+    expect(measureStatus(inPopulation({}))).toBe("care-gap");
+  });
+
+  it("calls a documented numerator met", () => {
+    expect(measureStatus(inPopulation({ numerator: true, negative: false }))).toBe("met");
+  });
+
+  it("reports an exclusion inside the denominator as excluded, not met", () => {
+    expect(measureStatus(inPopulation({ excluded: true, negative: false }))).toBe("excluded");
+  });
+
+  it("does not call a measure met for a patient outside the denominator", () => {
+    expect(measureStatus(inPopulation({ denominator: false, negative: false }))).toBe("not-in-denominator");
   });
 });

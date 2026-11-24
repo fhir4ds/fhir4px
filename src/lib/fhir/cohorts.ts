@@ -16,6 +16,8 @@ export interface CohortDefinition {
   description: string;
   category: "endocrinology" | "nephrology" | "cardiovascular";
   cql: string;
+  /** The defines a member must satisfy, with the label shown for each. */
+  criteria: ReadonlyArray<{ define: string; label: string }>;
 }
 
 export const COHORT_DEFINITIONS: readonly CohortDefinition[] = [
@@ -24,6 +26,10 @@ export const COHORT_DEFINITIONS: readonly CohortDefinition[] = [
     title: "Type 2 diabetes on metformin",
     description: "Active T2DM condition and a metformin medication request",
     category: "endocrinology",
+    criteria: [
+      { define: "T2DMConditions", label: "Type 2 diabetes" },
+      { define: "MetforminRequests", label: "Metformin" },
+    ],
     cql: `
 library T2dmOnMetformin
 
@@ -50,6 +56,10 @@ define InInitialPopulation:
     title: "Uncontrolled diabetes (latest HbA1c ≥ 8.0%)",
     description: "T2DM condition with any HbA1c at or above 8.0%",
     category: "endocrinology",
+    criteria: [
+      { define: "T2DMConditions", label: "Type 2 diabetes" },
+      { define: "ElevatedA1cObservations", label: "HbA1c at or above 8.0%" },
+    ],
     cql: `
 library UncontrolledT2dmA1c
 
@@ -78,6 +88,9 @@ define InInitialPopulation:
     title: "CKD stage 3+ (eGFR < 60)",
     description: "Any eGFR below 60 mL/min/1.73m2",
     category: "nephrology",
+    criteria: [
+      { define: "LowEgfrObservations", label: "eGFR below 60" },
+    ],
     cql: `
 library CkdStage3Egfr
 
@@ -100,6 +113,10 @@ define InInitialPopulation:
     title: "Hypertension on ACE inhibitor or ARB",
     description: "Hypertension condition with a RAAS-agent medication request",
     category: "cardiovascular",
+    criteria: [
+      { define: "HtnConditions", label: "Hypertension" },
+      { define: "RaasRequests", label: "ACE inhibitor or ARB" },
+    ],
     cql: `
 library HtnOnRaas
 
@@ -126,6 +143,10 @@ define InInitialPopulation:
     title: "Statin users with recent LDL",
     description: "Statin medication request and a recorded LDL cholesterol value",
     category: "cardiovascular",
+    criteria: [
+      { define: "StatinRequests", label: "Statin" },
+      { define: "LdlObservations", label: "Recent LDL" },
+    ],
     cql: `
 library StatinWithLdl
 
