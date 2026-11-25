@@ -240,6 +240,7 @@ import {
   type LabGroupContext
 } from "../lib/llm/association";
 import { SMART_AUTH_POPUP_EVENT, isSmartAuthPopupMessage } from "../lib/smart/popup";
+import { LOCAL_DATA_CHANGED_EVENT } from "../lib/app/data-events";
 import {
   type FhirDataset,
   type FhirResource
@@ -3425,9 +3426,16 @@ export function PatientExplorer() {
         void loadLocalData(true);
       }
     };
+    // A portal added while this page stayed mounted (it is kept alive across
+    // routes) is only in the vault: re-read it and fetch its records.
+    const onLocalDataChanged = () => void loadLocalData(true);
 
     window.addEventListener(SMART_AUTH_POPUP_EVENT, onSmartAuthComplete);
-    return () => window.removeEventListener(SMART_AUTH_POPUP_EVENT, onSmartAuthComplete);
+    window.addEventListener(LOCAL_DATA_CHANGED_EVENT, onLocalDataChanged);
+    return () => {
+      window.removeEventListener(SMART_AUTH_POPUP_EVENT, onSmartAuthComplete);
+      window.removeEventListener(LOCAL_DATA_CHANGED_EVENT, onLocalDataChanged);
+    };
   }, []);
 
   useEffect(() => {
@@ -6643,8 +6651,6 @@ export function PatientExplorer() {
             {renderDataToolbar()}
             {error && <Alert severity="warning">{error}</Alert>}
             {renderPatientMatchNotice()}
-
-            <Divider />
 
             <Stack spacing={2.25} minWidth={0}>
                 {/* Resource tabs live in the app frame's side navigation at
