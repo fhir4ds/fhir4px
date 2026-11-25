@@ -5,6 +5,7 @@
 
 import { engineQuery, engineLoadResources, type EngineQueryResult } from "../engine/engine-client";
 import { translateCqlToSql } from "../engine/viewdef";
+import { prebuiltCohortSql } from "../engine/prebuilt";
 import { boolAt } from "../engine/result-values";
 import type { FhirResource } from "../smart/data";
 import { COHORT_DEFINITIONS, type CohortDefinition } from "./cohorts";
@@ -93,7 +94,7 @@ export async function executeCohort(definition: CohortDefinition): Promise<Cohor
     executionMs: 0
   };
   try {
-    const sql = await translateCqlToSql(definition.cql);
+    const sql = (await prebuiltCohortSql(definition.id)) ?? (await translateCqlToSql(definition.cql));
     const result = (await engineQuery(sql)) as EngineQueryResult;
     const expected = [COHORT_MEMBERSHIP_DEFINE, ...definition.criteria.map((criterion) => criterion.define)];
     const missing = expected.filter((name) => !result.columns.includes(name));

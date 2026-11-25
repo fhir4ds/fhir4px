@@ -15,6 +15,7 @@
 import { engineLoadResources, engineQuery } from "../engine/engine-client";
 import { loadSessionResources } from "../engine/session-data";
 import { translateMeasureSql } from "../engine/viewdef";
+import { prebuiltMeasureSql } from "../engine/prebuilt";
 import { boolAt } from "../engine/result-values";
 import { valuesetToRows, seedValuesetCache, type ValuesetRow } from "../engine/valueset-bridge";
 
@@ -114,7 +115,11 @@ async function executeQualityMeasures(): Promise<MeasureResult[]> {
     }
     const started = performance.now();
     try {
-      const sql = await translateMeasureSql(measureCql, inputs.libraryTexts, measurementPeriod);
+      // Prebuilt SQL (translated at build time, year filled in) first; live
+      // translation is the fallback.
+      const sql =
+        (await prebuiltMeasureSql(id, measurementYear)) ??
+        (await translateMeasureSql(measureCql, inputs.libraryTexts, measurementPeriod));
       const result = await engineQuery(sql);
       results.push({
         id,
@@ -148,6 +153,15 @@ interface EcqmInputs {
 }
 
 let cachedInputs: Promise<EcqmInputs> | null = null;
+
+/** The CQL texts the live measure translation reads — the same inputs
+ * scripts/prebuild_sql.py translates at build time. Exported so the parity
+ * test (tests/e2e/prebuilt-sql.spec.ts) compares like with like. */
+export async function loadMeasureTranslationInputs(): Promise<EcqmInputs> {
+  const response = await fetch(`${measuresBaseUrl()}/cql-manifest.json`);
+  if (!response.ok) throw new Error(`CQL manifest unavailable (${response.status})`);
+  return loadEcqmInputs((await response.json()) as Parameters<typeof loadEcqmInputs>[0]);
+}
 
 async function loadEcqmInputs(cqlManifest: {
   libraries?: string[];

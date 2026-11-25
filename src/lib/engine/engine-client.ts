@@ -22,6 +22,7 @@ interface EngineMessage {
   viewDefinition?: Record<string, unknown>;
   library?: Record<string, unknown>;
   composeOmop?: boolean;
+  prebuilt?: EnginePrebuiltSql;
 }
 
 let frame: HTMLIFrameElement | null = null;
@@ -106,19 +107,31 @@ export function engineLoadResources(resources: FhirResource[]): Promise<{ count:
   return post({ id: 0, kind: "loadResources", resources });
 }
 
+/**
+ * SQL generated ahead of time (prebuilt mode). When given, the engine frame
+ * runs it as is and never starts Python to generate it.
+ */
+export interface EnginePrebuiltSql {
+  sql: string;
+  setupSql?: string[];
+  /** The OMOP composition statements an OMOP query joins to. */
+  composition?: string[];
+}
+
 /** flatten_view: run a ViewDefinition (fhir4ds viewdef engine, SQL verbatim). */
 export function engineFlattenView(
   viewDefinition: Record<string, unknown>,
-  resources: FhirResource[]
+  resources: FhirResource[],
+  prebuilt?: EnginePrebuiltSql
 ): Promise<EngineQueryResult> {
-  return post({ id: 0, kind: "flattenView", viewDefinition, resources });
+  return post({ id: 0, kind: "flattenView", viewDefinition, resources, prebuilt });
 }
 
 /** SQLQuery Library execution with live OMOP composition (their pipeline). */
 export function engineRunLibrary(
   library: Record<string, unknown>,
   resources: FhirResource[],
-  options: { composeOmop?: boolean } = {}
+  options: { composeOmop?: boolean; prebuilt?: EnginePrebuiltSql } = {}
 ): Promise<EngineQueryResult> {
-  return post({ id: 0, kind: "runLibrary", library, resources, composeOmop: options.composeOmop });
+  return post({ id: 0, kind: "runLibrary", library, resources, composeOmop: options.composeOmop, prebuilt: options.prebuilt });
 }

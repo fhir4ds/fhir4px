@@ -43,3 +43,8 @@ __pycache__/
 .oc-serve/
 .opencode/
 .env
+
+# The "prebuilt" build: SQL translated at build time (npm run build:prebuilt),
+# so the browser does not start Python for it. Live translation stays as the
+# fallback for anything that was not built ahead.
+public/fhir4ds/prebuilt/

@@ -7,6 +7,8 @@
     "dev": "vite --host localhost --port 3000",
     "dev:fresh": "lsof -ti tcp:3000 | xargs -r kill; rm -rf node_modules/.vite && vite --force --host localhost --port 3000",
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
+    "prebuild:sql": "node scripts/prebuild-sql.mjs",
+    "build:prebuilt": "node scripts/prebuild-sql.mjs && tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build --mode prebuilt",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",

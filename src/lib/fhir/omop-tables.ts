@@ -14,6 +14,7 @@
  */
 
 import { engineRunLibrary, type EngineQueryResult } from "../engine/engine-client";
+import { prebuiltOmopLibrary } from "../engine/prebuilt";
 import type { FhirResource } from "../smart/data";
 import type { ConceptResolution } from "./omop-concepts";
 
@@ -93,13 +94,19 @@ export async function runOmopExport(resources: FhirResource[], resolution: Conce
 
   const results: OmopTableResult[] = [];
   for (const id of OMOP_LIBRARY_IDS) {
-    const library = await fetchLibrary(id);
-    if (!library) {
+    // Prebuilt query + composition first; otherwise the engine frame
+    // generates them from the Library (live translation is the fallback).
+    const prebuilt = await prebuiltOmopLibrary(id);
+    const library = prebuilt ? null : await fetchLibrary(id);
+    if (!prebuilt && !library) {
       results.push({ id, columns: [], rows: [], error: `Library artifact unavailable: ${id}` });
       continue;
     }
     try {
-      const result = (await engineRunLibrary(library, staged, { composeOmop: true })) as EngineQueryResult;
+      const result = (await engineRunLibrary(library ?? {}, staged, {
+        composeOmop: true,
+        prebuilt: prebuilt ?? undefined
+      })) as EngineQueryResult;
       results.push({ id, columns: result.columns, rows: result.rows });
     } catch (error) {
       results.push({ id, columns: [], rows: [], error: error instanceof Error ? error.message : String(error) });

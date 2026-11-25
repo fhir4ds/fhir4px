@@ -8,6 +8,7 @@
  */
 
 import { engineFlattenView, type EngineQueryResult } from "../engine/engine-client";
+import { prebuiltViewSql } from "../engine/prebuilt";
 import type { FhirResource } from "../smart/data";
 
 export interface UsCoreCheck {
@@ -79,7 +80,12 @@ export async function runUsCoreChecks(
       const response = await fetcher(`${uscoreBaseUrl()}/${check.id}.json`, { cache: "force-cache" });
       if (!response.ok) throw new Error(`view unavailable (${response.status})`);
       const viewDefinition = (await response.json()) as Record<string, unknown>;
-      const result = (await engineFlattenView(viewDefinition, candidates)) as EngineQueryResult;
+      // The engine frame generates the SQL unless it was built ahead.
+      const result = (await engineFlattenView(
+        viewDefinition,
+        candidates,
+        (await prebuiltViewSql(check.id)) ?? undefined
+      )) as EngineQueryResult;
       // Every selected column is a required element: conforming rows have no nulls.
       const requiredCount = result.columns.length;
       const conforming = result.rows.filter((row) => {

@@ -36,3 +36,15 @@ peer-to-peer.
   fhir4ds wheel bump run `quality-measures.spec.ts`: fhir4ds <=0.0.26 emits
   invalid CMS159 SQL unless `translate_library()` is called before
   `translate_library_to_population_sql()` (see src/lib/engine/viewdef.ts).
+- SQL source has two modes. `npm run dev` and `npm run build` translate the
+  CQL, view definitions and OMOP libraries live in the browser (Pyodide + the
+  fhir4ds wheel). `npm run build:prebuilt` first runs `npm run prebuild:sql`
+  (scripts/prebuild_sql.py: the same wheel on the build machine's Python;
+  `pip install public/vendor/fhir4ds/*.whl` gives its dependencies) and writes
+  public/fhir4ds/prebuilt/ (gitignored). The app loads that SQL and falls back
+  to live translation for anything missing; measure SQL carries `{{YEAR}}` for
+  the measurement period. After a wheel or CQL bump, in prebuilt mode run
+  `PREBUILT_SQL_E2E=1 PLAYWRIGHT_PORT=<port> npx playwright test
+  tests/e2e/prebuilt-sql.spec.ts`: it proves the generated files equal the
+  live translation. The Pages workflow uses prebuilt only when the repository
+  variable `SQL_MODE` is `prebuilt`.

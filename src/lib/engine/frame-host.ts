@@ -11,7 +11,7 @@
  */
 
 import { createDuckDBConnection } from "./duckdb";
-import { generateLibrarySql, generateViewSql, deriveCompositionDdl } from "./viewdef";
+import { generateLibrarySql, generateViewSql, deriveCompositionDdl, type ViewSqlResult } from "./viewdef";
 import type { FhirResource } from "../smart/data";
 
 interface EngineMessage {
@@ -23,6 +23,8 @@ interface EngineMessage {
   library?: Record<string, unknown>;
   /** Stage a ConceptMap resource alongside patient resources (OMOP path). */
   composeOmop?: boolean;
+  /** Prebuilt SQL (build-time translation); generated here when absent. */
+  prebuilt?: { sql: string; setupSql?: string[]; composition?: string[] };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,9 +131,12 @@ async function stageAndRun(
 /** flatten_view: their capability — ViewDefinition JSON -> verbatim SQL. */
 async function runViewDefinition(
   viewDefinition: Record<string, unknown>,
-  resources: FhirResource[]
+  resources: FhirResource[],
+  prebuilt?: EngineMessage["prebuilt"]
 ): Promise<{ columns: string[]; rows: unknown[][] }> {
-  const generated = await generateViewSql(viewDefinition);
+  const generated: ViewSqlResult = prebuilt
+    ? { ok: true, sql: prebuilt.sql, setup_sql: prebuilt.setupSql ?? [], diagnostics: null }
+    : await generateViewSql(viewDefinition);
   if (!generated.ok || !generated.sql) {
     throw new Error(`ViewDefinition generation failed: ${JSON.stringify(generated.diagnostics ?? []).slice(0, 300)}`);
   }
@@ -142,9 +147,12 @@ async function runViewDefinition(
 async function runLibraryQuery(
   library: Record<string, unknown>,
   resources: FhirResource[],
-  composeOmop: boolean
+  composeOmop: boolean,
+  prebuilt?: EngineMessage["prebuilt"]
 ): Promise<{ columns: string[]; rows: unknown[][] }> {
-  const generated = await generateLibrarySql(library);
+  const generated: ViewSqlResult = prebuilt
+    ? { ok: true, sql: prebuilt.sql, setup_sql: [], diagnostics: null }
+    : await generateLibrarySql(library);
   if (!generated.ok || !generated.sql) {
     throw new Error(`Library parsing failed: ${JSON.stringify(generated.diagnostics ?? []).slice(0, 300)}`);
   }
@@ -153,7 +161,12 @@ async function runLibraryQuery(
     generated.sql,
     resources,
     generated.setup_sql ?? [],
-    needsComposition ? () => deriveCompositionDdl((sql) => connection.conn.query(sql)) : undefined
+    needsComposition
+      ? () =>
+          prebuilt?.composition
+            ? Promise.resolve(prebuilt.composition)
+            : deriveCompositionDdl((sql) => connection.conn.query(sql))
+      : undefined
   );
 }
 
@@ -169,10 +182,15 @@ async function handleMessage(message: EngineMessage): Promise<unknown> {
       return loadResources(message.resources ?? []);
     case "flattenView":
       await boot();
-      return runViewDefinition(message.viewDefinition ?? {}, message.resources ?? []);
+      return runViewDefinition(message.viewDefinition ?? {}, message.resources ?? [], message.prebuilt);
     case "runLibrary":
       await boot();
-      return runLibraryQuery(message.library ?? {}, message.resources ?? [], message.composeOmop === true);
+      return runLibraryQuery(
+        message.library ?? {},
+        message.resources ?? [],
+        message.composeOmop === true,
+        message.prebuilt
+      );
     default:
       throw new Error(`Unknown engine message kind: ${message.kind}`);
   }
