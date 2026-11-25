@@ -53,6 +53,22 @@ export interface RecordTabsState {
   activeSourceId: string;
 }
 
+/** A patient the app header can switch to: one entry per distinct person. */
+export interface PatientChoice {
+  /** The person's key from the Records page; null shows every patient together. */
+  id: string | null;
+  label: string;
+  /** The portals behind the person, e.g. "SMART Dev Sandbox". */
+  detail?: string;
+}
+
+export interface PatientSelectionState {
+  /** Empty or one entry: nothing to switch between, the header shows the name. */
+  choices: PatientChoice[];
+  /** The chosen person's id; null = every patient together. */
+  selectedId: string | null;
+}
+
 export interface ConnectionStatusState {
   phase: ConnectionPhase;
   /** Primary line, e.g. "SMART Dev Sandbox · 243 records". */
@@ -72,6 +88,9 @@ export interface ConnectionStatusState {
   /** fhir4ds record checks for the loaded dataset, run in the background:
    * deduplication and patient matching. Null until a run has started. */
   recordChecks?: RecordChecks | null;
+  /** The patient switcher: several people are connected. Null when a single
+   * person is loaded (or nothing is). */
+  patientSelection?: PatientSelectionState | null;
   /** The loaded patient, shown in the app header on every page. Null while
    * a different dataset is loading or when nothing is loaded. */
   patient?: PatientHeaderInfo | null;
@@ -103,11 +122,15 @@ function emit(next: ConnectionStatusState): void {
   // The patient belongs to publishPatient and completeConnection: a status
   // publish that does not speak to it leaves it in place, so the header keeps
   // showing the patient while the Records page reports grouping progress.
-  // The record checks (publishRecordChecks) are kept the same way.
+  // The record checks and the patient switcher (publishRecordChecks,
+  // publishPatientSelection) are kept the same way.
+  const speak = <K extends keyof ConnectionStatusState>(key: K): ConnectionStatusState[K] =>
+    key in next ? next[key] : state[key];
   state = {
     ...next,
-    patient: "patient" in next ? next.patient : state.patient,
-    recordChecks: "recordChecks" in next ? next.recordChecks : state.recordChecks
+    patient: speak("patient"),
+    recordChecks: speak("recordChecks"),
+    patientSelection: speak("patientSelection")
   };
   for (const listener of listeners) listener(state);
 }
@@ -229,6 +252,17 @@ export function publishRecordChecks(recordChecks: RecordChecks | null): void {
   for (const listener of listeners) listener(state);
 }
 
+/**
+ * Make the patient switcher known: the people behind the connected portals and
+ * the one the Records page is scoped to. Null when they are all one person,
+ * which the header then shows as a plain name.
+ */
+export function publishPatientSelection(selection: PatientSelectionState | null): void {
+  if (state.patientSelection === selection) return;
+  state = { ...state, patientSelection: selection };
+  for (const listener of listeners) listener(state);
+}
+
 // ── Records-page actions ──────────────────────────────────────────────────
 // PatientExplorer is keep-alive mounted, but only after its first visit.
 // The app frame (drawer, connection popover) registers nothing itself: it
@@ -239,6 +273,7 @@ export function publishRecordChecks(recordChecks: RecordChecks | null): void {
 export type RecordsPageCommand =
   | { kind: "selectTab"; tabId: string }
   | { kind: "selectSource"; sourceId: string }
+  | { kind: "selectPatient"; patientId: string | null }
   | { kind: "refreshSources" }
   | { kind: "addRecord" }
   | { kind: "dismissCareGap"; gapId: string }
@@ -247,6 +282,8 @@ export type RecordsPageCommand =
 export interface RecordsPageHandlers {
   selectTab: (tabId: string) => void;
   selectSource: (sourceId: string) => void;
+  /** Scope the page to one person (PatientChoice id), or to all of them (null). */
+  selectPatient: (patientId: string | null) => void;
   refreshSources: () => void;
   addRecord: () => void;
   dismissCareGap: (gapId: string) => void;
@@ -267,6 +304,9 @@ function run(command: RecordsPageCommand): void {
       break;
     case "selectSource":
       recordsPageHandlers.selectSource(command.sourceId);
+      break;
+    case "selectPatient":
+      recordsPageHandlers.selectPatient(command.patientId);
       break;
     case "refreshSources":
       recordsPageHandlers.refreshSources();

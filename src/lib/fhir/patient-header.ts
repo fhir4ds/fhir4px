@@ -107,11 +107,52 @@ export function patientHeaderInfo(patient: FhirResource | null | undefined): Pat
 }
 
 /** Two profiles are the same person when their name and birth date match. */
+export function patientIdentityKey(patient: FhirResource): string {
+  return `${patientDisplayName(patient).toLowerCase()}|${String(patient.birthDate ?? "")}`;
+}
+
 function samePatient(left: FhirResource, right: FhirResource): boolean {
-  return (
-    patientDisplayName(left).toLowerCase() === patientDisplayName(right).toLowerCase() &&
-    String(left.birthDate ?? "") === String(right.birthDate ?? "")
-  );
+  return patientIdentityKey(left) === patientIdentityKey(right);
+}
+
+/** A portal profile: which portal a patient came from. */
+export interface PatientProfileLike {
+  sourceId: string;
+  sourceName: string;
+  patient: FhirResource;
+}
+
+/** One person, with the portals whose profiles belong to them. */
+export interface PatientIdentity<T extends PatientProfileLike> {
+  /** Stable id for the person: the header's patient selector uses it. */
+  key: string;
+  name: string;
+  profiles: T[];
+}
+
+/**
+ * The distinct people behind the connected portals, in the order they were
+ * connected. Several portals of the same person land in one identity.
+ */
+export function groupProfilesByPatient<T extends PatientProfileLike>(profiles: T[]): PatientIdentity<T>[] {
+  const identities: PatientIdentity<T>[] = [];
+  const byKey = new Map<string, PatientIdentity<T>>();
+  for (const profile of profiles) {
+    const key = patientIdentityKey(profile.patient);
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.profiles.push(profile);
+      continue;
+    }
+    const identity: PatientIdentity<T> = {
+      key,
+      name: patientDisplayName(profile.patient),
+      profiles: [profile]
+    };
+    byKey.set(key, identity);
+    identities.push(identity);
+  }
+  return identities;
 }
 
 /**

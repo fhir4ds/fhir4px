@@ -138,21 +138,24 @@ import {
   type CareGapDismissal
 } from "../lib/fhir/care-gaps";
 import { invalidateCareGaps } from "../lib/fhir/care-gaps-run";
-import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
+import { runQualityEvaluation, invalidateQualityEvaluation, setQualityScopeResources } from "../lib/fhir/quality-run";
 import type { MeasureResult } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
 import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
 import {
   publishConnectionStatus,
   publishPatient,
+  publishPatientSelection,
   publishRecordChecks,
   registerRecordsPageActions,
   type ConnectionPhase,
   type ConnectionStatusSource,
+  type PatientChoice,
+  type PatientSelectionState,
   type RecordChecks
 } from "../lib/app/connection-status";
 import { useFhir4dsDedup, useFhir4dsPatientMatching, type DedupInputRecord } from "../lib/app/use-fhir4ds-records";
-import { headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
+import { groupProfilesByPatient, headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
 import type { UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
@@ -1342,15 +1345,12 @@ export function PatientExplorer() {
     [activeSourceId, sources]
   );
 
-  const dataset = useMemo(() => mergeSourceDatasets(filteredSources, sourceDatasets), [filteredSources, sourceDatasets]);
-
-  const summary = useMemo(() => {
-    const sourceSummaries = filteredSources.flatMap((source) => {
-      const sourceDataset = sourceDatasets[source.id];
-      return sourceDataset ? [sourceScopedSummary(source, sourceDataset)] : [];
-    });
-    return mergeSourceSummaries(sourceSummaries);
-  }, [filteredSources, sourceDatasets]);
+  // ── Patient scope ──────────────────────────────────────────────────────
+  // A portal carries one patient, so several portals can bring several
+  // people. Choosing one of them scopes every patient-derived number to that
+  // person — the record list, care gaps, quality measures and cohorts alike —
+  // not just the visible records.
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
 
   const patientProfiles = useMemo<PatientProfile[]>(
     () =>
@@ -1360,6 +1360,46 @@ export function PatientExplorer() {
       }),
     [filteredSources, sourceDatasets]
   );
+  const patientIdentities = useMemo(() => groupProfilesByPatient(patientProfiles), [patientProfiles]);
+
+  // The chosen person can disappear when a portal is disconnected or an
+  // active-portal filter leaves them out; fall back to every patient together.
+  useEffect(() => {
+    if (selectedPatientId === null) return;
+    if (patientIdentities.some((identity) => identity.key === selectedPatientId)) return;
+    setSelectedPatientId(null);
+  }, [patientIdentities, selectedPatientId]);
+
+  const scopedSourceIds = useMemo(() => {
+    if (selectedPatientId === null) return null;
+    const identity = patientIdentities.find((entry) => entry.key === selectedPatientId);
+    return identity ? new Set(identity.profiles.map((profile) => profile.sourceId)) : null;
+  }, [patientIdentities, selectedPatientId]);
+  const scopedSources = useMemo(
+    () => (scopedSourceIds ? filteredSources.filter((source) => scopedSourceIds.has(source.id)) : filteredSources),
+    [filteredSources, scopedSourceIds]
+  );
+  const scopedPatientProfiles = useMemo(
+    () =>
+      scopedSourceIds
+        ? patientProfiles.filter((profile) => scopedSourceIds.has(profile.sourceId))
+        : patientProfiles,
+    [patientProfiles, scopedSourceIds]
+  );
+  const scopedResources = useMemo(() => {
+    if (!scopedSourceIds) return null;
+    return scopedSources.flatMap((source) => sourceDatasets[source.id]?.resources ?? []);
+  }, [scopedSourceIds, scopedSources, sourceDatasets]);
+
+  const dataset = useMemo(() => mergeSourceDatasets(scopedSources, sourceDatasets), [scopedSources, sourceDatasets]);
+
+  const summary = useMemo(() => {
+    const sourceSummaries = scopedSources.flatMap((source) => {
+      const sourceDataset = sourceDatasets[source.id];
+      return sourceDataset ? [sourceScopedSummary(source, sourceDataset)] : [];
+    });
+    return mergeSourceSummaries(sourceSummaries);
+  }, [scopedSources, sourceDatasets]);
 
   const records = useMemo(
     () => buildGroupableRecords(summary ?? emptyReferralSummary(), { patches, patientAuthoredRecords }),
@@ -1493,7 +1533,7 @@ export function PatientExplorer() {
 
   const resourceByKey = useMemo(() => {
     const map = new Map<string, FhirResource>();
-    for (const source of filteredSources) {
+    for (const source of scopedSources) {
       for (const resource of sourceDatasets[source.id]?.resources ?? []) {
         const scopedId = scopedResourceId(source.id, resource.id);
         const key = resourceKey(resource.resourceType, scopedId);
@@ -1506,7 +1546,7 @@ export function PatientExplorer() {
       if (key) map.set(key, record.resource as unknown as FhirResource);
     }
     return map;
-  }, [filteredSources, patientAuthoredRecords, sourceDatasets]);
+  }, [scopedSources, patientAuthoredRecords, sourceDatasets]);
 
   const recordByKey = useMemo(() => {
     const map = new Map<string, GroupableRecord>();
@@ -1556,12 +1596,12 @@ export function PatientExplorer() {
   const explicitRelationships = useMemo(
     () =>
       buildExplicitRecordRelationships(
-        filteredSources.map((source) => ({
+        scopedSources.map((source) => ({
           sourceId: source.id,
           resources: sourceDatasets[source.id]?.resources ?? []
         }))
       ),
-    [filteredSources, sourceDatasets]
+    [scopedSources, sourceDatasets]
   );
 
   const explicitRelationshipsByRecordKey = useMemo(
@@ -3248,7 +3288,7 @@ export function PatientExplorer() {
   // name for LLM-named groups). Stores null too so we don't re-attempt every
   // render — setGroupReferenceRanges acts as a "processed" marker.
   useEffect(() => {
-    const primary = patientProfiles[0]?.patient ?? summary?.patient;
+    const primary = scopedPatientProfiles[0]?.patient ?? summary?.patient;
     if (!primary) return;
     const sex: PatientSex = (() => {
       const g = typeof primary.gender === "string" ? primary.gender.trim().toLowerCase() : "";
@@ -3302,7 +3342,7 @@ export function PatientExplorer() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups, patientProfiles, summary, observationById]);
+  }, [groups, scopedPatientProfiles, summary, observationById]);
 
   // Resolve every group to its association concept key (or lab part CIDs)
   // once grouping settles. Enables deterministic click-to-relate matching.
@@ -3353,7 +3393,7 @@ export function PatientExplorer() {
       resourceTypes: group.resourceTypes,
       resolution: groupConceptResolutions[group.groupId] ?? {}
     }));
-    const primary = patientProfiles[0]?.patient ?? summary?.patient;
+    const primary = scopedPatientProfiles[0]?.patient ?? summary?.patient;
     const ageYears = patientAge(primary?.birthDate) ?? null;
     void (async () => {
       try {
@@ -3973,6 +4013,7 @@ export function PatientExplorer() {
     registerRecordsPageActions({
       selectTab: (tabId) => setActiveTab(tabId as ExplorerTab),
       selectSource: (sourceId) => switchSource(sourceId),
+      selectPatient: (patientId) => setSelectedPatientId(patientId),
       refreshSources: () => void refreshSources(),
       addRecord: () => openAddRecordDialog(),
       dismissCareGap: (gapId) => void dismissCareGap(gapId),
@@ -4090,7 +4131,11 @@ export function PatientExplorer() {
     let cancelled = false;
     setMeasureGapsBusy(true);
     setUsCoreChecks(null);
-    invalidateQualityEvaluation(); // dataset changed — recalculate
+    // A chosen patient is evaluated from the resources already loaded for their
+    // portals, so measures and cohorts cover that person only. "All patients"
+    // keeps evaluating the active session's dataset, as before.
+    setQualityScopeResources(scopedResources);
+    invalidateQualityEvaluation(); // dataset or patient scope changed — recalculate
     invalidateCareGaps();
     void runQualityEvaluation()
       .then((evaluation) => {
@@ -4109,7 +4154,7 @@ export function PatientExplorer() {
     return () => {
       cancelled = true;
     };
-  }, [summary]);
+  }, [summary, scopedResources]);
 
   const [dismissedGapIds, setDismissedGapIds] = useState<Set<string>>(new Set());
   const [dismissedGaps, setDismissedGaps] = useState<CareGap[]>([]);
@@ -4211,7 +4256,7 @@ export function PatientExplorer() {
       careGaps: { open: openCareGaps, dismissed: dismissedGaps },
       usCore: usCoreChecks,
       recordTabs: {
-        patientLabel: patientProfiles[0]?.patient ? patientDisplayName(patientProfiles[0].patient) : null,
+        patientLabel: scopedPatientProfiles[0]?.patient ? patientDisplayName(scopedPatientProfiles[0].patient) : null,
         activeTabId: activeTab,
         activeSourceId,
         tabs: [
@@ -4225,14 +4270,38 @@ export function PatientExplorer() {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, activeSourceId, records, patientProfiles, openCareGaps, dismissedGaps, usCoreChecks]);
+  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, activeSourceId, records, scopedPatientProfiles, openCareGaps, dismissedGaps, usCoreChecks]);
 
   // The app header shows the loaded patient on every page. It is cleared as
   // soon as a new dataset starts loading, so the previous patient is never
-  // shown over the next one's records.
+  // shown over the next one's records. Once one person is chosen from the
+  // switcher, the header shows that person rather than the first profile.
   useEffect(() => {
-    publishPatient(busy ? null : headerPatientFor(patientProfiles.map((profile) => profile.patient)));
-  }, [busy, patientProfiles]);
+    publishPatient(busy ? null : headerPatientFor(scopedPatientProfiles.map((profile) => profile.patient)));
+  }, [busy, scopedPatientProfiles]);
+
+  // The header's patient switcher appears only when the connected portals
+  // belong to more than one person.
+  const patientSelection = useMemo<PatientSelectionState | null>(() => {
+    if (patientIdentities.length < 2) return null;
+    const choices: PatientChoice[] = [
+      {
+        id: null,
+        label: `All patients (${patientIdentities.length})`,
+        detail: `${patientProfiles.length} portal profile${patientProfiles.length === 1 ? "" : "s"}`
+      },
+      ...patientIdentities.map((identity) => ({
+        id: identity.key,
+        label: identity.name,
+        detail: [...new Set(identity.profiles.map((profile) => profile.sourceName))].join(", ")
+      }))
+    ];
+    return { choices, selectedId: selectedPatientId };
+  }, [patientIdentities, patientProfiles, selectedPatientId]);
+  useEffect(() => {
+    publishPatientSelection(patientSelection);
+  }, [patientSelection]);
+
 
   function renderCareGaps() {
     if (careGaps.length === 0 && !measureGapsBusy) return null;

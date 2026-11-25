@@ -14,15 +14,17 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, Chip, Container, Stack, Typography } from "@mui/material";
+import { Box, Button, Chip, Container, MenuItem, Select, Stack, Typography } from "@mui/material";
 import { Database, Settings } from "lucide-react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import ConnectionChip from "./ConnectionChip";
 import {
+  dispatchRecordsPageCommand,
   getConnectionStatus,
   sourceChipLabel,
   subscribeConnectionStatus,
-  type ConnectionStatusState
+  type ConnectionStatusState,
+  type PatientChoice
 } from "../lib/app/connection-status";
 
 const navItems = [
@@ -32,6 +34,53 @@ const navItems = [
 
 /** CSS variable the side navigation reads to pin below the header. */
 const HEIGHT_VARIABLE = "--app-header-h";
+
+/** Select value for "every patient together". */
+const ALL_PATIENTS = "__all__";
+
+/**
+ * The person whose records the app is scoped to. Shown instead of the name
+ * when several people are connected; changing it changes what every page
+ * shows (records, care gaps, measures, cohorts).
+ */
+function PatientSelect({ choices, selectedId }: { choices: PatientChoice[]; selectedId: string | null }) {
+  return (
+    <Select
+      size="small"
+      variant="standard"
+      disableUnderline
+      value={selectedId ?? ALL_PATIENTS}
+      onChange={(event) =>
+        dispatchRecordsPageCommand({
+          kind: "selectPatient",
+          patientId: event.target.value === ALL_PATIENTS ? null : String(event.target.value)
+        })
+      }
+      inputProps={{ "aria-label": "Patient" }}
+      renderValue={(value) => (
+        <Typography component="span" variant="subtitle1" sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
+          {choices.find((choice) => String(choice.id ?? ALL_PATIENTS) === String(value))?.label ?? ""}
+        </Typography>
+      )}
+      sx={{ maxWidth: 260, minWidth: 120, "& .MuiSelect-select": { py: 0.25 } }}
+    >
+      {choices.map((choice) => (
+        <MenuItem key={choice.id ?? ALL_PATIENTS} value={choice.id ?? ALL_PATIENTS}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" noWrap>
+              {choice.label}
+            </Typography>
+            {choice.detail && (
+              <Typography variant="caption" color="text.secondary" noWrap display="block">
+                {choice.detail}
+              </Typography>
+            )}
+          </Box>
+        </MenuItem>
+      ))}
+    </Select>
+  );
+}
 
 export default function AppHeader() {
   const [status, setStatus] = useState<ConnectionStatusState>(getConnectionStatus);
@@ -61,6 +110,9 @@ export default function AppHeader() {
 
   const working = status.phase === "loading" || status.phase === "evaluating";
   const patient = status.patient ?? null;
+  const selection = status.patientSelection && status.patientSelection.choices.length > 0 ? status.patientSelection : null;
+  // Several people connected and none chosen: the name is not one person's.
+  const showingAllPatients = selection !== null && selection.selectedId === null;
   const showContactLine = patient !== null && (Boolean(patient.address) || patient.telecoms.length > 0);
 
   return (
@@ -113,11 +165,19 @@ export default function AppHeader() {
               alignItems="center"
               sx={{ gridColumn: { md: 2 }, gridRow: { md: 1 }, minWidth: 0, rowGap: 0.5 }}
             >
-              <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
-                {patient.name}
-              </Typography>
-              {patient.birthDate && <Chip size="small" variant="outlined" label={`DOB ${patient.birthDate}`} />}
-              {patient.gender && <Chip size="small" variant="outlined" label={patient.gender} />}
+              {selection ? (
+                <PatientSelect choices={selection.choices} selectedId={selection.selectedId} />
+              ) : (
+                <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
+                  {patient.name}
+                </Typography>
+              )}
+              {!showingAllPatients && patient.birthDate && (
+                <Chip size="small" variant="outlined" label={`DOB ${patient.birthDate}`} />
+              )}
+              {!showingAllPatients && patient.gender && (
+                <Chip size="small" variant="outlined" label={patient.gender} />
+              )}
               {patient.otherPatients > 0 && (
                 <Chip
                   size="small"

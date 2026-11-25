@@ -5,6 +5,7 @@ import {
   publishConnectionStatus,
   publishConnections,
   publishPatient,
+  publishPatientSelection,
   publishRecordChecks,
   sourceChipLabel,
   subscribeConnectionStatus,
@@ -150,6 +151,30 @@ describe("record checks", () => {
   it("can be cleared for the next patient", () => {
     publishRecordChecks(null);
     expect(getConnectionStatus().recordChecks).toBeNull();
+  });
+});
+
+describe("the patient switcher", () => {
+  it("reaches the listeners and survives a status publish that does not mention it", () => {
+    disconnect();
+    const selection = {
+      choices: [
+        { id: null, label: "All patients (2)" },
+        { id: "grace|1958-03-02", label: "Grace Mensah", detail: "SMART Dev Sandbox" },
+        { id: "linda|1969-04-27", label: "Linda Ross", detail: "SMART Dev Sandbox" }
+      ],
+      selectedId: "linda|1969-04-27"
+    };
+    publishPatientSelection(selection);
+    expect(getConnectionStatus().patientSelection).toEqual(selection);
+
+    publishConnectionStatus({ phase: "connected", label: "SMART Dev Sandbox · 250 records", sources: [] });
+    expect(getConnectionStatus().patientSelection).toEqual(selection);
+  });
+
+  it("goes away when the portals turn out to be one person", () => {
+    publishPatientSelection(null);
+    expect(getConnectionStatus().patientSelection).toBeNull();
   });
 });
 

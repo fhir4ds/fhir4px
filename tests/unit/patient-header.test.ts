@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { headerPatientFor, patientHeaderInfo } from "../../src/lib/fhir/patient-header";
+import { groupProfilesByPatient, headerPatientFor, patientIdentityKey, patientHeaderInfo } from "../../src/lib/fhir/patient-header";
 import type { FhirResource } from "../../src/lib/smart/data";
 
 /** A local-calendar birth date that makes the patient an exact number of
@@ -89,5 +89,38 @@ describe("headerPatientFor", () => {
       profileCount: 2,
       otherPatients: 1
     });
+  });
+});
+
+describe("patientIdentityKey", () => {
+  it("ignores name case and keeps the birth date apart", () => {
+    const left = patient({ id: "p1", name: [{ family: "Mensah", given: ["Grace"] }], birthDate: "1958-03-02" });
+    const same = patient({ id: "p2", name: [{ family: "mensah", given: ["GRACE"] }], birthDate: "1958-03-02" });
+    const otherBirthDate = patient({ id: "p3", name: [{ family: "Mensah", given: ["Grace"] }], birthDate: "1958-03-03" });
+
+    expect(patientIdentityKey(left)).toBe(patientIdentityKey(same));
+    expect(patientIdentityKey(left)).not.toBe(patientIdentityKey(otherBirthDate));
+  });
+});
+
+describe("groupProfilesByPatient", () => {
+  const grace = patient({ id: "p1", name: [{ family: "Mensah", given: ["Grace"] }], birthDate: "1958-03-02" });
+  const linda = patient({ id: "p2", name: [{ family: "Ross", given: ["Linda"] }], birthDate: "1969-04-27" });
+
+  it("keeps one identity per person and lists their portals", () => {
+    const identities = groupProfilesByPatient([
+      { sourceId: "portal-a", sourceName: "Portal A", patient: grace },
+      { sourceId: "portal-b", sourceName: "Portal B", patient: linda },
+      { sourceId: "portal-c", sourceName: "Portal C", patient: { ...grace, id: "p3" } }
+    ]);
+
+    expect(identities.map((identity) => identity.name)).toEqual(["Grace Mensah", "Linda Ross"]);
+    expect(identities[0].profiles.map((profile) => profile.sourceId)).toEqual(["portal-a", "portal-c"]);
+    expect(identities[1].profiles.map((profile) => profile.sourceId)).toEqual(["portal-b"]);
+    expect(identities[0].key).toBe(patientIdentityKey(grace));
+  });
+
+  it("has nothing to say without profiles", () => {
+    expect(groupProfilesByPatient([])).toEqual([]);
   });
 });
