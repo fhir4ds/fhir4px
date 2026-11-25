@@ -89,19 +89,45 @@ const listeners = new Set<Listener>();
  * look "connected" — working phases latch for this long before clearing. */
 const WORKING_LATCH_MS = 4000;
 let lastWorkingAt = 0;
+/** A settled state that arrived inside the latch window. It is published
+ * when the window ends, unless a newer publish replaces it. Dropping it
+ * instead left the chip on a working label for good whenever the last step
+ * finished quickly (a prebuilt evaluation takes about a second). */
+let heldState: ConnectionStatusState | null = null;
+let latchTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function publishConnectionStatus(next: ConnectionStatusState): void {
-  if (next.phase === "loading" || next.phase === "evaluating") {
-    lastWorkingAt = Date.now();
-  } else if (Date.now() - lastWorkingAt < WORKING_LATCH_MS) {
-    // Keep the previous working phase through inter-stage idle gaps.
-    return;
-  }
+function emit(next: ConnectionStatusState): void {
   // The patient belongs to publishPatient and completeConnection: a status
   // publish that does not speak to it leaves it in place, so the header keeps
   // showing the patient while the Records page reports grouping progress.
   state = { ...next, patient: "patient" in next ? next.patient : state.patient };
   for (const listener of listeners) listener(state);
+}
+
+export function publishConnectionStatus(next: ConnectionStatusState): void {
+  if (latchTimer !== null) {
+    clearTimeout(latchTimer);
+    latchTimer = null;
+    heldState = null;
+  }
+  if (next.phase === "loading" || next.phase === "evaluating") {
+    lastWorkingAt = Date.now();
+    emit(next);
+    return;
+  }
+  const remaining = WORKING_LATCH_MS - (Date.now() - lastWorkingAt);
+  if (remaining > 0) {
+    // Keep the previous working phase through inter-stage idle gaps.
+    heldState = next;
+    latchTimer = setTimeout(() => {
+      latchTimer = null;
+      const held = heldState;
+      heldState = null;
+      if (held) emit(held);
+    }, remaining);
+    return;
+  }
+  emit(next);
 }
 
 export function getConnectionStatus(): ConnectionStatusState {

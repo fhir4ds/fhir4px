@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   completeConnection,
   getConnectionStatus,
@@ -123,5 +123,67 @@ describe("the header patient", () => {
     });
 
     expect(getConnectionStatus().patient?.name).toBe("Pat Explorer");
+  });
+});
+
+// Keep this describe LAST in the file: the latch keeps module-level time state.
+describe("the working latch", () => {
+  const sources = [{ id: "s1", label: "Portal", status: "ready", recordCount: 9 }];
+  afterEach(() => {
+    // Let a held state out and stop the fake clock.
+    if (vi.isFakeTimers()) {
+      vi.advanceTimersByTime(6000);
+      vi.useRealTimers();
+    }
+  });
+
+  it("publishes a settled state that arrives inside the window once the window ends", () => {
+    vi.useFakeTimers();
+    publishConnectionStatus({ phase: "evaluating", label: "Evaluating quality measures", sources });
+    vi.advanceTimersByTime(1000);
+    publishConnectionStatus({ phase: "connected", label: "Portal · 9 records", sources });
+
+    // Inside the window the working label stays, so the chip does not flicker.
+    expect(getConnectionStatus().phase).toBe("evaluating");
+    vi.advanceTimersByTime(2999);
+    expect(getConnectionStatus().phase).toBe("evaluating");
+    vi.advanceTimersByTime(2);
+    expect(getConnectionStatus().phase).toBe("connected");
+    expect(getConnectionStatus().label).toBe("Portal · 9 records");
+  });
+
+  it("replaces a held state with a newer working state", () => {
+    vi.useFakeTimers();
+    publishConnectionStatus({ phase: "loading", label: "Downloading medical records...", sources });
+    vi.advanceTimersByTime(500);
+    publishConnectionStatus({ phase: "connected", label: "Portal · 9 records", sources });
+    vi.advanceTimersByTime(500);
+    publishConnectionStatus({ phase: "loading", label: "Organizing medical records...", sources });
+
+    expect(getConnectionStatus().label).toBe("Organizing medical records...");
+    // The held "connected" state must not appear behind the new work.
+    vi.advanceTimersByTime(5000);
+    expect(getConnectionStatus().phase).toBe("loading");
+    expect(getConnectionStatus().label).toBe("Organizing medical records...");
+  });
+
+  it("publishes at once outside the window", () => {
+    vi.useFakeTimers();
+    publishConnectionStatus({ phase: "loading", label: "Organizing medical records...", sources });
+    vi.advanceTimersByTime(4000);
+    publishConnectionStatus({ phase: "connected", label: "Portal · 9 records", sources });
+    expect(getConnectionStatus().phase).toBe("connected");
+  });
+
+  it("keeps the patient that was published while a state was held", () => {
+    vi.useFakeTimers();
+    publishPatient(patient("Pat"));
+    publishConnectionStatus({ phase: "evaluating", label: "Evaluating quality measures", sources });
+    publishConnectionStatus({ phase: "connected", label: "Portal · 9 records", sources });
+    publishPatient(patient("Robin"));
+    vi.advanceTimersByTime(4000);
+
+    expect(getConnectionStatus().phase).toBe("connected");
+    expect(getConnectionStatus().patient?.name).toBe("Robin");
   });
 });
