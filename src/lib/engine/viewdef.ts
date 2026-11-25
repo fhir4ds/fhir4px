@@ -12,31 +12,19 @@
  * from the wheel's library on every run).
  */
 
-const PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
+import { FHIR4DS_INSTALL_PY, FHIR4DS_PYODIDE_PACKAGES, PYODIDE_CDN, fhir4dsWheelUrl } from "./fhir4ds-runtime";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pyodide: any = null;
 let bootPromise: Promise<void> | null = null;
 
-function wheelUrl(): string {
-  const base = import.meta.env.BASE_URL || "/";
-  return new URL(`${base.replace(/\/?$/, "/")}vendor/fhir4ds/fhir4ds_v2-0.0.26-py3-none-any.whl`, globalThis.location.href).href;
-}
-
 async function bootPyodide(): Promise<void> {
   const { loadPyodide } = await import(/* @vite-ignore */ `${PYODIDE_CDN}pyodide.mjs`);
   pyodide = await loadPyodide({ indexURL: PYODIDE_CDN });
   // Binary packages the wheel's import chain reaches at module load.
-  await pyodide.loadPackage(["micropip", "duckdb", "orjson", "pyarrow"]);
-  pyodide.globals.set("__wheel_url__", wheelUrl());
-  await pyodide.runPythonAsync(`
-import micropip
-await micropip.install([
-    "antlr4-python3-runtime>=4.10",
-    "python-dateutil>=2.8",
-])
-await micropip.install(__wheel_url__, deps=False)
-  `);
+  await pyodide.loadPackage([...FHIR4DS_PYODIDE_PACKAGES]);
+  pyodide.globals.set("__wheel_url__", fhir4dsWheelUrl());
+  await pyodide.runPythonAsync(FHIR4DS_INSTALL_PY);
   pyodide.runPython(`
 from fhir4ds.viewdef.parser import parse_view_definition
 from fhir4ds.viewdef.generator import SQLGenerator

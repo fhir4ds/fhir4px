@@ -51,6 +51,16 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
   const working = status.phase === "loading" || status.phase === "evaluating";
   const usCore = status.usCore && status.usCore.length > 0 ? status.usCore : null;
   const usCoreLine = useMemo(() => (usCore ? usCoreSummaryText(summarizeUsCore(usCore)) : null), [usCore]);
+  const dedupCheck = status.recordChecks?.dedup ?? null;
+  const duplicateLine = !dedupCheck
+    ? null
+    : dedupCheck.state === "running"
+      ? "checking…"
+      : dedupCheck.state === "failed"
+        ? "check unavailable"
+        : dedupCheck.merged > 0
+          ? `${dedupCheck.merged} ${dedupCheck.merged === 1 ? "copy" : "copies"} of other records merged`
+          : "none found";
 
   return (
     <>
@@ -107,6 +117,13 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
               >
                 US Core data: {usCoreLine}
               </Button>
+            </>
+          )}
+
+          {duplicateLine && (
+            <>
+              <Divider />
+              <Typography variant="body2">Duplicate records (fhir4ds): {duplicateLine}</Typography>
             </>
           )}
 

@@ -145,10 +145,13 @@ import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
 import {
   publishConnectionStatus,
   publishPatient,
+  publishRecordChecks,
   registerRecordsPageActions,
   type ConnectionPhase,
-  type ConnectionStatusSource
+  type ConnectionStatusSource,
+  type RecordChecks
 } from "../lib/app/connection-status";
+import { useFhir4dsDedup, useFhir4dsPatientMatching, type DedupInputRecord } from "../lib/app/use-fhir4ds-records";
 import { headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
 import type { UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
@@ -1510,6 +1513,45 @@ export function PatientExplorer() {
     for (const record of records) map.set(recordKey(record), record);
     return map;
   }, [records]);
+
+  // fhir4ds deduplication and patient matching run in a background worker
+  // once the records are grouped and on screen. Until the dedup result
+  // arrives, the fast local rule decides what is a copy; afterwards fhir4ds
+  // decides for every record it examined.
+  const recordEngineIdle = !busy && !modelBusy;
+  const dedupInput = useMemo<DedupInputRecord[] | null>(() => {
+    if (records.length === 0) return null;
+    const input: DedupInputRecord[] = [];
+    for (const record of records) {
+      if (record.source !== "provider") continue;
+      const resource = resourceByKey.get(recordKey(record));
+      if (resource) input.push({ id: record.id, resource });
+    }
+    return input;
+  }, [records, resourceByKey]);
+  const dedupRun = useFhir4dsDedup(dedupInput, recordEngineIdle);
+  const matchRun = useFhir4dsPatientMatching(
+    patientProfiles.length > 1 ? patientProfiles.map((profile) => profile.patient) : null,
+    recordEngineIdle
+  );
+  const duplicateLinks = dedupRun?.state === "done" ? dedupRun.links : null;
+
+  const recordChecks = useMemo<RecordChecks>(
+    () => ({
+      dedup: dedupRun ? { state: dedupRun.state, merged: dedupRun.mergedCount, error: dedupRun.error } : null,
+      patientMatch: matchRun
+        ? {
+            state: matchRun.state,
+            verdict: matchRun.verdict?.status ?? null,
+            error: matchRun.error
+          }
+        : null
+    }),
+    [dedupRun, matchRun]
+  );
+  useEffect(() => {
+    publishRecordChecks(recordChecks);
+  }, [recordChecks]);
 
   const explicitRelationships = useMemo(
     () =>
@@ -3763,7 +3805,7 @@ export function PatientExplorer() {
   }
 
   function groupRecordCount(group: PatientFriendlyGroup): number {
-    return dedupeGroupedRecords(recordsForGroup(group)).length;
+    return dedupeGroupedRecords(recordsForGroup(group), duplicateLinks).length;
   }
 
   function sortGroupsForDisplay(nextGroups: PatientFriendlyGroup[]): PatientFriendlyGroup[] {
@@ -3799,7 +3841,7 @@ export function PatientExplorer() {
   }
 
   function sortedDateClusters(nextRecords: GroupableRecord[]): DedupedRecordCluster[] {
-    return dedupeGroupedRecords(nextRecords).sort((left, right) =>
+    return dedupeGroupedRecords(nextRecords, duplicateLinks).sort((left, right) =>
       compareRecordsByDate(left.canonical, right.canonical, dateSort)
     );
   }
@@ -3960,6 +4002,22 @@ export function PatientExplorer() {
     if (appDataIsLoading()) return "Loading app data...";
     if (measureGapsBusy) return "Evaluating quality measures and cohorts...";
     return dataStatusSummary();
+  }
+
+  // Portals that may belong to different people: say so, but keep showing
+  // their records together.
+  function renderPatientMatchNotice() {
+    if (matchRun?.state !== "done" || !matchRun.verdict || matchRun.verdict.status === "same") return null;
+    const nameOf = (index: number) => patientDisplayName(patientProfiles[index]?.patient);
+    const names = matchRun.verdict.pairs.map((pair) => `${nameOf(pair.first)} and ${nameOf(pair.second)}`).join("; ");
+    const different = matchRun.verdict.status === "different";
+    return (
+      <Alert severity={different ? "warning" : "info"}>
+        {different
+          ? `These portals appear to belong to different people: ${names}. fhir4ds patient matching found no match between them. Their records are still shown together.`
+          : `fhir4ds patient matching could not confirm that ${names} ${matchRun.verdict.pairs.length === 1 ? "is" : "are"} the same person. Their records are still shown together.`}
+      </Alert>
+    );
   }
 
   function renderDataToolbar() {
@@ -5190,7 +5248,7 @@ export function PatientExplorer() {
         ? encounterTypeForRecord(groupRecords[0])
         : undefined;
 
-    const clusters = dedupeGroupedRecords(groupRecords);
+    const clusters = dedupeGroupedRecords(groupRecords, duplicateLinks);
     const canonicalRecords = clusters.map((cluster) => cluster.canonical);
     const duplicateCount = clusters.reduce((total, cluster) => total + cluster.duplicateCount, 0);
 
@@ -6515,6 +6573,7 @@ export function PatientExplorer() {
           <Stack spacing={2.5}>
             {renderDataToolbar()}
             {error && <Alert severity="warning">{error}</Alert>}
+            {renderPatientMatchNotice()}
 
             <Divider />
 

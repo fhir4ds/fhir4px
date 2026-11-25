@@ -5,7 +5,10 @@ import {
   publishConnectionStatus,
   publishConnections,
   publishPatient,
-  sourceChipLabel
+  publishRecordChecks,
+  sourceChipLabel,
+  subscribeConnectionStatus,
+  type RecordChecks
 } from "../../src/lib/app/connection-status";
 import type { PatientHeaderInfo } from "../../src/lib/fhir/patient-header";
 
@@ -127,6 +130,29 @@ describe("the header patient", () => {
 });
 
 // Keep this describe LAST in the file: the latch keeps module-level time state.
+describe("record checks", () => {
+  it("reach the listeners and survive a status publish that does not mention them", () => {
+    disconnect();
+    const checks: RecordChecks = { dedup: { state: "done", merged: 26 }, patientMatch: null };
+    const seen: Array<RecordChecks | null | undefined> = [];
+    const unsubscribe = subscribeConnectionStatus((state) => seen.push(state.recordChecks));
+
+    publishRecordChecks(checks);
+    expect(getConnectionStatus().recordChecks).toEqual(checks);
+    expect(seen.at(-1)).toEqual(checks);
+
+    // The Records page publishes its settled state once grouping is over.
+    publishConnectionStatus({ phase: "connected", label: "SMART Dev Sandbox · 282 records", sources: [] });
+    expect(getConnectionStatus().recordChecks).toEqual(checks);
+    unsubscribe();
+  });
+
+  it("can be cleared for the next patient", () => {
+    publishRecordChecks(null);
+    expect(getConnectionStatus().recordChecks).toBeNull();
+  });
+});
+
 describe("the working latch", () => {
   const sources = [{ id: "s1", label: "Portal", status: "ready", recordCount: 9 }];
   afterEach(() => {

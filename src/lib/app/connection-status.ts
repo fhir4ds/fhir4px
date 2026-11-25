@@ -69,6 +69,9 @@ export interface ConnectionStatusState {
   careGaps?: CareGapsState | null;
   /** US Core data-presence checks for the loaded dataset (connection info). */
   usCore?: UsCoreCheckResult[] | null;
+  /** fhir4ds record checks for the loaded dataset, run in the background:
+   * deduplication and patient matching. Null until a run has started. */
+  recordChecks?: RecordChecks | null;
   /** The loaded patient, shown in the app header on every page. Null while
    * a different dataset is loading or when nothing is loaded. */
   patient?: PatientHeaderInfo | null;
@@ -100,7 +103,12 @@ function emit(next: ConnectionStatusState): void {
   // The patient belongs to publishPatient and completeConnection: a status
   // publish that does not speak to it leaves it in place, so the header keeps
   // showing the patient while the Records page reports grouping progress.
-  state = { ...next, patient: "patient" in next ? next.patient : state.patient };
+  // The record checks (publishRecordChecks) are kept the same way.
+  state = {
+    ...next,
+    patient: "patient" in next ? next.patient : state.patient,
+    recordChecks: "recordChecks" in next ? next.recordChecks : state.recordChecks
+  };
   for (const listener of listeners) listener(state);
 }
 
@@ -198,6 +206,26 @@ export function publishPatient(patient: PatientHeaderInfo | null): void {
 export function publishUsCore(usCore: UsCoreCheckResult[]): void {
   if (state.usCore === usCore) return;
   state = { ...state, usCore };
+  for (const listener of listeners) listener(state);
+}
+
+export type RecordCheckState = "running" | "done" | "failed";
+
+export interface RecordChecks {
+  /** fhir4ds deduplication. `merged`: records that are copies of another record. */
+  dedup: { state: RecordCheckState; merged: number; error?: string } | null;
+  /** fhir4ds patient matching between the connected portals. */
+  patientMatch: {
+    state: RecordCheckState;
+    verdict: "same" | "different" | "unconfirmed" | null;
+    error?: string;
+  } | null;
+}
+
+/** Make the state of the background record checks known; the connection menu shows it. */
+export function publishRecordChecks(recordChecks: RecordChecks | null): void {
+  if (state.recordChecks === recordChecks) return;
+  state = { ...state, recordChecks };
   for (const listener of listeners) listener(state);
 }
 

@@ -175,17 +175,70 @@ function clusterId(records: GroupableRecord[]): string {
   return `dedupe:${stableHash(ids)}`;
 }
 
-export function dedupeGroupedRecords(records: GroupableRecord[]): DedupedRecordCluster[] {
+/**
+ * Duplicate decisions made by fhir4ds deduplication for one set of records.
+ * `covered` holds every record it examined. `clusterByRecordId` holds, for
+ * the records that are copies of another record, the cluster they belong to;
+ * a covered record with no entry was examined and is not a copy.
+ */
+export interface DuplicateLinks {
+  covered: ReadonlySet<string>;
+  clusterByRecordId: ReadonlyMap<string, number>;
+}
+
+export function duplicateLinksFromClusters(
+  recordIds: Iterable<string>,
+  clusters: Iterable<Iterable<string>>
+): DuplicateLinks {
+  const covered = new Set(recordIds);
+  const clusterByRecordId = new Map<string, number>();
+  let clusterNumber = 0;
+  for (const cluster of clusters) {
+    for (const id of cluster) {
+      covered.add(id);
+      clusterByRecordId.set(id, clusterNumber);
+    }
+    clusterNumber += 1;
+  }
+  return { covered, clusterByRecordId };
+}
+
+/**
+ * Groups records that are copies of one record.
+ *
+ * Without `links`, the local rules in `recordsMatch` decide every pair.
+ *
+ * With `links`, records that fhir4ds examined are copies only when fhir4ds
+ * put them in one cluster. A decided record never joins a cluster that holds
+ * a decided record from another fhir4ds cluster. Pairs fhir4ds did not
+ * examine (for example a record the patient added) still use the local rules.
+ */
+export function dedupeGroupedRecords(records: GroupableRecord[], links?: DuplicateLinks | null): DedupedRecordCluster[] {
   const clusters: Array<{ records: GroupableRecord[]; reasons: string[] }> = [];
+  const isDecided = (record: GroupableRecord): boolean => links?.covered.has(record.id) === true;
+  const fhir4dsClusterOf = (record: GroupableRecord): number | undefined => links?.clusterByRecordId.get(record.id);
+  const firstLocalReason = (cluster: { records: GroupableRecord[] }, record: GroupableRecord): string | null =>
+    cluster.records.map((member) => recordsMatch(member, record)).find(Boolean) ?? null;
+
+  const joinReason = (cluster: { records: GroupableRecord[] }, record: GroupableRecord): string | null => {
+    if (!isDecided(record)) return firstLocalReason(cluster, record);
+    const decidedMembers = cluster.records.filter(isDecided);
+    if (decidedMembers.length === 0) return firstLocalReason(cluster, record);
+    const sharesCluster = fhir4dsClusterOf(record) !== undefined &&
+      decidedMembers.every((member) => fhir4dsClusterOf(member) === fhir4dsClusterOf(record));
+    return sharesCluster ? "Copies of one record, found by fhir4ds deduplication." : null;
+  };
 
   for (const record of records.filter((candidate) => !candidate.hidden)) {
-    const match = clusters.find((cluster) => cluster.records.some((candidate) => recordsMatch(candidate, record)));
+    let reason: string | null = null;
+    const match = clusters.find((cluster) => {
+      reason = joinReason(cluster, record);
+      return reason !== null;
+    });
     if (!match) {
       clusters.push({ records: [record], reasons: [] });
       continue;
     }
-
-    const reason = match.records.map((candidate) => recordsMatch(candidate, record)).find(Boolean);
     match.records.push(record);
     if (reason) match.reasons.push(reason);
   }

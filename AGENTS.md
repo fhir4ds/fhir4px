@@ -48,3 +48,11 @@ peer-to-peer.
   tests/e2e/prebuilt-sql.spec.ts`: it proves the generated files equal the
   live translation. The Pages workflow uses prebuilt only when the repository
   variable `SQL_MODE` is `prebuilt`.
+- fhir4ds deduplication and patient matching run in a background worker with
+  its own Pyodide (src/lib/engine/fhir4ds.worker.ts). The page is
+  cross-origin isolated, and a browser then refuses to start a worker whose
+  script file lacks the COOP/COEP headers, so the worker is started from an
+  in-memory script that imports the worker module
+  (src/lib/engine/fhir4ds-client.ts) — keep it that way on any host. Records
+  are first shown with the fast local rule (src/lib/fhir/dedupe.ts); once the
+  worker reports, fhir4ds decides for every record it examined.
