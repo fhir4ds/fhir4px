@@ -151,7 +151,13 @@ export default defineConfig(({ mode }) => {
       engineIsolationHeaders(),
       terminologyProxy(),
       VitePWA({
-        registerType: "prompt",
+        // A new version takes over as soon as it installs (this adds
+        // skipWaiting and clientsClaim to the generated service worker). The
+        // page then reloads itself once, to run the new version; the reload is
+        // ours (src/lib/pwa/register-sw.ts), so it never lands on the SMART
+        // callback page or in the middle of an export.
+        registerType: "autoUpdate",
+        injectRegister: null,
         strategies: "generateSW",
         manifest: {
           name: "fhir4px",

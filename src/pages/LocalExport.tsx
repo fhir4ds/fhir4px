@@ -39,6 +39,7 @@ import { printIpsHtml } from "../lib/fhir/ips-html";
 import { extractDistinctCodes, resolveOmopConcepts } from "../lib/fhir/omop-concepts";
 import { omopResultToCsv, runOmopExport, type OmopTableResult } from "../lib/fhir/omop-tables";
 import { engineLoadResources } from "../lib/engine/engine-client";
+import { holdAppUpdate } from "../lib/pwa/update-hold";
 import { loadSessionResources } from "../lib/engine/session-data";
 import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 import { localVault } from "../lib/vault/store";
@@ -99,6 +100,13 @@ export function LocalExport() {
       if (exportState?.downloadUrl) URL.revokeObjectURL(exportState.downloadUrl);
     };
   }, [exportState?.downloadUrl]);
+
+  // An export that a version reload interrupted would leave the user with
+  // nothing: keep the update waiting while one is being built.
+  useEffect(() => {
+    if (!busy) return;
+    return holdAppUpdate();
+  }, [busy]);
 
   useEffect(() => {
     const testFile = new File(["{}"], "fhir4px-test.json", { type: "application/json" });
