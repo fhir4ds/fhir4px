@@ -173,7 +173,10 @@ export default defineConfig(({ mode }) => {
         workbox: {
           cleanupOutdatedCaches: true,
           globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
-          globIgnores: ["**/assets/webllm-*.js"],
+          // cicada.js (CDC immunization forecast, ~4.8 MB) exceeds Workbox's
+          // 2 MiB precache limit; like the WebLLM bundles it is fetched on
+          // first use rather than precached.
+          globIgnores: ["**/assets/webllm-*.js", "**/vendor/cicada/**"],
           navigateFallback: "/index.html",
           runtimeCaching: [
             {

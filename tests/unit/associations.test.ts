@@ -149,7 +149,7 @@ function group(overrides: Partial<PatientFriendlyGroup>): PatientFriendlyGroup {
 }
 
 function record(overrides: Partial<GroupableRecord> & Pick<GroupableRecord, "id" | "resourceType">): GroupableRecord {
-  return { source: "provider", ...overrides };
+  return { source: "provider", sourceLabel: "Record", ...overrides };
 }
 
 describe("association resolution + matching", () => {

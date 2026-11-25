@@ -60,7 +60,6 @@ import {
   dedupeGroupedRecords,
   recordQualityScore,
   type DedupedRecordCluster,
-  type GroupableResourceType,
 } from "../lib/fhir/dedupe";
 import {
   buildGroupableRecords,
@@ -74,6 +73,7 @@ import {
 import type {
   CanonicalCode,
   GroupableRecord,
+  GroupableResourceType,
   PatientFriendlyGroup,
   PatientGroupingResult,
   PatientObservationBucket
