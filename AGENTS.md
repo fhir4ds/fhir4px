@@ -56,3 +56,16 @@ peer-to-peer.
   (src/lib/engine/fhir4ds-client.ts) — keep it that way on any host. Records
   are first shown with the fast local rule (src/lib/fhir/dedupe.ts); once the
   worker reports, fhir4ds decides for every record it examined.
+- The patient switcher (app header) appears when the connected portals belong
+  to more than one person. Choosing a person scopes records, care gaps,
+  measures and cohorts to them: the Records page publishes the choice and the
+  person's source ids, and scopes the quality evaluation with
+  `setQualityScopeResources` (src/lib/fhir/quality-run.ts) instead of the
+  active SMART session. "All patients" keeps measures on that session, i.e.
+  the most recently connected portal. Every switch re-runs the measures and
+  cohorts (about 10-15 s in the sandbox).
+- The service worker updates itself (`registerType: "autoUpdate"`, registered
+  by hand in src/lib/pwa/register-sw.ts): a returning page reloads once when a
+  new build takes over. It never reloads the first visit, /smart/callback, or
+  while something holds the update (src/lib/pwa/update-hold.ts — the export
+  page holds it while building).
