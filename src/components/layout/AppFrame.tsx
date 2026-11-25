@@ -17,9 +17,16 @@ import { getOrCreateSessionVaultKey } from "../../lib/vault/keys";
 import AppHeader from "../AppHeader";
 import AppNav from "../AppNav";
 
+// Site pages: public text pages whose content is loose (not inside a bordered
+// card). The side navigation switches between parts of a loaded patient's
+// record, so it has no job here, and its border would have nothing to line
+// up with.
+const SITE_PATHS: ReadonlySet<string> = new Set(["/", "/docs", "/terms", "/privacy"]);
+
 export function AppFrame({ children }: PropsWithChildren) {
   const location = useLocation();
   const navigate = useNavigate();
+  const isSitePage = SITE_PATHS.has(location.pathname);
 
   // Preload embedding model eagerly (needed for classification) and patient-
   // friendly lookup tables lazily (needed for deterministic naming). The model
@@ -134,8 +141,8 @@ export function AppFrame({ children }: PropsWithChildren) {
         maxWidth="lg"
         sx={{ display: "flex", flexDirection: "row", alignItems: "stretch", flexGrow: 1, pt: 3, pb: 3 }}
       >
-        <AppNav />
-        <Box sx={{ flexGrow: 1, minWidth: 0, ml: 2 }}>{children}</Box>
+        {!isSitePage && <AppNav />}
+        <Box sx={{ flexGrow: 1, minWidth: 0, ml: isSitePage ? 0 : 2 }}>{children}</Box>
       </Container>
     </Box>
   );
