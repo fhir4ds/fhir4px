@@ -34,6 +34,7 @@ import { LLM_ENABLED } from "../lib/llm/config";
 import { buildAuthorizeUrl } from "../lib/smart/oauth";
 import { fetchSandboxPatients, configuredSandboxPatients, mergeSandboxPatients } from "../lib/smart/sandbox";
 import { upsertLocalTestSource } from "../lib/smart/sources";
+import { notifyLocalDataChanged } from "../lib/app/data-events";
 import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 
 interface ProviderResultGroup {
@@ -291,6 +292,9 @@ export function ProviderSearch() {
           patientId: selectedPatientId,
           nextRoute: "/records"
         });
+        // The Records page may already be mounted (it is kept alive) and read
+        // the vault long ago: tell it there is a new portal to fetch.
+        notifyLocalDataChanged();
         navigate("/records");
         if (LLM_ENABLED) window.setTimeout(() => void preloadNamingModel(), 0);
         return;
