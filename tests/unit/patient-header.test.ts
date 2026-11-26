@@ -35,9 +35,8 @@ describe("patientHeaderInfo", () => {
       birthDate: `${birthDateYearsAgo(68)} (68)`,
       gender: "female",
       address: "912 Highway 14 · Cadillac, MI, 49601",
-      telecoms: ["phone: mobile: +1 231-666-6666", "email: grace@example.org"],
-      profileCount: 1,
-      otherPatients: 0
+      contacts: [{ system: "phone", value: "+1 231-666-6666" }, { system: "email", value: "grace@example.org" }],
+      profileCount: 1
     });
   });
 
@@ -47,7 +46,7 @@ describe("patientHeaderInfo", () => {
     expect(info).toMatchObject({
       name: "Longitudinal",
       gender: undefined,
-      telecoms: ["phone: mobile: +1 231-666-6666", "email: grace@example.org"]
+      contacts: [{ system: "phone", value: "+1 231-666-6666" }, { system: "email", value: "grace@example.org" }]
     });
   });
 
@@ -66,8 +65,7 @@ describe("headerPatientFor", () => {
   it("shows one portal's patient", () => {
     expect(headerPatientFor([patient({ birthDate })])).toMatchObject({
       name: "Grace Mensah",
-      profileCount: 1,
-      otherPatients: 0
+      profileCount: 1
     });
   });
 
@@ -76,18 +74,18 @@ describe("headerPatientFor", () => {
 
     expect(headerPatientFor([patient({ birthDate }), otherPortalCopy])).toMatchObject({
       name: "Grace Mensah",
-      profileCount: 2,
-      otherPatients: 0
+      profileCount: 2
     });
   });
 
-  it("counts portals that belong to someone else", () => {
+  it("keeps counting portal profiles when they are different people", () => {
     const someoneElse = patient({ id: "p2", name: [{ family: "Ross", given: ["Linda"] }], birthDate: "1969-04-27" });
 
+    // Who is who comes from groupProfilesByPatient: the header only counts
+    // profiles, and the selector lists the people.
     expect(headerPatientFor([patient({ birthDate }), someoneElse])).toMatchObject({
       name: "Grace Mensah",
-      profileCount: 2,
-      otherPatients: 1
+      profileCount: 2
     });
   });
 });
@@ -109,9 +107,9 @@ describe("groupProfilesByPatient", () => {
 
   it("keeps one identity per person and lists their portals", () => {
     const identities = groupProfilesByPatient([
-      { sourceId: "portal-a", sourceName: "Portal A", patient: grace },
-      { sourceId: "portal-b", sourceName: "Portal B", patient: linda },
-      { sourceId: "portal-c", sourceName: "Portal C", patient: { ...grace, id: "p3" } }
+      { sourceId: "portal-a", portalName: "Portal A", patient: grace },
+      { sourceId: "portal-b", portalName: "Portal B", patient: linda },
+      { sourceId: "portal-c", portalName: "Portal C", patient: { ...grace, id: "p3" } }
     ]);
 
     expect(identities.map((identity) => identity.name)).toEqual(["Grace Mensah", "Linda Ross"]);

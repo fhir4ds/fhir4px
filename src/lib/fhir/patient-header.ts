@@ -6,17 +6,22 @@
 
 import type { FhirResource } from "../smart/data";
 
+/** One contact detail, without the FHIR packaging the header does not need. */
+export interface PatientContact {
+  /** FHIR telecom system, e.g. "phone", "email", "sms". */
+  system: string;
+  value: string;
+}
+
 export interface PatientHeaderInfo {
   name: string;
   /** Date of birth with the patient's age, e.g. "1969-04-27 (57)". */
   birthDate?: string;
   gender?: string;
   address?: string;
-  telecoms: string[];
+  contacts: PatientContact[];
   /** Portal profiles behind the loaded records (more than one with several portals). */
   profileCount: number;
-  /** Profiles that belong to someone other than the first patient. */
-  otherPatients: number;
 }
 
 export function patientDisplayName(patient: FhirResource | null | undefined): string {
@@ -79,15 +84,13 @@ function patientAddressLabel(patient: FhirResource): string | undefined {
   return [...lines, locality].filter(Boolean).join(" · ") || undefined;
 }
 
-function patientTelecomLabels(patient: FhirResource): string[] {
+function patientContacts(patient: FhirResource): PatientContact[] {
   const telecoms = Array.isArray(patient.telecom) ? patient.telecom : [];
   return telecoms
     .flatMap((entry) => {
-      const telecom = entry as { system?: unknown; value?: unknown; use?: unknown };
+      const telecom = entry as { system?: unknown; value?: unknown };
       if (typeof telecom.value !== "string" || !telecom.value.trim()) return [];
-      const system = typeof telecom.system === "string" ? telecom.system : "contact";
-      const use = typeof telecom.use === "string" ? telecom.use : undefined;
-      return [[system, use, telecom.value].filter(Boolean).join(": ")];
+      return [{ system: typeof telecom.system === "string" ? telecom.system : "contact", value: telecom.value.trim() }];
     })
     .slice(0, 3);
 }
@@ -100,9 +103,8 @@ export function patientHeaderInfo(patient: FhirResource | null | undefined): Pat
     birthDate: patientBirthDateLabel(patient),
     gender: patientGenderLabel(patient),
     address: patientAddressLabel(patient),
-    telecoms: patientTelecomLabels(patient),
-    profileCount: 1,
-    otherPatients: 0
+    contacts: patientContacts(patient),
+    profileCount: 1
   };
 }
 
@@ -111,14 +113,11 @@ export function patientIdentityKey(patient: FhirResource): string {
   return `${patientDisplayName(patient).toLowerCase()}|${String(patient.birthDate ?? "")}`;
 }
 
-function samePatient(left: FhirResource, right: FhirResource): boolean {
-  return patientIdentityKey(left) === patientIdentityKey(right);
-}
-
 /** A portal profile: which portal a patient came from. */
 export interface PatientProfileLike {
   sourceId: string;
-  sourceName: string;
+  /** The portal's name, without the patient (the person is the identity). */
+  portalName: string;
   patient: FhirResource;
 }
 
@@ -156,18 +155,13 @@ export function groupProfilesByPatient<T extends PatientProfileLike>(profiles: T
 }
 
 /**
- * The patient the header shows for the loaded records. Portals that resolve
- * to the same person show that patient. When they are different people the
- * first patient is shown and the others are counted, so the header can say
- * "+1 source"; the connection menu lists every portal.
+ * The patient the header shows for the loaded records: the first portal's
+ * patient, with the number of portal profiles behind it. When the portals are
+ * different people the header also has a patient selector (groupProfilesByPatient).
  */
 export function headerPatientFor(patients: FhirResource[]): PatientHeaderInfo | null {
   const first = patients[0];
   const info = patientHeaderInfo(first);
   if (!first || !info) return null;
-  return {
-    ...info,
-    profileCount: patients.length,
-    otherPatients: patients.slice(1).filter((patient) => !samePatient(patient, first)).length
-  };
+  return { ...info, profileCount: patients.length };
 }

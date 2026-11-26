@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   completeConnection,
+  connectionChipText,
   getConnectionStatus,
   publishConnectionStatus,
   publishConnections,
@@ -14,7 +15,7 @@ import {
 import type { PatientHeaderInfo } from "../../src/lib/fhir/patient-header";
 
 function patient(name: string): PatientHeaderInfo {
-  return { name, telecoms: [], profileCount: 1, otherPatients: 0 };
+  return { name, contacts: [], profileCount: 1 };
 }
 
 function disconnect(): void {
@@ -131,6 +132,36 @@ describe("the header patient", () => {
 });
 
 // Keep this describe LAST in the file: the latch keeps module-level time state.
+describe("connectionChipText", () => {
+  const source = (id: string, recordCount?: number) => ({
+    id,
+    label: `SMART Dev Sandbox · Patient ${id}`,
+    providerLabel: "SMART Dev Sandbox",
+    status: "ready",
+    recordCount
+  });
+
+  it("keeps one portal's name and count", () => {
+    expect(connectionChipText([source("a", 9)], null)).toBe("SMART Dev Sandbox · 9 records");
+  });
+
+  it("leaves the count off one portal that has not delivered yet", () => {
+    expect(connectionChipText([source("a")], null)).toBe("SMART Dev Sandbox");
+  });
+
+  it("collapses several portals to a count, with the record count on screen", () => {
+    expect(connectionChipText([source("a", 250), source("b", 9)], 252)).toBe("2 portals · 252 records");
+  });
+
+  it("uses the singular for one record on screen", () => {
+    expect(connectionChipText([source("a", 2), source("b", 1)], 1)).toBe("2 portals · 1 record");
+  });
+
+  it("counts portals alone when no page has published a record count", () => {
+    expect(connectionChipText([source("a", 250), source("b", 9)], null)).toBe("2 portals");
+  });
+});
+
 describe("record checks", () => {
   it("reach the listeners and survive a status publish that does not mention them", () => {
     disconnect();

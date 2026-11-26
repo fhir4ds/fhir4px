@@ -29,6 +29,25 @@ export function sourceChipLabel(source: Pick<ConnectionStatusSource, "label" | "
   return `${source.label} · ${count.toLocaleString()} ${count === 1 ? "record" : "records"}`;
 }
 
+/**
+ * The header's single connection chip. One portal keeps its own name and
+ * count; several portals collapse to a portal count, because their names and
+ * per-portal counts neither identify the patient nor add up to the records on
+ * screen (deduplication and filters come after the fetch). `shownRecordCount`
+ * is that on-screen count, when a page has published it.
+ */
+export function connectionChipText(
+  sources: ConnectionStatusSource[],
+  shownRecordCount: number | null
+): string {
+  if (sources.length === 1) {
+    return sourceChipLabel({ label: sources[0].providerLabel ?? sources[0].label, recordCount: sources[0].recordCount });
+  }
+  const portals = `${sources.length} portals`;
+  if (shownRecordCount === null) return portals;
+  return `${portals} · ${shownRecordCount.toLocaleString()} ${shownRecordCount === 1 ? "record" : "records"}`;
+}
+
 /** The patient's care gaps as the Records page computed them. */
 export interface CareGapsState {
   /** Open gaps, most urgent first (not capped). */

@@ -752,7 +752,8 @@ function groupStatusRollup(records: GroupableRecord[]): GroupStatusRollup {
 
 interface PatientProfile {
   sourceId: string;
-  sourceName: string;
+  /** The portal's name, without the patient: the person is the identity. */
+  portalName: string;
   patient: FhirResource;
 }
 
@@ -1357,7 +1358,7 @@ export function PatientExplorer() {
     () =>
       filteredSources.flatMap((source) => {
         const patient = sourceDatasets[source.id]?.patient;
-        return patient ? [{ sourceId: source.id, sourceName: sourceLabel(source), patient }] : [];
+        return patient ? [{ sourceId: source.id, portalName: providerLabel(source), patient }] : [];
       }),
     [filteredSources, sourceDatasets]
   );
@@ -4301,7 +4302,7 @@ export function PatientExplorer() {
       ...patientIdentities.map((identity) => ({
         id: identity.key,
         label: identity.name,
-        detail: [...new Set(identity.profiles.map((profile) => profile.sourceName))].join(", ")
+        detail: [...new Set(identity.profiles.map((profile) => profile.portalName))].join(", ")
       }))
     ];
     return { choices, selectedId: selectedPatientId };

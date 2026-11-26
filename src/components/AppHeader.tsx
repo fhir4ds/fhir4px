@@ -13,15 +13,15 @@
  * navigation pins below it instead of sliding underneath.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { Box, Button, Chip, Container, MenuItem, Select, Stack, Typography } from "@mui/material";
-import { Database, Settings } from "lucide-react";
+import { Database, Globe, Mail, MapPin, Phone, Settings } from "lucide-react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import ConnectionChip from "./ConnectionChip";
 import {
+  connectionChipText,
   dispatchRecordsPageCommand,
   getConnectionStatus,
-  sourceChipLabel,
   subscribeConnectionStatus,
   type ConnectionStatusState,
   type PatientChoice
@@ -34,6 +34,26 @@ const navItems = [
 
 /** CSS variable the side navigation reads to pin below the header. */
 const HEIGHT_VARIABLE = "--app-header-h";
+
+function contactIcon(system: string): ReactElement {
+  if (system === "phone") return <Phone size={13} />;
+  if (system === "email") return <Mail size={13} />;
+  return <Globe size={13} />;
+}
+
+/** Address, phone or email: one quiet line of text rather than a chip each. */
+function ContactDetail({ icon, text }: { icon: ReactElement; text: string }) {
+  return (
+    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0, maxWidth: "100%" }}>
+      <Box component="span" aria-hidden sx={{ display: "flex", color: "text.secondary", flexShrink: 0 }}>
+        {icon}
+      </Box>
+      <Typography variant="caption" color="text.secondary" noWrap title={text} sx={{ minWidth: 0 }}>
+        {text}
+      </Typography>
+    </Stack>
+  );
+}
 
 /** Select value for "every patient together". */
 const ALL_PATIENTS = "__all__";
@@ -113,7 +133,12 @@ export default function AppHeader() {
   const selection = status.patientSelection && status.patientSelection.choices.length > 0 ? status.patientSelection : null;
   // Several people connected and none chosen: the name is not one person's.
   const showingAllPatients = selection !== null && selection.selectedId === null;
-  const showContactLine = patient !== null && (Boolean(patient.address) || patient.telecoms.length > 0);
+  // What the pages are showing, as the Records page publishes it. The sum of
+  // each portal's fetched records is a different, larger number.
+  const shownRecordCount = status.recordTabs?.tabs.find((tab) => tab.id === "PatientSummary")?.count ?? null;
+  // A mixed view of several people must not show the first one's details.
+  const showContactLine =
+    patient !== null && !showingAllPatients && (Boolean(patient.address) || patient.contacts.length > 0);
 
   return (
     <Box
@@ -178,13 +203,9 @@ export default function AppHeader() {
               {!showingAllPatients && patient.gender && (
                 <Chip size="small" variant="outlined" label={patient.gender} />
               )}
-              {patient.otherPatients > 0 && (
-                <Chip
-                  size="small"
-                  label={`+${patient.otherPatients} source${patient.otherPatients === 1 ? "" : "s"}`}
-                />
-              )}
-              {patient.profileCount > 1 && (
+              {/* With several people the patient selector already says so; this
+                  chip is only informative when every portal is the same person. */}
+              {selection === null && patient.profileCount > 1 && (
                 <Chip size="small" label={`${patient.profileCount} portal profiles`} />
               )}
             </Stack>
@@ -198,9 +219,13 @@ export default function AppHeader() {
               useFlexGap
               sx={{ gridColumn: { md: "2 / span 2" }, gridRow: { md: 2 }, minWidth: 0, rowGap: 0.5, mt: { md: 0.5 } }}
             >
-              {patient.address && <Chip size="small" variant="outlined" label={patient.address} />}
-              {patient.telecoms.map((label) => (
-                <Chip key={label} size="small" variant="outlined" label={label} />
+              {patient.address && <ContactDetail icon={<MapPin size={13} />} text={patient.address} />}
+              {patient.contacts.map((contact) => (
+                <ContactDetail
+                  key={`${contact.system}:${contact.value}`}
+                  icon={contactIcon(contact.system)}
+                  text={contact.value}
+                />
               ))}
             </Stack>
           )}
@@ -221,17 +246,7 @@ export default function AppHeader() {
               ) : status.sources.length === 0 ? (
                 <ConnectionChip label="Connect portal" />
               ) : (
-                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                  {status.sources.map((source) => (
-                    <ConnectionChip
-                      key={source.id}
-                      label={sourceChipLabel({
-                        label: source.providerLabel ?? source.label,
-                        recordCount: source.recordCount
-                      })}
-                    />
-                  ))}
-                </Stack>
+                <ConnectionChip label={connectionChipText(status.sources, shownRecordCount)} />
               )}
             </Box>
             {navItems.map((item) => (
