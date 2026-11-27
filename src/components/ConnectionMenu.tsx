@@ -3,8 +3,8 @@
  * connection control: the header's connection chip and the top-bar pill on
  * pages without one. It lists the portals with their own refresh and delete
  * actions, a one-line US Core data summary that opens the full table, the
- * state of the duplicate check, Add portal, and Clear local data for every
- * portal at once. Choosing which patient is shown belongs to the header, not
+ * state of the duplicate check, Add portal, and deleting every portal's data
+ * at once. Choosing which patient is shown belongs to the header, not
  * here.
  */
 
@@ -274,28 +274,32 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
               Add portal
             </Button>
             {patientPeople && patientPeople.overrideCount > 0 && (
-              <Button
-                size="small"
-                onClick={() => {
-                  onClose();
-                  dispatchRecordsPageCommand({ kind: "resetPatientIdentity" });
-                }}
-                sx={{ textTransform: "none" }}
-              >
-                Reset to matching
-              </Button>
+              <Tooltip title="Follow the matching again">
+                <Button
+                  size="small"
+                  aria-label="Reset to matching"
+                  onClick={() => {
+                    onClose();
+                    dispatchRecordsPageCommand({ kind: "resetPatientIdentity" });
+                  }}
+                  sx={{ textTransform: "none" }}
+                >
+                  Reset
+                </Button>
+              </Tooltip>
             )}
             {status.sources.length > 0 && (
               <Button
                 size="small"
                 color="error"
+                aria-label="Delete all portals' data"
                 onClick={() => {
                   onClose();
                   setConfirmOpen(true);
                 }}
                 sx={{ textTransform: "none" }}
               >
-                Delete all portals' data
+                Delete all
               </Button>
             )}
           </Stack>
