@@ -20,10 +20,12 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  IconButton,
   MenuItem,
   Popover,
   Select,
   Stack,
+  Tooltip,
   Typography
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
@@ -77,7 +79,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
   const working = status.phase === "loading" || status.phase === "evaluating";
   const usCore = status.usCore && status.usCore.length > 0 ? status.usCore : null;
   const usCoreLine = useMemo(() => (usCore ? usCoreSummaryText(summarizeUsCore(usCore)) : null), [usCore]);
-  const placements = status.patientPlacements ?? null;
+  const patientPeople = status.patientPeople ?? null;
   const mismatch = status.patientMismatch ?? null;
   const dedupCheck = status.recordChecks?.dedup ?? null;
   const duplicates = dedupCheck?.state === "done" ? dedupCheck.duplicates ?? null : null;
@@ -104,7 +106,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
         onClose={onClose}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
-        slotProps={{ paper: { sx: { width: 380, p: 2 } } }}
+        slotProps={{ paper: { sx: { width: 440, p: 2 } } }}
       >
         <Stack spacing={1.5}>
           {working && <CircularProgress size={18} sx={{ alignSelf: "flex-start" }} />}
@@ -120,13 +122,18 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
           ) : (
             <Stack spacing={1.75}>
               {status.sources.map((source) => {
-                const placement = placements?.[source.id];
+                const placement = patientPeople?.placements[source.id];
+                const placedWith =
+                  placement?.kind === "sameAs"
+                    ? patientPeople?.people.find((person) => person.sourceIds.includes(placement.sourceId))
+                        ?.sourceIds[0] ?? placement.sourceId
+                    : null;
                 const value =
                   placement === undefined || placement.kind === "auto"
                     ? "auto"
                     : placement.kind === "alone"
                       ? "alone"
-                      : placement.sourceId;
+                      : placedWith;
                 return (
                   <Stack key={source.id} spacing={0.5}>
                     <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
@@ -151,70 +158,69 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                         {portalDetail(source)}
                       </Typography>
                     </Stack>
-                    <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-                      {placements && (
-                        <>
-                          <Typography variant="caption" color="text.secondary">
-                            Person
-                          </Typography>
-                          <Select
-                            size="small"
-                            variant="standard"
-                            disableUnderline
-                            displayEmpty
-                            value={value}
-                            onChange={(event) => {
-                              const next = String(event.target.value);
-                              dispatchRecordsPageCommand({
-                                kind: "setPatientIdentity",
-                                sourceId: source.id,
-                                placement:
-                                  next === "auto"
-                                    ? { kind: "auto" }
-                                    : next === "alone"
-                                      ? { kind: "alone" }
-                                      : { kind: "sameAs", sourceId: next }
-                              });
-                            }}
-                            inputProps={{ "aria-label": `Person for ${source.label}` }}
-                            sx={{ maxWidth: 190, fontSize: "0.8rem" }}
-                          >
-                            <MenuItem value="auto">Automatic (as matched)</MenuItem>
-                            <MenuItem value="alone">This portal only</MenuItem>
-                            {status.sources
-                              .filter((other) => other.id !== source.id)
-                              .map((other) => (
-                                <MenuItem key={other.id} value={other.id}>
-                                  Same person as {other.label}
-                                </MenuItem>
-                              ))}
-                          </Select>
-                        </>
+                    <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
+                      {patientPeople && (
+                        <Select
+                          size="small"
+                          variant="standard"
+                          disableUnderline
+                          displayEmpty
+                          value={value}
+                          onChange={(event) => {
+                            const next = String(event.target.value);
+                            dispatchRecordsPageCommand({
+                              kind: "setPatientIdentity",
+                              sourceId: source.id,
+                              placement:
+                                next === "auto"
+                                  ? { kind: "auto" }
+                                  : next === "alone"
+                                    ? { kind: "alone" }
+                                    : { kind: "sameAs", sourceId: next }
+                            });
+                          }}
+                          inputProps={{ "aria-label": `Person for ${source.label}` }}
+                          sx={{ flex: 1, minWidth: 150, maxWidth: 240, fontSize: "0.8rem" }}
+                        >
+                          <MenuItem value="auto">Automatic</MenuItem>
+                          {patientPeople.people
+                            .filter((person) => !person.sourceIds.includes(source.id))
+                            .map((person) => (
+                              <MenuItem key={person.sourceIds[0]} value={person.sourceIds[0]}>
+                                Same as {person.label}
+                              </MenuItem>
+                            ))}
+                          <MenuItem value="alone">Different person</MenuItem>
+                        </Select>
                       )}
-                      <Button
-                        size="small"
-                        startIcon={<RefreshCw size={14} />}
-                        onClick={() => {
-                          onClose();
-                          dispatchRecordsPageCommand({ kind: "refreshSource", sourceId: source.id });
-                        }}
-                        sx={{ textTransform: "none", ml: "auto" }}
-                      >
-                        Refresh
-                      </Button>
-                      <Button
-                        size="small"
-                        color="error"
-                        startIcon={<Trash2 size={14} />}
-                        onClick={() => {
-                          onClose();
-                          setDeleteError(null);
-                          setSourceToDelete(source);
-                        }}
-                        sx={{ textTransform: "none" }}
-                      >
-                        Delete
-                      </Button>
+                      <Stack direction="row" spacing={0.25} sx={{ ml: "auto", flexShrink: 0 }}>
+                        <Tooltip title="Refresh this portal">
+                          <IconButton
+                            size="small"
+                            aria-label={`Refresh ${source.label}`}
+                            onClick={() => {
+                              onClose();
+                              dispatchRecordsPageCommand({ kind: "refreshSource", sourceId: source.id });
+                            }}
+                          >
+                            <RefreshCw size={16} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete this portal's data">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            aria-label={`Delete ${source.label}`}
+                            onClick={() => {
+                              onClose();
+                              setDeleteError(null);
+                              setSourceToDelete(source);
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
                     </Stack>
                   </Stack>
                 );

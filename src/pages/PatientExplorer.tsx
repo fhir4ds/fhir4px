@@ -148,7 +148,7 @@ import {
   publishConnectionStatus,
   publishPatient,
   publishPatientMismatch,
-  publishPatientPlacements,
+  publishPatientPeople,
   publishPatientSelection,
   publishRecordChecks,
   registerRecordsPageActions,
@@ -156,6 +156,7 @@ import {
   type ConnectionStatusSource,
   type PatientChoice,
   type PatientMismatch,
+  type PatientPeopleState,
   type PatientSelectionState,
   type RecordChecks
 } from "../lib/app/connection-status";
@@ -4342,18 +4343,29 @@ export function PatientExplorer() {
     publishPatientSelection(patientSelection);
   }, [patientSelection]);
 
-  // Placements are useful from the second portal on, whatever the groups say.
-  const patientPlacements = useMemo<Record<string, PatientIdentityPlacement> | null>(() => {
+  // The person control is useful from the second portal on, whatever the
+  // groups say: two portals of the same person still need to be separable.
+  const patientPeople = useMemo<PatientPeopleState | null>(() => {
     if (sources.length < 2) return null;
     const placements: Record<string, PatientIdentityPlacement> = {};
     for (const [sourceId, override] of identityOverrides) {
       placements[sourceId] = override.sameAs === null ? { kind: "alone" } : { kind: "sameAs", sourceId: override.sameAs };
     }
-    return placements;
-  }, [sources.length, identityOverrides]);
+    // Two people with the same name are told apart by their portals.
+    const nameCounts = new Map<string, number>();
+    for (const identity of patientIdentities) nameCounts.set(identity.name, (nameCounts.get(identity.name) ?? 0) + 1);
+    const people = patientIdentities.map((identity) => ({
+      label:
+        (nameCounts.get(identity.name) ?? 0) > 1
+          ? `${identity.name} (${[...new Set(identity.profiles.map((profile) => profile.portalName))].join(", ")})`
+          : identity.name,
+      sourceIds: identity.profiles.map((profile) => profile.sourceId)
+    }));
+    return { placements, people };
+  }, [sources.length, identityOverrides, patientIdentities]);
   useEffect(() => {
-    publishPatientPlacements(patientPlacements);
-  }, [patientPlacements]);
+    publishPatientPeople(patientPeople);
+  }, [patientPeople]);
 
   // A hint, not a state: it appears only while the shown person's portals are
   // all left to the automatic decision and the matching disagrees with it.

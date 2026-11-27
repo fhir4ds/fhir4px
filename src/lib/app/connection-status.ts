@@ -72,6 +72,14 @@ export interface RecordTabsState {
   activeTabId: string;
 }
 
+/** What the connection menu needs to show and edit a portal's person. */
+export interface PatientPeopleState {
+  /** Draft placements by portal id; a portal without an entry is automatic. */
+  placements: Record<string, PatientIdentityPlacement>;
+  /** One entry per person; `sourceIds` are the portals whose patients are theirs. */
+  people: Array<{ label: string; sourceIds: string[] }>;
+}
+
 /** The shown person's portals, as fhir4ds matching sees them. */
 export interface PatientMismatch {
   portalCount: number;
@@ -116,9 +124,9 @@ export interface ConnectionStatusState {
   /** The patient switcher: several people are connected. Null when a single
    * person is loaded (or nothing is). */
   patientSelection?: PatientSelectionState | null;
-  /** Where the user has said one portal's patient belongs, by portal id.
-   * Portals without an entry follow the automatic decision. */
-  patientPlacements?: Record<string, PatientIdentityPlacement> | null;
+  /** The portals' people, for the connection menu's person control:
+   * where each portal was placed by hand, and the people to place it with. */
+  patientPeople?: PatientPeopleState | null;
   /** Set when the portals of the person being shown disagree with fhir4ds
    * patient matching, and none of them has been placed by hand. */
   patientMismatch?: PatientMismatch | null;
@@ -162,7 +170,7 @@ function emit(next: ConnectionStatusState): void {
     patient: speak("patient"),
     recordChecks: speak("recordChecks"),
     patientSelection: speak("patientSelection"),
-    patientPlacements: speak("patientPlacements"),
+    patientPeople: speak("patientPeople"),
     patientMismatch: speak("patientMismatch")
   };
   for (const listener of listeners) listener(state);
@@ -309,10 +317,10 @@ export function publishPatientMismatch(mismatch: PatientMismatch | null): void {
   for (const listener of listeners) listener(state);
 }
 
-/** Make the user's portal placements known; the connection menu edits them. */
-export function publishPatientPlacements(placements: Record<string, PatientIdentityPlacement> | null): void {
-  if (state.patientPlacements === placements) return;
-  state = { ...state, patientPlacements: placements };
+/** Make the people and the portal placements known; the connection menu edits them. */
+export function publishPatientPeople(patientPeople: PatientPeopleState | null): void {
+  if (state.patientPeople === patientPeople) return;
+  state = { ...state, patientPeople };
   for (const listener of listeners) listener(state);
 }
 
