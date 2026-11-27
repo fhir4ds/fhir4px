@@ -6,6 +6,12 @@
  * discovered via the HF API file listing.
  */
 
+import {
+  markRuntimeArtifactsUnavailable,
+  runtimeArtifactsUnavailable,
+  withArtifactDeadline
+} from "./runtime-artifacts";
+
 const TERM_BASE = "https://huggingface.co/fhir4ds/terminology/resolve/main";
 const TERM_API = "https://huggingface.co/api/models/fhir4ds/terminology";
 
@@ -99,19 +105,24 @@ function toValueSetLookup(concepts: ValueSetConcept[]): ValueSetLookup {
  * lexical.ts); this artifact covers the canonical codes themselves.
  */
 export function loadValueSets(options: { fetcher?: typeof fetch } = {}): Promise<ValueSetLookup> {
+  if (runtimeArtifactsUnavailable()) return Promise.resolve({});
   if (valueSetsPromise) return valueSetsPromise;
   const fetcher = options.fetcher ?? fetch;
-  valueSetsPromise = (async () => {
-    const release = await resolveTerminologyRelease("canonical", "value_sets.json", fetcher);
-    const response = await fetcher(terminologyArtifactUrl("canonical", release, "value_sets.json"), {
-      cache: "force-cache"
-    });
-    if (!response.ok) throw new Error(`value_sets unavailable: ${response.status} (release ${release})`);
-    const concepts = (await response.json()) as ValueSetConcept[];
-    return toValueSetLookup(concepts);
-  })().catch((error) => {
-    // Offline-tolerant: shard + display_names naming stays functional.
+  valueSetsPromise = withArtifactDeadline(
+    (async () => {
+      const release = await resolveTerminologyRelease("canonical", "value_sets.json", fetcher);
+      const response = await fetcher(terminologyArtifactUrl("canonical", release, "value_sets.json"), {
+        cache: "force-cache"
+      });
+      if (!response.ok) throw new Error(`value_sets unavailable: ${response.status} (release ${release})`);
+      const concepts = (await response.json()) as ValueSetConcept[];
+      return toValueSetLookup(concepts);
+    })()
+  ).catch((error) => {
+    // Offline-tolerant: shard + display_names naming stays functional, and the
+    // rest of the session does not wait for these artifacts again.
     valueSetsPromise = null;
+    markRuntimeArtifactsUnavailable();
     throw error;
   });
   return valueSetsPromise;

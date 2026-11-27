@@ -13,6 +13,11 @@
  */
 
 import { resolveTerminologyRelease, terminologyArtifactUrl } from "./valueSets";
+import {
+  markRuntimeArtifactsUnavailable,
+  runtimeArtifactsUnavailable,
+  withArtifactDeadline
+} from "./runtime-artifacts";
 
 export type LexicalCategory = "medication" | "lab" | "condition" | "procedure" | "vaccine" | "body_structure";
 
@@ -45,18 +50,22 @@ export function loadLexicalIndex(
   category: LexicalCategory,
   options: { fetcher?: typeof fetch } = {}
 ): Promise<LexicalIndex> {
+  if (runtimeArtifactsUnavailable()) return Promise.reject(new Error("lexical artifacts unavailable"));
   const cached = categoryPromises.get(category);
   if (cached) return cached;
   const fetcher = options.fetcher ?? fetch;
-  const promise = (async () => {
-    const release = await resolveTerminologyRelease("lexical", `${category}.json`, fetcher);
-    const response = await fetcher(terminologyArtifactUrl("lexical", release, `${category}.json`), {
-      cache: "force-cache"
-    });
-    if (!response.ok) throw new Error(`lexical ${category} unavailable: ${response.status}`);
-    return (await response.json()) as LexicalIndex;
-  })().catch((error) => {
+  const promise = withArtifactDeadline(
+    (async () => {
+      const release = await resolveTerminologyRelease("lexical", `${category}.json`, fetcher);
+      const response = await fetcher(terminologyArtifactUrl("lexical", release, `${category}.json`), {
+        cache: "force-cache"
+      });
+      if (!response.ok) throw new Error(`lexical ${category} unavailable: ${response.status}`);
+      return (await response.json()) as LexicalIndex;
+    })()
+  ).catch((error) => {
     categoryPromises.delete(category);
+    markRuntimeArtifactsUnavailable();
     throw error;
   });
   categoryPromises.set(category, promise);
@@ -88,7 +97,12 @@ export function loadLexicalCodeMap(
 ): Promise<Map<string, LexicalCodeEntry>> {
   const cached = codeMapPromises.get(category);
   if (cached) return cached;
-  const promise = loadLexicalIndex(category, options).then(lexicalCodeMapOf);
+  const promise = loadLexicalIndex(category, options)
+    .then(lexicalCodeMapOf)
+    .catch((error) => {
+      codeMapPromises.delete(category);
+      throw error;
+    });
   codeMapPromises.set(category, promise);
   return promise;
 }
