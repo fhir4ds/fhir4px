@@ -14,9 +14,9 @@
  */
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
-import { Box, Button, Chip, Container, MenuItem, Select, Stack, Typography } from "@mui/material";
-import { Database, Globe, Mail, MapPin, Phone } from "lucide-react";
-import { Link as RouterLink, useLocation } from "react-router-dom";
+import { Box, Chip, Container, MenuItem, Select, Stack, Typography } from "@mui/material";
+import { Globe, Mail, MapPin, Phone } from "lucide-react";
+import { Link as RouterLink } from "react-router-dom";
 import ConnectionChip from "./ConnectionChip";
 import {
   connectionChipText,
@@ -26,8 +26,6 @@ import {
   type ConnectionStatusState,
   type PatientChoice
 } from "../lib/app/connection-status";
-
-const navItems = [{ to: "/export", label: "Export", icon: <Database size={18} /> }];
 
 /** CSS variable the side navigation reads to pin below the header. */
 const HEIGHT_VARIABLE = "--app-header-h";
@@ -94,7 +92,6 @@ function PatientSelect({ choices, selectedId }: { choices: PatientChoice[]; sele
 export default function AppHeader() {
   const [status, setStatus] = useState<ConnectionStatusState>(getConnectionStatus);
   useEffect(() => subscribeConnectionStatus(setStatus), []);
-  const location = useLocation();
   const rootRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -234,18 +231,6 @@ export default function AppHeader() {
                 <ConnectionChip label={connectionChipText(status.sources, shownRecordCount)} />
               )}
             </Box>
-            {navItems.map((item) => (
-              <Button
-                key={item.to}
-                component={RouterLink}
-                to={item.to}
-                startIcon={item.icon}
-                variant={location.pathname === item.to ? "contained" : "outlined"}
-                size="small"
-              >
-                {item.label}
-              </Button>
-            ))}
           </Stack>
         </Box>
       </Container>

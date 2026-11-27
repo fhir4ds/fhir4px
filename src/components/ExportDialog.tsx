@@ -1,16 +1,32 @@
+/**
+ * Export — the four ways data leaves the app: the encrypted Bundle, an IPS
+ * document, the OMOP CDM tables, and the reverse (importing a Bundle). It is a
+ * dialog rather than a page because it is a task: the record list stays behind
+ * it, and the result (download, key, QR) survives switching tabs.
+ *
+ * While a job runs the dialog cannot be dismissed by a click outside or Escape,
+ * and Close is disabled, so a bundle or an extraction cannot be killed by a
+ * stray click.
+ */
+
 import {
   Alert,
   Box,
   Button,
-  Card,
-  CardContent,
   Checkbox,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   FormControlLabel,
   LinearProgress,
   MenuItem,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Typography
 } from "@mui/material";
@@ -52,6 +68,8 @@ const DEFAULT_RESOURCE_TYPES: readonly MvpResourceType[] = [
   "Observation"
 ];
 
+type ExportTab = "bundle" | "ips" | "omop" | "import";
+
 interface ExportState {
   downloadUrl: string;
   fileName: string;
@@ -71,7 +89,8 @@ interface ImportState {
   resourceTypes: string[];
 }
 
-export function LocalExport() {
+export default function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [tab, setTab] = useState<ExportTab>("bundle");
   const [selectedResourceTypes, setSelectedResourceTypes] = useState<readonly MvpResourceType[]>(DEFAULT_RESOURCE_TYPES);
   const [includePatches, setIncludePatches] = useState(true);
   const [lookbackDays, setLookbackDays] = useState<number | null>(365);
@@ -83,6 +102,12 @@ export function LocalExport() {
   const [importKey, setImportKey] = useState("");
   const [importError, setImportError] = useState<string | null>(null);
   const [importState, setImportState] = useState<ImportState | null>(null);
+  const [omopState, setOmopState] = useState<{
+    results: OmopTableResult[];
+    resolved: number;
+    unmatched: number;
+    mapUnavailable: boolean;
+  } | null>(null);
 
   const selectedSet = useMemo(() => new Set(selectedResourceTypes), [selectedResourceTypes]);
 
@@ -269,8 +294,6 @@ export function LocalExport() {
     }
   }
 
-  const [omopState, setOmopState] = useState<{ results: OmopTableResult[]; resolved: number; unmatched: number; mapUnavailable: boolean } | null>(null);
-
   async function buildOmopExport() {
     setBusy(true);
     setError(null);
@@ -288,7 +311,7 @@ export function LocalExport() {
 
       setStatus("OMOP: extracting CDM tables via the fhir4ds view engine…");
       const outcome = await runOmopExport(resources, resolution);
-      const okTables = outcome.results.filter((r) => !r.error).length;
+      const okTables = outcome.results.filter((result) => !result.error).length;
       setOmopState({
         results: outcome.results,
         resolved: outcome.resolved,
@@ -312,240 +335,300 @@ export function LocalExport() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `omop_${table.id.replace('-omop', '')}.csv`;
+    anchor.download = `omop_${table.id.replace("-omop", "")}.csv`;
     anchor.click();
     globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        <Stack spacing={3}>
-          <Typography variant="h2">Local encrypted Bundle</Typography>
-          <Typography color="text.secondary">{status}</Typography>
+    <Dialog
+      open={open}
+      maxWidth="md"
+      fullWidth
+      onClose={(_event, reason) => {
+        // A running job must not be dismissed by a stray click.
+        if (busy) return;
+        if (reason === "backdropClick" || reason === "escapeKeyDown") return;
+        onClose();
+      }}
+      PaperProps={{ sx: { maxHeight: "85vh" } }}
+    >
+      <DialogTitle sx={{ pb: 0 }}>
+        <Typography variant="h6" component="div" fontWeight={700}>
+          Export
+        </Typography>
+        <Tabs value={tab} onChange={(_event, next: ExportTab) => setTab(next)} variant="fullWidth" sx={{ mt: 1 }}>
+          <Tab value="bundle" label="Bundle" />
+          <Tab value="ips" label="IPS" />
+          <Tab value="omop" label="OMOP" />
+          <Tab value="import" label="Import" />
+        </Tabs>
+      </DialogTitle>
+
+      <DialogContent dividers>
+        <Stack spacing={2}>
           {busy && <LinearProgress />}
           {error && <Alert severity="error">{error}</Alert>}
 
-          <Stack spacing={1}>
-            <Typography fontWeight={700}>Included resources</Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
-              {MVP_RESOURCE_TYPES.map((resourceType) => (
+          {tab === "bundle" && (
+            <Stack spacing={2}>
+              <Stack spacing={1}>
+                <Typography fontWeight={700}>Included resources</Typography>
+                <Stack direction="row" flexWrap="wrap" gap={1}>
+                  {MVP_RESOURCE_TYPES.map((resourceType) => (
+                    <FormControlLabel
+                      key={resourceType}
+                      control={
+                        <Checkbox
+                          checked={selectedSet.has(resourceType)}
+                          disabled={resourceType === "Patient" || busy}
+                          onChange={() => toggleResource(resourceType)}
+                        />
+                      }
+                      label={resourceType}
+                    />
+                  ))}
+                </Stack>
                 <FormControlLabel
-                  key={resourceType}
                   control={
                     <Checkbox
-                      checked={selectedSet.has(resourceType)}
-                      disabled={resourceType === "Patient" || busy}
-                      onChange={() => toggleResource(resourceType)}
+                      checked={includePatches}
+                      disabled={busy}
+                      onChange={(event) => setIncludePatches(event.target.checked)}
                     />
                   }
-                  label={resourceType}
+                  label="Include patient corrections"
                 />
-              ))}
-            </Stack>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={includePatches}
+                <TextField
+                  select
+                  label="Date range"
+                  value={lookbackDays ?? "all"}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setLookbackDays(value === "all" ? null : Number(value));
+                  }}
                   disabled={busy}
-                  onChange={(event) => setIncludePatches(event.target.checked)}
-                />
-              }
-              label="Include patient corrections"
-            />
-            <TextField
-              select
-              label="Date range"
-              value={lookbackDays ?? "all"}
-              onChange={(event) => {
-                const value = event.target.value;
-                setLookbackDays(value === "all" ? null : Number(value));
-              }}
-              disabled={busy}
-              sx={{ maxWidth: 260 }}
-            >
-              <MenuItem value={365}>Last 12 months</MenuItem>
-              <MenuItem value={730}>Last 24 months</MenuItem>
-              <MenuItem value="all">All available dates</MenuItem>
-            </TextField>
-          </Stack>
+                  sx={{ maxWidth: 260 }}
+                >
+                  <MenuItem value={365}>Last 12 months</MenuItem>
+                  <MenuItem value={730}>Last 24 months</MenuItem>
+                  <MenuItem value="all">All available dates</MenuItem>
+                </TextField>
+              </Stack>
 
-          <Button
-            variant="contained"
-            startIcon={<FileLock2 size={18} />}
-            onClick={() => void buildExport()}
-            disabled={busy}
-          >
-            Build encrypted export
-          </Button>
-
-          <Divider />
-          <Stack spacing={1}>
-            <Typography fontWeight={700}>International Patient Summary</Typography>
-            <Typography color="text.secondary" variant="body2">
-              Standards-based summary document (IPS R4): medications, allergies, problem list, procedures,
-              immunizations, and results. Uses the same date range as above.
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <Button
-                variant="outlined"
-                startIcon={<Download size={18} />}
-                onClick={() => void buildIpsExport("json")}
+                variant="contained"
+                startIcon={<FileLock2 size={18} />}
+                onClick={() => void buildExport()}
                 disabled={busy}
+                sx={{ alignSelf: "flex-start" }}
               >
-                Download IPS JSON
+                Build encrypted export
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<FileText size={18} />}
-                onClick={() => void buildIpsExport("print")}
-                disabled={busy}
-              >
-                Print IPS (PDF)
-              </Button>
-            </Stack>
-          </Stack>
 
-          <Divider />
-          <Stack spacing={1}>
-            <Typography fontWeight={700}>OMOP CDM export</Typography>
-            <Typography color="text.secondary" variant="body2">
-              OMOP CDM v5.5 tables extracted locally. Concepts resolve in batch against the medterm4ds
-              terminology server (cached in the browser); unmapped codes keep OMOP concept_id 0 with
-              source values preserved.
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<Database size={18} />}
-              onClick={() => void buildOmopExport()}
-              disabled={busy}
-            >
-              Build OMOP export
-            </Button>
-            {omopState && (
-              <Stack spacing={1}>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={`${omopState.resolved} concepts resolved`} color={omopState.resolved > 0 ? "success" : "default"} />
-                  {omopState.unmatched > 0 && <Chip label={`${omopState.unmatched} unmapped → concept_id 0`} variant="outlined" />}
-                  {omopState.mapUnavailable && (
-                    <Chip label="athena map unavailable on server" color="warning" variant="outlined" />
-                  )}
-                </Stack>
-                {omopState.results.map((entry) => (
-                  <Stack key={entry.id} direction="row" spacing={1} alignItems="center">
-                    <Typography variant="body2" sx={{ minWidth: 180 }}>
-                      {entry.id.replace("-omop", "")}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
-                      {entry.error ?? `${entry.rows.length} rows`}
-                    </Typography>
-                    {!entry.error && entry.rows.length > 0 && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<Download size={14} />}
-                        onClick={() => downloadOmopCsv(entry, omopResultToCsv(entry))}
-                      >
-                        CSV
-                      </Button>
+              {exportState && (
+                <Stack spacing={2}>
+                  <Divider />
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Chip label={`${exportState.resourceCount} resources`} />
+                    {exportState.resourceCount !== exportState.fetchedResourceCount && (
+                      <Chip label={`${exportState.fetchedResourceCount} fetched before date filter`} />
+                    )}
+                    <Chip label={`${exportState.patchCount} patient corrections`} />
+                    <Chip label={`${Math.ceil(JSON.stringify(exportState.artifact).length / 1024)} KB encrypted JSON`} />
+                    <Chip
+                      label={`${exportState.qrBytes} QR bytes`}
+                      color={exportState.qrDataUrl ? "success" : "warning"}
+                    />
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Button
+                      component="a"
+                      href={exportState.downloadUrl}
+                      download={exportState.fileName}
+                      variant="outlined"
+                      startIcon={<Download size={18} />}
+                    >
+                      Save encrypted Bundle
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => void shareExport()}
+                      disabled={!shareAvailable}
+                      startIcon={<Share2 size={18} />}
+                    >
+                      Share encrypted Bundle
+                    </Button>
+                  </Stack>
+
+                  <Alert severity="warning">
+                    Decryption key:{" "}
+                    <Box component="code" sx={{ wordBreak: "break-all" }}>
+                      {exportState.decryptionKey}
+                    </Box>
+                  </Alert>
+
+                  <Stack spacing={1}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <QrCode size={18} />
+                      <Typography fontWeight={700}>QR summary</Typography>
+                    </Stack>
+                    {exportState.qrDataUrl ? (
+                      <Box
+                        component="img"
+                        alt="QR summary"
+                        src={exportState.qrDataUrl}
+                        sx={{ width: 256, height: 256, bgcolor: "white", p: 1, borderRadius: 1 }}
+                      />
+                    ) : (
+                      <Alert severity="info">{exportState.qrFallbackReason}</Alert>
                     )}
                   </Stack>
-                ))}
-              </Stack>
-            )}
-          </Stack>
-
-          {exportState && (
-            <Stack spacing={2}>
-              <Divider />
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip label={`${exportState.resourceCount} resources`} />
-                {exportState.resourceCount !== exportState.fetchedResourceCount && (
-                  <Chip label={`${exportState.fetchedResourceCount} fetched before date filter`} />
-                )}
-                <Chip label={`${exportState.patchCount} patient corrections`} />
-                <Chip label={`${Math.ceil(JSON.stringify(exportState.artifact).length / 1024)} KB encrypted JSON`} />
-                <Chip label={`${exportState.qrBytes} QR bytes`} color={exportState.qrDataUrl ? "success" : "warning"} />
-              </Stack>
-
-              <Button
-                component="a"
-                href={exportState.downloadUrl}
-                download={exportState.fileName}
-                variant="outlined"
-                startIcon={<Download size={18} />}
-              >
-                Save encrypted Bundle
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => void shareExport()}
-                disabled={!shareAvailable}
-                startIcon={<Share2 size={18} />}
-              >
-                Share encrypted Bundle
-              </Button>
-
-              <Alert severity="warning">
-                Decryption key: <Box component="code" sx={{ wordBreak: "break-all" }}>{exportState.decryptionKey}</Box>
-              </Alert>
-
-              <Stack spacing={1}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <QrCode size={18} />
-                  <Typography fontWeight={700}>QR summary</Typography>
                 </Stack>
-                {exportState.qrDataUrl ? (
-                  <Box
-                    component="img"
-                    alt="QR summary"
-                    src={exportState.qrDataUrl}
-                    sx={{ width: 256, height: 256, bgcolor: "white", p: 1, borderRadius: 1 }}
-                  />
-                ) : (
-                  <Alert severity="info">{exportState.qrFallbackReason}</Alert>
-                )}
+              )}
+            </Stack>
+          )}
+
+          {tab === "ips" && (
+            <Stack spacing={1}>
+              <Typography fontWeight={700}>International Patient Summary</Typography>
+              <Typography color="text.secondary" variant="body2">
+                Standards-based summary document (IPS R4): medications, allergies, problem list, procedures,
+                immunizations, and results. Uses the date range chosen in Bundle.
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                <Button
+                  variant="outlined"
+                  startIcon={<Download size={18} />}
+                  onClick={() => void buildIpsExport("json")}
+                  disabled={busy}
+                >
+                  Download IPS JSON
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<FileText size={18} />}
+                  onClick={() => void buildIpsExport("print")}
+                  disabled={busy}
+                >
+                  Print IPS (PDF)
+                </Button>
               </Stack>
             </Stack>
           )}
 
-          <Divider />
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <UnlockKeyhole size={18} />
-              <Typography fontWeight={700}>Import/decrypt dev utility</Typography>
+          {tab === "omop" && (
+            <Stack spacing={1}>
+              <Typography fontWeight={700}>OMOP CDM export</Typography>
+              <Typography color="text.secondary" variant="body2">
+                OMOP CDM v5.5 tables extracted locally. Concepts resolve in batch against the medterm4ds
+                terminology server (cached in the browser); unmapped codes keep OMOP concept_id 0 with source
+                values preserved.
+              </Typography>
+              <Button
+                variant="outlined"
+                startIcon={<Database size={18} />}
+                onClick={() => void buildOmopExport()}
+                disabled={busy}
+                sx={{ alignSelf: "flex-start" }}
+              >
+                Build OMOP export
+              </Button>
+              {omopState && (
+                <Stack spacing={1}>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Chip
+                      label={`${omopState.resolved} concepts resolved`}
+                      color={omopState.resolved > 0 ? "success" : "default"}
+                    />
+                    {omopState.unmatched > 0 && (
+                      <Chip label={`${omopState.unmatched} unmapped → concept_id 0`} variant="outlined" />
+                    )}
+                    {omopState.mapUnavailable && (
+                      <Chip label="athena map unavailable on server" color="warning" variant="outlined" />
+                    )}
+                  </Stack>
+                  {omopState.results.map((entry) => (
+                    <Stack key={entry.id} direction="row" spacing={1} alignItems="center">
+                      <Typography variant="body2" sx={{ minWidth: 180 }}>
+                        {entry.id.replace("-omop", "")}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ flexGrow: 1 }}>
+                        {entry.error ?? `${entry.rows.length} rows`}
+                      </Typography>
+                      {!entry.error && entry.rows.length > 0 && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<Download size={14} />}
+                          onClick={() => downloadOmopCsv(entry, omopResultToCsv(entry))}
+                        >
+                          CSV
+                        </Button>
+                      )}
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
             </Stack>
-            <Alert severity="info">
-              Decrypts an encrypted fhir4px Bundle locally in this browser for receiver workflow testing.
-            </Alert>
-            {importError && <Alert severity="error">{importError}</Alert>}
-            <TextField
-              label="Decryption key"
-              value={importKey}
-              onChange={(event) => setImportKey(event.target.value)}
-              fullWidth
-            />
-            <Button component="label" variant="outlined" startIcon={<Upload size={18} />}>
-              Import encrypted Bundle
-              <input
-                type="file"
-                accept="application/json,.json"
-                hidden
-                onChange={(event) => void importEncryptedBundle(event.target.files?.[0])}
-              />
-            </Button>
-            {importState && (
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip label={importState.fileName} />
-                <Chip label={`${importState.resourceCount} decrypted resources`} color="success" />
-                {importState.resourceTypes.map((resourceType) => (
-                  <Chip key={resourceType} label={resourceType} />
-                ))}
+          )}
+
+          {tab === "import" && (
+            <Stack spacing={2}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <UnlockKeyhole size={18} />
+                <Typography fontWeight={700}>Import/decrypt dev utility</Typography>
               </Stack>
-            )}
-          </Stack>
+              <Alert severity="info">
+                Decrypts an encrypted fhir4px Bundle locally in this browser for receiver workflow testing.
+              </Alert>
+              {importError && <Alert severity="error">{importError}</Alert>}
+              <TextField
+                label="Decryption key"
+                value={importKey}
+                onChange={(event) => setImportKey(event.target.value)}
+                fullWidth
+              />
+              <Button
+                component="label"
+                variant="outlined"
+                startIcon={<Upload size={18} />}
+                sx={{ alignSelf: "flex-start" }}
+              >
+                Import encrypted Bundle
+                <input
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                  onChange={(event) => void importEncryptedBundle(event.target.files?.[0])}
+                />
+              </Button>
+              {importState && (
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Chip label={importState.fileName} />
+                  <Chip label={`${importState.resourceCount} decrypted resources`} color="success" />
+                  {importState.resourceTypes.map((resourceType) => (
+                    <Chip key={resourceType} label={resourceType} />
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+          )}
         </Stack>
-      </CardContent>
-    </Card>
+      </DialogContent>
+
+      <DialogActions sx={{ justifyContent: "space-between", gap: 1 }}>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+          {busy && <CircularProgress size={14} />}
+          <Typography variant="caption" color="text.secondary" noWrap title={status}>
+            {status}
+          </Typography>
+        </Stack>
+        <Button onClick={onClose} disabled={busy}>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

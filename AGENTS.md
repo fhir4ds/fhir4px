@@ -74,8 +74,10 @@ peer-to-peer.
   dismissals, and re-points the legacy "current" session that the quality
   evaluation reads (src/lib/vault/delete-source.ts). There is no portal filter:
   the header selector is the only scope control. The vault key (passkey or
-  session-only) moved there too as the "Vault" action (VaultKeyDialog); there
-  is no Settings page.
+  session-only) and Export live there too (VaultKeyDialog, ExportDialog); there
+  is no Settings or Export page and no /settings or /export route. Export is a
+  four-tab dialog (Bundle, IPS, OMOP, Import) that refuses to close while a job
+  runs.
 - The service worker updates itself (`registerType: "autoUpdate"`, registered
   by hand in src/lib/pwa/register-sw.ts): a returning page reloads once when a
   new build takes over. It never reloads the first visit, /smart/callback, or
