@@ -101,7 +101,6 @@ describe("duplicateSummary", () => {
     expect(summary?.groups).toHaveLength(1);
     expect(summary?.groups[0].kept.id).toBe("a");
     expect(summary?.groups[0].copies.map((copy) => copy.id)).toEqual(["b"]);
-    expect(summary?.byType).toEqual([{ resourceType: "Observation", copies: 1 }]);
   });
 
   it("keeps the best record of a group of three", () => {
@@ -140,6 +139,6 @@ describe("duplicateSummary", () => {
     const records = [sugar("a", "2024-01-01T09:00:00Z", true)];
     const links = duplicateLinksFromClusters(["a"], []);
 
-    expect(duplicateSummary(records, links)).toEqual({ groups: [], copies: 0, byType: [] });
+    expect(duplicateSummary(records, links)).toEqual({ groups: [], copies: 0 });
   });
 });

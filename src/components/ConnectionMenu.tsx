@@ -78,7 +78,16 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
 
   const working = status.phase === "loading" || status.phase === "evaluating";
   const usCore = status.usCore && status.usCore.length > 0 ? status.usCore : null;
-  const usCoreLine = useMemo(() => (usCore ? usCoreSummaryText(summarizeUsCore(usCore)) : null), [usCore]);
+  const usCoreSummary = useMemo(() => (usCore ? summarizeUsCore(usCore) : null), [usCore]);
+  const usCoreLine = useMemo(() => (usCoreSummary ? usCoreSummaryText(usCoreSummary) : null), [usCoreSummary]);
+  const usCoreChecked = usCoreSummary ? usCoreSummary.passing + usCoreSummary.failing : 0;
+  const usCoreChip =
+    !usCoreSummary || usCoreChecked === 0
+      ? { label: "US Core", color: "default" as const }
+      : {
+          label: `US Core ${usCoreSummary.passing}/${usCoreChecked}`,
+          color: usCoreSummary.failing > 0 ? ("warning" as const) : ("success" as const)
+        };
   const patientPeople = status.patientPeople ?? null;
   const mismatch = status.patientMismatch ?? null;
   const dedupCheck = status.recordChecks?.dedup ?? null;
@@ -97,6 +106,15 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
               }`
             : `${duplicateCopies} ${duplicateCopies === 1 ? "copy" : "copies"} of other records merged`
           : "none found";
+  const duplicateChip = !dedupCheck
+    ? null
+    : dedupCheck.state === "running"
+      ? "Duplicates: checking…"
+      : dedupCheck.state === "failed"
+        ? "Duplicates unavailable"
+        : duplicateCopies > 0
+          ? `${duplicateCopies} ${duplicateCopies === 1 ? "duplicate" : "duplicates"}`
+          : "No duplicates";
 
   return (
     <>
@@ -247,53 +265,40 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
             )}
           </Stack>
 
-          {usCore && (
+          {(usCore || duplicateChip) && (
             <>
               <Divider />
-              <Button
-                size="small"
-                aria-label="US Core data presence"
-                onClick={() => {
-                  onClose();
-                  setUsCoreOpen(true);
-                }}
-                sx={{ textTransform: "none", justifyContent: "flex-start", px: 0, color: "text.primary" }}
-              >
-                US Core data: {usCoreLine}
-              </Button>
-            </>
-          )}
-
-          {duplicateLine && (
-            <>
-              <Divider />
-              {duplicates && duplicates.copies > 0 ? (
-                <Button
-                  size="small"
-                  aria-label="Duplicate records"
-                  onClick={() => {
-                    onClose();
-                    setDuplicatesOpen(true);
-                  }}
-                  sx={{ textTransform: "none", justifyContent: "flex-start", px: 0, color: "text.primary" }}
-                >
-                  Duplicate records: {duplicateLine}
-                </Button>
-              ) : (
-                <Typography variant="body2">Duplicate records (fhir4ds): {duplicateLine}</Typography>
-              )}
-              {duplicates && duplicates.copies > 0 && (
-                <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                  {duplicates.byType.map((entry) => (
-                    <Chip
-                      key={entry.resourceType}
-                      size="small"
-                      variant="outlined"
-                      label={`${entry.resourceType} · ${entry.copies}`}
-                    />
-                  ))}
-                </Stack>
-              )}
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                {usCore && (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    color={usCoreChip.color}
+                    label={usCoreChip.label}
+                    aria-label={`US Core data presence: ${usCoreLine}`}
+                    onClick={() => {
+                      onClose();
+                      setUsCoreOpen(true);
+                    }}
+                  />
+                )}
+                {duplicateChip && (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={duplicateChip}
+                    aria-label={`Duplicate records: ${duplicateLine}`}
+                    onClick={
+                      duplicates && duplicates.copies > 0
+                        ? () => {
+                            onClose();
+                            setDuplicatesOpen(true);
+                          }
+                        : undefined
+                    }
+                  />
+                )}
+              </Stack>
             </>
           )}
         </Stack>

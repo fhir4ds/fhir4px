@@ -3,7 +3,7 @@
  * record that is shown, and how many copies of it were dropped where.
  */
 
-import { Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import type { DuplicateGroup, DuplicateSummary } from "../lib/fhir/dedupe";
 import { recordDateLabel } from "../lib/fhir/display-date";
 
@@ -21,11 +21,6 @@ export default function DuplicateRecordsTable({ summary }: { summary: DuplicateS
         fhir4ds keeps one record per group and hides the others as copies. The check runs in the background after the
         records appear; records you added yourself are not part of it.
       </Typography>
-      <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-        {summary.byType.map((entry) => (
-          <Chip key={entry.resourceType} size="small" variant="outlined" label={`${entry.resourceType} · ${entry.copies}`} />
-        ))}
-      </Stack>
       <Table size="small">
         <TableHead>
           <TableRow>

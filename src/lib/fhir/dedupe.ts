@@ -272,8 +272,6 @@ export interface DuplicateSummary {
   groups: DuplicateGroup[];
   /** Records dropped as copies of another record. */
   copies: number;
-  /** Dropped copies per resource type, most first. */
-  byType: Array<{ resourceType: string; copies: number }>;
 }
 
 /**
@@ -305,21 +303,7 @@ export function duplicateSummary(records: GroupableRecord[], links: DuplicateLin
       left.kept.id.localeCompare(right.kept.id)
   );
 
-  const counts = new Map<string, number>();
-  for (const group of groups) {
-    for (const copy of group.copies) {
-      counts.set(copy.resourceType, (counts.get(copy.resourceType) ?? 0) + 1);
-    }
-  }
-  const byType = [...counts.entries()]
-    .map(([resourceType, copies]) => ({ resourceType, copies }))
-    .sort((left, right) => right.copies - left.copies || left.resourceType.localeCompare(right.resourceType));
-
-  return {
-    groups,
-    copies: groups.reduce((total, group) => total + group.copies.length, 0),
-    byType
-  };
+  return { groups, copies: groups.reduce((total, group) => total + group.copies.length, 0) };
 }
 
 export function sourceLabel(record: GroupableRecord): string {
