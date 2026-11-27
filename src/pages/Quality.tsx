@@ -68,7 +68,15 @@ export default function QualityPage() {
 
 
           {busy && <LinearProgress />}
-          {failed && (connected ? <Alert severity="error">{result.error}</Alert> : <Alert severity="info">Connect a portal to see quality results.</Alert>)}
+          {/* The care-gaps view brings its own empty and failure states, so this
+              one only speaks for the measures view. */}
+          {failed &&
+            view === "measures" &&
+            (connected ? (
+              <Alert severity="error">{result.error}</Alert>
+            ) : (
+              <Alert severity="info">Connect a portal to see quality results.</Alert>
+            ))}
 
           {/* Both views stay mounted so the measures filter survives switching. */}
           <Box sx={{ display: view === "care-gaps" ? "block" : "none" }}>
