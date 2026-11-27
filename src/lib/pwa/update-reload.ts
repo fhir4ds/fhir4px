@@ -19,3 +19,18 @@ export interface UpdateSituation {
 export function updateReloadAllowed(situation: UpdateSituation): boolean {
   return situation.hadController && !situation.smartCallback && !situation.held;
 }
+
+/**
+ * The visit that installs the worker reads a document without the isolation
+ * headers, so the analysis engine has no SharedArrayBuffer until the page is
+ * reloaded through the worker. Reload once for that, never on the callback
+ * page and never twice in a tab.
+ */
+export function needsIsolationReload(situation: {
+  hadController: boolean;
+  isolated: boolean;
+  smartCallback: boolean;
+  alreadyReloaded: boolean;
+}): boolean {
+  return !situation.hadController && !situation.isolated && !situation.smartCallback && !situation.alreadyReloaded;
+}

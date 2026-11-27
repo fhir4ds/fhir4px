@@ -1,9 +1,11 @@
 import { isSmartCallback } from "../smart/callback";
 import { appUpdateHeld } from "./update-hold";
-import { updateReloadAllowed } from "./update-reload";
+import { needsIsolationReload, updateReloadAllowed } from "./update-reload";
 
 /** How often a long-lived page asks whether a new version exists. */
 const UPDATE_CHECK_MS = 15 * 60 * 1000;
+/** Marks the one isolation reload a tab may do. */
+const ISOLATION_RELOAD_KEY = "fhir4px:isolation-reload";
 /** How often a reload that had to wait for a running job is retried. */
 const HELD_RELOAD_RETRY_MS = 5000;
 
@@ -45,6 +47,26 @@ export function registerServiceWorker(): void {
   };
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    // The visit that installed the worker was served without the isolation
+    // headers (a static host cannot send them); now that the worker controls
+    // the page, one reload gives it a document that carries them.
+    if (
+      needsIsolationReload({
+        hadController,
+        isolated: window.crossOriginIsolated,
+        smartCallback: isSmartCallback(),
+        alreadyReloaded: sessionStorage.getItem(ISOLATION_RELOAD_KEY) !== null
+      })
+    ) {
+      try {
+        sessionStorage.setItem(ISOLATION_RELOAD_KEY, "1");
+      } catch {
+        // Storage refused: the reload would loop, so do not reload.
+        return;
+      }
+      window.location.reload();
+      return;
+    }
     updatePending = true;
     applyUpdate();
   });

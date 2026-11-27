@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { appUpdateHeld, holdAppUpdate } from "../../src/lib/pwa/update-hold";
-import { updateReloadAllowed } from "../../src/lib/pwa/update-reload";
+import { needsIsolationReload, updateReloadAllowed } from "../../src/lib/pwa/update-reload";
 
 describe("holdAppUpdate", () => {
   it("holds the update until the job releases it", () => {
@@ -45,5 +45,29 @@ describe("updateReloadAllowed", () => {
 
   it("waits for a running job", () => {
     expect(updateReloadAllowed({ ...allowed, held: true })).toBe(false);
+  });
+});
+
+describe("needsIsolationReload", () => {
+  const visit = { hadController: false, isolated: false, smartCallback: false, alreadyReloaded: false };
+
+  it("reloads the visit that installed the worker, once, so the page gets isolation headers", () => {
+    expect(needsIsolationReload(visit)).toBe(true);
+  });
+
+  it("does nothing when the page is already isolated", () => {
+    expect(needsIsolationReload({ ...visit, isolated: true })).toBe(false);
+  });
+
+  it("does nothing on the SMART callback page", () => {
+    expect(needsIsolationReload({ ...visit, smartCallback: true })).toBe(false);
+  });
+
+  it("reloads at most once per tab", () => {
+    expect(needsIsolationReload({ ...visit, alreadyReloaded: true })).toBe(false);
+  });
+
+  it("does nothing on a visit that already had a controller", () => {
+    expect(needsIsolationReload({ ...visit, hadController: true })).toBe(false);
   });
 });
