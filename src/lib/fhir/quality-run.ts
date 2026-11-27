@@ -7,8 +7,7 @@
  */
 
 import { engineLoadResources } from "../engine/engine-client";
-import { loadSessionResources } from "../engine/session-data";
-import type { FhirResource } from "../smart/data";
+import { loadAnalyticResources } from "./analytic-resources";
 import { runUsCoreChecks, type UsCoreCheckResult } from "./uscore-checks";
 import {
   invalidateQualityMeasures,
@@ -32,7 +31,7 @@ export interface QualityEvaluation {
 export { qualityDatasetVersion };
 
 async function executeQualityEvaluation(): Promise<QualityEvaluation> {
-  const resources = scopeResources ?? (await loadSessionResources());
+  const resources = await loadAnalyticResources();
   await engineLoadResources(resources);
   const checks = await runUsCoreChecks(resources);
   const measures = await runQualityMeasures();
@@ -51,21 +50,6 @@ async function executeQualityEvaluation(): Promise<QualityEvaluation> {
 }
 
 let cachedRun: Promise<QualityEvaluation> | null = null;
-
-/**
- * The resources the evaluation should use, when it must cover one patient
- * rather than the active SMART session (the Records page's patient selector).
- * Null is the session's own dataset, which is the usual case.
- */
-let scopeResources: FhirResource[] | null = null;
-
-export function setQualityScopeResources(resources: FhirResource[] | null): void {
-  scopeResources = resources;
-}
-
-export function qualityScopeResources(): FhirResource[] | null {
-  return scopeResources;
-}
 
 export function invalidateQualityEvaluation(): void {
   cachedRun = null;

@@ -76,7 +76,10 @@ peer-to-peer.
   the header selector is the only scope control. The vault key is a status chip
   there ("Session vault" / "Passkey vault", VaultKeyDialog) and Export is an
   action (ExportDialog); there is no Settings or Export page and no /settings
-  or /export route. "Add Records"
+  or /export route. Analysis and export read the shown person's records through
+  src/lib/fhir/analytic-resources.ts (published by the Records page in a layout
+  effect); only when nothing is published do they fall back to the active SMART
+  session, which an imported Bundle does not have. "Add Records"
   offers a portal connection or a Bundle file: an import (readBundleFile,
   storeBundleSource) is stored as a source of kind "bundle" (no server, no
   refresh) under an id derived from the file's SHA-256, so the same file replaces

@@ -13,7 +13,7 @@
  */
 
 import { engineLoadResources, engineQuery } from "../engine/engine-client";
-import { loadSessionResources } from "../engine/session-data";
+import { loadAnalyticResources } from "./analytic-resources";
 import { translateMeasureSql } from "../engine/viewdef";
 import { prebuiltMeasureSql } from "../engine/prebuilt";
 import { boolAt } from "../engine/result-values";
@@ -78,7 +78,7 @@ export async function fetchMeasureManifest(): Promise<MeasureManifest> {
  */
 async function executeQualityMeasures(): Promise<MeasureResult[]> {
   const [resources, manifest, cqlManifest] = await Promise.all([
-    loadSessionResources(),
+    loadAnalyticResources(),
     fetchMeasureManifest(),
     fetch(`${measuresBaseUrl()}/cql-manifest.json`).then((response) => {
       if (!response.ok) throw new Error(`CQL manifest unavailable (${response.status})`);

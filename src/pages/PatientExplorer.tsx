@@ -54,7 +54,7 @@ import {
   RefreshCcw,
   X
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   dedupeGroupedRecords,
@@ -140,7 +140,8 @@ import {
   type CareGapDismissal
 } from "../lib/fhir/care-gaps";
 import { invalidateCareGaps } from "../lib/fhir/care-gaps-run";
-import { runQualityEvaluation, invalidateQualityEvaluation, setQualityScopeResources } from "../lib/fhir/quality-run";
+import { runQualityEvaluation, invalidateQualityEvaluation } from "../lib/fhir/quality-run";
+import { setAnalyticResources } from "../lib/fhir/analytic-resources";
 import type { MeasureResult } from "../lib/fhir/measures";
 import CareGapCarousel from "../components/CareGapCarousel";
 import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
@@ -4181,6 +4182,10 @@ export function PatientExplorer() {
   // results, and the care gaps here are built from its measures. This is a
   // best-effort enrichment — the engine (and its cold boot) may fail or be
   // unavailable, in which case the band simply shows no measure gaps.
+  useLayoutEffect(() => {
+    setAnalyticResources(scopedResources);
+  }, [scopedResources]);
+
   useEffect(() => {
     if (!summary) return;
     let cancelled = false;
@@ -4189,7 +4194,7 @@ export function PatientExplorer() {
     // A chosen patient is evaluated from the resources already loaded for their
     // portals, so measures and cohorts cover that person only. "All patients"
     // keeps evaluating the active session's dataset, as before.
-    setQualityScopeResources(scopedResources);
+    setAnalyticResources(scopedResources);
     invalidateQualityEvaluation(); // dataset or patient scope changed — recalculate
     invalidateCareGaps();
     void runQualityEvaluation()

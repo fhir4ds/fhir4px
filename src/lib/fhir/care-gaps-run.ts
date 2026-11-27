@@ -8,7 +8,7 @@
  * Records page, so nothing here is filtered by them.
  */
 
-import { loadSessionResources } from "../engine/session-data";
+import { loadAnalyticResources } from "./analytic-resources";
 import { assembleCareGaps, type CareGap } from "./care-gaps";
 import { runImmunizationForecast } from "./immunization-forecast";
 import { runQualityEvaluation } from "./quality-run";
@@ -32,7 +32,7 @@ export function runCareGaps(): Promise<CareGap[]> {
 }
 
 async function computeCareGaps(): Promise<CareGap[]> {
-  const resources = await loadSessionResources();
+  const resources = await loadAnalyticResources();
   const ofType = (resourceType: string) => resources.filter((resource) => resource.resourceType === resourceType);
   const patient = ofType("Patient")[0];
   // The forecast is the CDC schedule's half; a patient is needed for it.

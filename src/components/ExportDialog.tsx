@@ -55,7 +55,7 @@ import { extractDistinctCodes, resolveOmopConcepts } from "../lib/fhir/omop-conc
 import { omopResultToCsv, runOmopExport, type OmopTableResult } from "../lib/fhir/omop-tables";
 import { engineLoadResources } from "../lib/engine/engine-client";
 import { holdAppUpdate } from "../lib/pwa/update-hold";
-import { loadSessionResources } from "../lib/engine/session-data";
+import { analyticResources, loadAnalyticResources } from "../lib/fhir/analytic-resources";
 import { getOrCreateSessionVaultKey } from "../lib/vault/keys";
 import { localVault } from "../lib/vault/store";
 
@@ -158,15 +158,26 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
 
     try {
       const key = await getOrCreateSessionVaultKey();
-      const token = await localVault.getJson<SmartToken>(key, { type: "smart-token", id: "current" });
-      const session = await localVault.getJson<SmartSessionInfo>(key, { type: "smart-session", id: "current" });
-      if (!token || !session) throw new Error("No local SMART connection is available");
-
-      const dataset = await fetchPatientDataset(session, token, {
-        resourceTypes: selectedResourceTypes,
-        maxPages: DEFAULT_FHIR_PAGE_LIMIT
-      });
-      const filteredResources = filterResourcesByLookback(dataset.resources, lookbackDays);
+      // The shown person's records when the Records page has published them
+      // (the only option for an imported Bundle), else fetched from the portal.
+      const loaded = analyticResources();
+      const datasetResources =
+        loaded ??
+        (await (async () => {
+          const token = await localVault.getJson<SmartToken>(key, { type: "smart-token", id: "current" });
+          const session = await localVault.getJson<SmartSessionInfo>(key, { type: "smart-session", id: "current" });
+          if (!token || !session) throw new Error("No local SMART connection is available");
+          return (
+            await fetchPatientDataset(session, token, {
+              resourceTypes: selectedResourceTypes,
+              maxPages: DEFAULT_FHIR_PAGE_LIMIT
+            })
+          ).resources;
+        })());
+      const selected = loaded
+        ? datasetResources.filter((resource) => selectedResourceTypes.includes(resource.resourceType as MvpResourceType))
+        : datasetResources;
+      const filteredResources = filterResourcesByLookback(selected, lookbackDays);
       const resourceKeys = new Set(
         filteredResources
           .filter((resource) => resource.id)
@@ -193,7 +204,7 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
         decryptionKey: encryptedExport.decryptionKey,
         artifact: encryptedExport.artifact,
         resourceCount: filteredResources.length,
-        fetchedResourceCount: dataset.resources.length,
+        fetchedResourceCount: selected.length,
         patchCount: patches.length,
         qrDataUrl,
         qrBytes,
@@ -214,24 +225,32 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
     setStatus("Building International Patient Summary");
     try {
       const key = await getOrCreateSessionVaultKey();
-      const token = await localVault.getJson<SmartToken>(key, { type: "smart-token", id: "current" });
-      const session = await localVault.getJson<SmartSessionInfo>(key, { type: "smart-session", id: "current" });
-      if (!token || !session) throw new Error("No local SMART connection is available");
-
-      const dataset = await fetchPatientDataset(session, token, {
-        resourceTypes: [
-          "Patient",
-          "MedicationRequest",
-          "AllergyIntolerance",
-          "Condition",
-          "Observation",
-          "Immunization",
-          "Procedure",
-          "DiagnosticReport"
-        ],
-        maxPages: DEFAULT_FHIR_PAGE_LIMIT
-      });
-      const resources = filterResourcesByLookback(dataset.resources, lookbackDays);
+      const ipsTypes = [
+        "Patient",
+        "MedicationRequest",
+        "AllergyIntolerance",
+        "Condition",
+        "Observation",
+        "Immunization",
+        "Procedure",
+        "DiagnosticReport"
+      ];
+      const loaded = analyticResources();
+      const datasetResources =
+        loaded ??
+        (await (async () => {
+          const token = await localVault.getJson<SmartToken>(key, { type: "smart-token", id: "current" });
+          const session = await localVault.getJson<SmartSessionInfo>(key, { type: "smart-session", id: "current" });
+          if (!token || !session) throw new Error("No local SMART connection is available");
+          return (
+            await fetchPatientDataset(session, token, {
+              resourceTypes: ipsTypes as MvpResourceType[],
+              maxPages: DEFAULT_FHIR_PAGE_LIMIT
+            })
+          ).resources;
+        })());
+      const selected = loaded ? datasetResources.filter((resource) => ipsTypes.includes(resource.resourceType)) : datasetResources;
+      const resources = filterResourcesByLookback(selected, lookbackDays);
       const bundle = buildIpsBundle(resources, { authorLabel: "fhir4px" });
 
       if (mode === "print") {
@@ -263,7 +282,7 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
     setOmopState(null);
     try {
       setStatus("OMOP: loading patient data into the engine…");
-      const resources = await loadSessionResources();
+      const resources = await loadAnalyticResources();
       await engineLoadResources(resources);
 
       setStatus("OMOP: resolving concepts against the terminology server…");
