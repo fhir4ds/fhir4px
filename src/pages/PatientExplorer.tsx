@@ -4343,7 +4343,9 @@ export function PatientExplorer() {
         label: identity.name,
         detail: [...new Set(identity.profiles.map((profile) => profile.portalName))].join(", ")
       })),
-      selectedId: selectedIdentity?.profiles[0]?.sourceId ?? patientIdentities[0].profiles[0].sourceId
+      // The choices are keyed by the portal that names each person, so the
+      // value has to be that portal — not whichever member was shown.
+      selectedId: selectedIdentity?.key ?? patientIdentities[0].key
     };
   }, [patientIdentities, selectedIdentity]);
   useEffect(() => {
