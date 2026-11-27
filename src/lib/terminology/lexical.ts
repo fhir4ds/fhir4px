@@ -14,8 +14,9 @@
 
 import { resolveTerminologyRelease, terminologyArtifactUrl } from "./valueSets";
 import {
-  markRuntimeArtifactsUnavailable,
-  runtimeArtifactsUnavailable,
+  markRuntimeArtifactUnavailable,
+  resetRuntimeArtifactsForTest,
+  runtimeArtifactUnavailable,
   withArtifactDeadline
 } from "./runtime-artifacts";
 
@@ -50,7 +51,7 @@ export function loadLexicalIndex(
   category: LexicalCategory,
   options: { fetcher?: typeof fetch } = {}
 ): Promise<LexicalIndex> {
-  if (runtimeArtifactsUnavailable()) return Promise.reject(new Error("lexical artifacts unavailable"));
+  if (runtimeArtifactUnavailable("lexical")) return Promise.reject(new Error("lexical artifacts unavailable"));
   const cached = categoryPromises.get(category);
   if (cached) return cached;
   const fetcher = options.fetcher ?? fetch;
@@ -65,7 +66,7 @@ export function loadLexicalIndex(
     })()
   ).catch((error) => {
     categoryPromises.delete(category);
-    markRuntimeArtifactsUnavailable();
+    markRuntimeArtifactUnavailable("lexical");
     throw error;
   });
   categoryPromises.set(category, promise);
@@ -109,6 +110,7 @@ export function loadLexicalCodeMap(
 
 /** Test-only: inject an index directly, bypassing fetch. */
 export function setLexicalIndexForTest(category: LexicalCategory, index: LexicalIndex | null): void {
+  if (index) resetRuntimeArtifactsForTest();
   if (index) {
     categoryPromises.set(category, Promise.resolve(index));
     codeMapPromises.set(category, Promise.resolve(lexicalCodeMapOf(index)));

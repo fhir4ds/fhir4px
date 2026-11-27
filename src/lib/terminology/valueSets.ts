@@ -7,8 +7,9 @@
  */
 
 import {
-  markRuntimeArtifactsUnavailable,
-  runtimeArtifactsUnavailable,
+  markRuntimeArtifactUnavailable,
+  resetRuntimeArtifactsForTest,
+  runtimeArtifactUnavailable,
   withArtifactDeadline
 } from "./runtime-artifacts";
 
@@ -105,7 +106,7 @@ function toValueSetLookup(concepts: ValueSetConcept[]): ValueSetLookup {
  * lexical.ts); this artifact covers the canonical codes themselves.
  */
 export function loadValueSets(options: { fetcher?: typeof fetch } = {}): Promise<ValueSetLookup> {
-  if (runtimeArtifactsUnavailable()) return Promise.resolve({});
+  if (runtimeArtifactUnavailable("valueSets")) return Promise.resolve({});
   if (valueSetsPromise) return valueSetsPromise;
   const fetcher = options.fetcher ?? fetch;
   valueSetsPromise = withArtifactDeadline(
@@ -122,7 +123,7 @@ export function loadValueSets(options: { fetcher?: typeof fetch } = {}): Promise
     // Offline-tolerant: shard + display_names naming stays functional, and the
     // rest of the session does not wait for these artifacts again.
     valueSetsPromise = null;
-    markRuntimeArtifactsUnavailable();
+    markRuntimeArtifactUnavailable("valueSets");
     throw error;
   });
   return valueSetsPromise;
@@ -130,5 +131,6 @@ export function loadValueSets(options: { fetcher?: typeof fetch } = {}): Promise
 
 /** Test-only: inject parsed concepts directly, bypassing fetch. */
 export function setValueSetsForTest(concepts: ValueSetConcept[] | null): void {
+  if (concepts) resetRuntimeArtifactsForTest();
   valueSetsPromise = concepts ? Promise.resolve(toValueSetLookup(concepts)) : null;
 }

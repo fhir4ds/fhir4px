@@ -25,6 +25,9 @@ describe("patient-friendly lookup", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     resetPatientFriendlyLookupForTest();
+    void import("../../src/lib/terminology/runtime-artifacts").then(({ resetRuntimeArtifactsForTest }) =>
+      resetRuntimeArtifactsForTest()
+    );
     void import("../../src/lib/associations/display-names").then(({ setDisplayNamesForTest }) =>
       setDisplayNamesForTest(null)
     );

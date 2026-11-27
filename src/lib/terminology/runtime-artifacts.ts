@@ -13,15 +13,22 @@
 
 export const RUNTIME_ARTIFACT_TIMEOUT_MS = 6000;
 
-let unavailable = false;
+export type RuntimeArtifact = "valueSets" | "lexical";
 
-export function runtimeArtifactsUnavailable(): boolean {
-  return unavailable;
+const unavailable = new Set<RuntimeArtifact>();
+
+export function runtimeArtifactUnavailable(kind: RuntimeArtifact): boolean {
+  return unavailable.has(kind);
 }
 
 /** Called after a timeout or failure: shard naming stands for this session. */
-export function markRuntimeArtifactsUnavailable(): void {
-  unavailable = true;
+export function markRuntimeArtifactUnavailable(kind: RuntimeArtifact): void {
+  unavailable.add(kind);
+}
+
+/** Test hook: a fresh session. */
+export function resetRuntimeArtifactsForTest(): void {
+  unavailable.clear();
 }
 
 export function withArtifactDeadline<T>(promise: Promise<T>, timeoutMs = RUNTIME_ARTIFACT_TIMEOUT_MS): Promise<T> {

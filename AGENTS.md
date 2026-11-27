@@ -85,6 +85,11 @@ peer-to-peer.
   refresh) under an id derived from the file's SHA-256, so the same file replaces
   itself. Export is a three-tab dialog (Bundle, IPS, OMOP) that refuses to close
   while a job runs.
+- The canonical value sets and lexical indexes the naming step enriches with
+  are hosted on HuggingFace and are optional: src/lib/terminology/runtime-artifacts.ts
+  gives them a 6 s deadline and switches each family off for the session after a
+  timeout, so slow HF costs one wait instead of leaving the page on "Applying
+  patient-friendly terminology lookup". The bundled shards name records alone.
 - GitHub Pages cannot send COOP/COEP, which the engine's SharedArrayBuffer needs,
   so public/coi-headers.js is imported by the generated service worker
   (`workbox.importScripts`) and answers navigation requests with those headers.
