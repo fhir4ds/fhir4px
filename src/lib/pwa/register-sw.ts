@@ -79,8 +79,10 @@ export function registerServiceWorker(): void {
 
   const register = () => {
     const base = import.meta.env.BASE_URL || "/";
+    // The host may cache sw.js for hours; a versioned URL is always this build's
+    // manifest, whose precached assets actually exist.
     void navigator.serviceWorker
-      .register(`${base}sw.js`, { scope: base })
+      .register(`${base}sw.js?v=${__APP_BUILD__}`, { scope: base })
       .then((registration) => {
         const check = () => {
           void registration.update();

@@ -106,6 +106,15 @@ const localhostCert =
       }
     : undefined;
 
+/**
+ * Identifies this build in the URLs a host may cache for hours. The service
+ * worker script and the header script it imports are versioned with it: after a
+ * deploy the previous precache manifest points at assets that no longer exist,
+ * so a stale copy fails to install — and without a worker the page is not
+ * cross-origin isolated, which the analysis engine needs.
+ */
+const BUILD_ID = (process.env.GITHUB_SHA || String(Date.now())).slice(0, 12);
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const publicEnv = {
@@ -119,7 +128,8 @@ export default defineConfig(({ mode }) => {
     "import.meta.env.VITE_EPIC_SANDBOX_REDIRECT_URI": JSON.stringify(env.VITE_EPIC_SANDBOX_REDIRECT_URI || ""),
     "import.meta.env.VITE_CERNER_SANDBOX_BASE_URL": JSON.stringify(
       env.VITE_CERNER_SANDBOX_BASE_URL || env.CERNER_SANDBOX_BASE_URL || ""
-    )
+    ),
+    __APP_BUILD__: JSON.stringify(BUILD_ID)
   };
 
   return {
@@ -180,7 +190,7 @@ export default defineConfig(({ mode }) => {
           // Loaded before the generated worker's own routes: answers navigation
           // requests with the COOP/COEP headers a static host cannot send, so the
           // page and its engine iframe are cross-origin isolated in production.
-          importScripts: ["/coi-headers.js"],
+          importScripts: [`/coi-headers.js?v=${BUILD_ID}`],
           cleanupOutdatedCaches: true,
           globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
           // cicada.js (CDC immunization forecast, ~4.8 MB) exceeds Workbox's
