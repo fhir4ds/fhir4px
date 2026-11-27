@@ -262,6 +262,66 @@ export function dedupeGroupedRecords(records: GroupableRecord[], links?: Duplica
   });
 }
 
+export interface DuplicateGroup {
+  /** The record the page shows; the others were dropped as copies of it. */
+  kept: GroupableRecord;
+  copies: GroupableRecord[];
+}
+
+export interface DuplicateSummary {
+  groups: DuplicateGroup[];
+  /** Records dropped as copies of another record. */
+  copies: number;
+  /** Dropped copies per resource type, most first. */
+  byType: Array<{ resourceType: string; copies: number }>;
+}
+
+/**
+ * What fhir4ds deduplication hid, grouped as the page groups it, for the
+ * connection menu's report. Only records fhir4ds looked at and put in a
+ * cluster of two or more are listed. Null until a run has decided something.
+ */
+export function duplicateSummary(records: GroupableRecord[], links: DuplicateLinks | null): DuplicateSummary | null {
+  if (!links) return null;
+  const byCluster = new Map<number, GroupableRecord[]>();
+  for (const record of records) {
+    if (record.hidden) continue;
+    const cluster = links.clusterByRecordId.get(record.id);
+    if (cluster === undefined) continue;
+    const members = byCluster.get(cluster) ?? [];
+    members.push(record);
+    byCluster.set(cluster, members);
+  }
+
+  const groups: DuplicateGroup[] = [];
+  for (const members of byCluster.values()) {
+    if (members.length < 2) continue;
+    const kept = canonicalRecord(members).record;
+    groups.push({ kept, copies: members.filter((member) => member.id !== kept.id) });
+  }
+  groups.sort(
+    (left, right) =>
+      left.kept.resourceType.localeCompare(right.kept.resourceType) ||
+      left.kept.id.localeCompare(right.kept.id)
+  );
+
+  const counts = new Map<string, number>();
+  for (const group of groups) {
+    for (const copy of group.copies) {
+      counts.set(copy.resourceType, (counts.get(copy.resourceType) ?? 0) + 1);
+    }
+  }
+  const byType = [...counts.entries()]
+    .map(([resourceType, copies]) => ({ resourceType, copies }))
+    .sort((left, right) => right.copies - left.copies || left.resourceType.localeCompare(right.resourceType));
+
+  return {
+    groups,
+    copies: groups.reduce((total, group) => total + group.copies.length, 0),
+    byType
+  };
+}
+
 export function sourceLabel(record: GroupableRecord): string {
   return record.portalSourceName || record.portalSourceId || "Source";
 }

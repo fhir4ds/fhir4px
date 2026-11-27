@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dedupeGroupedRecords, duplicateLinksFromClusters } from "../../src/lib/fhir/dedupe";
+import { dedupeGroupedRecords, duplicateLinksFromClusters, duplicateSummary } from "../../src/lib/fhir/dedupe";
 import type { GroupableRecord } from "../../src/lib/fhir/patient-groups";
 
 function record(overrides: Partial<GroupableRecord> & Pick<GroupableRecord, "id" | "resourceType" | "sourceLabel">): GroupableRecord {
@@ -76,5 +76,70 @@ describe("dedupeGroupedRecords with fhir4ds decisions", () => {
     const records = [a1c("a1", "portal-a"), a1c("a2", "portal-a"), a1c("b1", "portal-b")];
     expect(dedupeGroupedRecords(records, null)).toEqual(dedupeGroupedRecords(records));
     expect(dedupeGroupedRecords(records)).toHaveLength(2);
+  });
+});
+
+describe("duplicateSummary", () => {
+  function sugar(id: string, date: string, withValue: boolean) {
+    return record({
+      id,
+      resourceType: "Observation",
+      sourceLabel: "Hemoglobin A1c",
+      codingKeys: ["loinc:4548-4"],
+      date,
+      ...(withValue ? { displayValue: "7.2 %", canonicalValue: 7.2, canonicalUnit: "%" } : {})
+    });
+  }
+
+  it("reports the groups, the copies and their kinds", () => {
+    const records = [sugar("a", "2024-01-01T09:00:00Z", true), sugar("b", "2024-01-01T09:01:00Z", false)];
+    const links = duplicateLinksFromClusters(["a", "b"], [["a", "b"]]);
+
+    const summary = duplicateSummary(records, links);
+
+    expect(summary?.copies).toBe(1);
+    expect(summary?.groups).toHaveLength(1);
+    expect(summary?.groups[0].kept.id).toBe("a");
+    expect(summary?.groups[0].copies.map((copy) => copy.id)).toEqual(["b"]);
+    expect(summary?.byType).toEqual([{ resourceType: "Observation", copies: 1 }]);
+  });
+
+  it("keeps the best record of a group of three", () => {
+    const records = [
+      sugar("weak", "2024-01-01T09:00:00Z", false),
+      sugar("best", "2024-01-01T09:02:00Z", true),
+      sugar("middle", "2024-01-01T09:01:00Z", false)
+    ];
+    const links = duplicateLinksFromClusters(["weak", "best", "middle"], [["weak", "best", "middle"]]);
+
+    const summary = duplicateSummary(records, links);
+
+    expect(summary?.copies).toBe(2);
+    expect(summary?.groups[0].kept.id).toBe("best");
+  });
+
+  it("ignores records fhir4ds examined and left alone, and hidden ones", () => {
+    const records = [
+      sugar("a", "2024-01-01T09:00:00Z", true),
+      sugar("b", "2024-01-01T09:01:00Z", false),
+      { ...sugar("hidden", "2024-01-01T09:02:00Z", false), hidden: true }
+    ];
+    const links = duplicateLinksFromClusters(["a", "b", "hidden"], [["a", "b", "hidden"]]);
+
+    const summary = duplicateSummary(records, links);
+
+    expect(summary?.copies).toBe(1);
+    expect(summary?.groups[0].copies.map((copy) => copy.id)).toEqual(["b"]);
+  });
+
+  it("has nothing to report before fhir4ds has decided", () => {
+    expect(duplicateSummary([sugar("a", "2024-01-01T09:00:00Z", true)], null)).toBeNull();
+  });
+
+  it("reports an empty result when no group holds two records", () => {
+    const records = [sugar("a", "2024-01-01T09:00:00Z", true)];
+    const links = duplicateLinksFromClusters(["a"], []);
+
+    expect(duplicateSummary(records, links)).toEqual({ groups: [], copies: 0, byType: [] });
   });
 });

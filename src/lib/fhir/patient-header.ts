@@ -131,13 +131,40 @@ export interface PatientIdentity<T extends PatientProfileLike> {
 
 /**
  * The distinct people behind the connected portals, in the order they were
- * connected. Several portals of the same person land in one identity.
+ * connected. `samePerson` decides whether two profiles are one person; by
+ * default the name and birth date must match, and callers that also know
+ * fhir4ds' verdict pass their own test.
  */
-export function groupProfilesByPatient<T extends PatientProfileLike>(profiles: T[]): PatientIdentity<T>[] {
+export function groupProfilesByPatient<T extends PatientProfileLike>(
+  profiles: T[],
+  samePerson: (left: T, right: T) => boolean = (left, right) =>
+    patientIdentityKey(left.patient) === patientIdentityKey(right.patient)
+): PatientIdentity<T>[] {
+  const identities: PatientIdentity<T>[] = [];
+  for (const profile of profiles) {
+    const existing = identities.find((identity) => samePerson(identity.profiles[0], profile));
+    if (existing) {
+      existing.profiles.push(profile);
+      continue;
+    }
+    identities.push({
+      key: patientIdentityKey(profile.patient),
+      name: patientDisplayName(profile.patient),
+      profiles: [profile]
+    });
+  }
+  return identities;
+}
+
+/** One identity per distinct value of `keyBySourceId`, in profile order. */
+export function groupProfilesByKeys<T extends PatientProfileLike>(
+  profiles: T[],
+  keyBySourceId: ReadonlyMap<string, string>
+): PatientIdentity<T>[] {
   const identities: PatientIdentity<T>[] = [];
   const byKey = new Map<string, PatientIdentity<T>>();
   for (const profile of profiles) {
-    const key = patientIdentityKey(profile.patient);
+    const key = keyBySourceId.get(profile.sourceId) ?? patientIdentityKey(profile.patient);
     const existing = byKey.get(key);
     if (existing) {
       existing.profiles.push(profile);

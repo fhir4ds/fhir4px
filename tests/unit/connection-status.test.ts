@@ -190,11 +190,10 @@ describe("the patient switcher", () => {
     disconnect();
     const selection = {
       choices: [
-        { id: null, label: "All patients (2)" },
-        { id: "grace|1958-03-02", label: "Grace Mensah", detail: "SMART Dev Sandbox" },
-        { id: "linda|1969-04-27", label: "Linda Ross", detail: "SMART Dev Sandbox" }
+        { id: "portal-a", label: "Grace Mensah", detail: "SMART Dev Sandbox" },
+        { id: "portal-b", label: "Linda Ross", detail: "SMART Dev Sandbox" }
       ],
-      selectedId: "linda|1969-04-27"
+      selectedId: "portal-b"
     };
     publishPatientSelection(selection);
     expect(getConnectionStatus().patientSelection).toEqual(selection);

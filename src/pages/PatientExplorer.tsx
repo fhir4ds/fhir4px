@@ -58,9 +58,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import {
   dedupeGroupedRecords,
+  duplicateSummary,
   recordQualityScore,
   type DedupedRecordCluster,
 } from "../lib/fhir/dedupe";
+import { displayFhirDatePrecision, parseFhirDateValue, recordDateLabel } from "../lib/fhir/display-date";
 import {
   buildGroupableRecords,
   compactRecordsForModel,
@@ -145,6 +147,7 @@ import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
 import {
   publishConnectionStatus,
   publishPatient,
+  publishPatientPlacements,
   publishPatientSelection,
   publishRecordChecks,
   registerRecordsPageActions,
@@ -155,7 +158,17 @@ import {
   type RecordChecks
 } from "../lib/app/connection-status";
 import { useFhir4dsDedup, useFhir4dsPatientMatching, type DedupInputRecord } from "../lib/app/use-fhir4ds-records";
-import { groupProfilesByPatient, headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
+import { headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
+import {
+  emptyPatientIdentityRecord,
+  overridesBySourceId,
+  resolvePatientIdentities,
+  withIdentityOverride,
+  withSelectedSourceId,
+  PATIENT_IDENTITY_ID,
+  type PatientIdentityPlacement,
+  type PatientIdentityRecord
+} from "../lib/fhir/patient-identity";
 import type { UsCoreCheckResult } from "../lib/fhir/uscore-checks";
 import { documentAttachment, downloadFilename, loadDocumentBlob, viewKindFor, viewKindForContent } from "../lib/fhir/document-viewer";
 import {
@@ -581,17 +594,6 @@ function compareRecordsByDate(left: GroupableRecord, right: GroupableRecord, sor
   return dateOrder || left.sourceLabel.localeCompare(right.sourceLabel);
 }
 
-/**
- * Parse a FHIR date/datetime for display and sorting. FHIR date-only strings
- * (and partial dates: "2021", "2021-06") carry no timezone — parsing them as
- * UTC shifts the local calendar date back a day in the Americas. Parse those
- * as local midnight instead; datetimes (with 'T') parse natively.
- */
-function parseFhirDateValue(raw: string): Date {
-  if (/^\d{4}(-\d{2})?(-\d{2})?$/.test(raw)) return new Date(`${raw}T00:00:00`);
-  return new Date(raw);
-}
-
 /** Local calendar date (YYYY-MM-DD) of a timestamp — panel draw anchoring. */
 function localDateKey(timestamp: number): string {
   const date = new Date(timestamp);
@@ -600,26 +602,7 @@ function localDateKey(timestamp: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** Display a raw FHIR date at its own precision (year / year-month / day). */
-function displayFhirDatePrecision(raw: string): string | undefined {
-  const yearOnly = /^\d{4}$/.exec(raw);
-  if (yearOnly) return yearOnly[0];
-  const yearMonth = /^(\d{4})-(\d{2})$/.exec(raw);
-  if (yearMonth) {
-    const parsed = new Date(`${yearMonth[0]}-01T00:00:00`);
-    return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString(undefined, { month: "short", year: "numeric" });
-  }
-  return undefined;
-}
 
-function recordDateLabel(record: GroupableRecord): string {
-  const raw = record.date || record.latestDate;
-  if (!raw) return "No date";
-  const precise = displayFhirDatePrecision(raw);
-  if (precise) return precise;
-  const parsed = parseFhirDateValue(raw);
-  return Number.isNaN(parsed.getTime()) ? raw : parsed.toLocaleDateString();
-}
 
 function recordDateSectionLabel(record: GroupableRecord): string {
   const raw = record.date || record.latestDate;
@@ -653,9 +636,7 @@ function observationComparableUnit(observation: ReferralSummary["observations"][
 }
 
 function detailDate(record: GroupableRecord): string | undefined {
-  if (!record.date) return undefined;
-  const parsed = new Date(record.date);
-  return Number.isNaN(parsed.getTime()) ? record.date : parsed.toLocaleString();
+  return record.date || record.latestDate ? recordDateLabel(record) : undefined;
 }
 
 function statusChipColor(status?: string): "default" | "success" | "warning" {
@@ -1257,7 +1238,6 @@ export function PatientExplorer() {
   const [groupingDiagnostics, setGroupingDiagnostics] = useState<string[]>([]);
   const [sources, setSources] = useState<ConnectedSource[]>([]);
   const [sourceDatasets, setSourceDatasets] = useState<Record<string, FhirDataset>>({});
-  const [activeSourceId, setActiveSourceId] = useState("all");
   const [patches, setPatches] = useState<PatientPatch[]>([]);
   const [patientAuthoredRecords, setPatientAuthoredRecords] = useState<PatientAuthoredRecord[]>([]);
   const [groupReferenceRanges, setGroupReferenceRanges] = useState<Record<string, GroupReferenceRange | null>>({});
@@ -1342,56 +1322,99 @@ export function PatientExplorer() {
   const queuedLocalModelSwitch = useRef(false);
   const lastAutoGroupingKey = useRef<string | null>(null);
 
-  const filteredSources = useMemo(
-    () => (activeSourceId === "all" ? sources : sources.filter((source) => source.id === activeSourceId)),
-    [activeSourceId, sources]
-  );
-
   // ── Patient scope ──────────────────────────────────────────────────────
   // A portal carries one patient, so several portals can bring several
-  // people. Choosing one of them scopes every patient-derived number to that
-  // person — the record list, care gaps, quality measures and cohorts alike —
-  // not just the visible records.
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  // people. One person is shown at a time, and everything patient-derived
+  // follows that person: the record list, care gaps, quality measures and
+  // cohorts. The portals are placed with fhir4ds' matching (plus name and
+  // birth date), and the user can overrule that placement, one portal at a
+  // time, from the connection menu. The choice is stored in the vault, so the
+  // same person is shown after a reload.
+  const [identityRecord, setIdentityRecord] = useState<PatientIdentityRecord>(emptyPatientIdentityRecord);
+  const [selectedPatientSourceId, setSelectedPatientSourceId] = useState<string | null>(null);
+  const identityRecordRef = useRef(identityRecord);
+  identityRecordRef.current = identityRecord;
+  // The action handlers below are registered once and outlive these values,
+  // so they read the current ones through refs.
+  const sourcesRef = useRef(sources);
+  sourcesRef.current = sources;
+  const connectedSourceIdsRef = useRef<Set<string>>(new Set());
 
   const patientProfiles = useMemo<PatientProfile[]>(
     () =>
-      filteredSources.flatMap((source) => {
+      sources.flatMap((source) => {
         const patient = sourceDatasets[source.id]?.patient;
         return patient ? [{ sourceId: source.id, portalName: providerLabel(source), patient }] : [];
       }),
-    [filteredSources, sourceDatasets]
+    [sources, sourceDatasets]
   );
-  const patientIdentities = useMemo(() => groupProfilesByPatient(patientProfiles), [patientProfiles]);
 
-  // The chosen person can disappear when a portal is disconnected or an
-  // active-portal filter leaves them out; fall back to every patient together.
-  useEffect(() => {
-    if (selectedPatientId === null) return;
-    if (patientIdentities.some((identity) => identity.key === selectedPatientId)) return;
-    setSelectedPatientId(null);
-  }, [patientIdentities, selectedPatientId]);
-
-  const scopedSourceIds = useMemo(() => {
-    if (selectedPatientId === null) return null;
-    const identity = patientIdentities.find((entry) => entry.key === selectedPatientId);
-    return identity ? new Set(identity.profiles.map((profile) => profile.sourceId)) : null;
-  }, [patientIdentities, selectedPatientId]);
-  const scopedSources = useMemo(
-    () => (scopedSourceIds ? filteredSources.filter((source) => scopedSourceIds.has(source.id)) : filteredSources),
-    [filteredSources, scopedSourceIds]
+  // fhir4ds compares every patient with every other one in the background;
+  // a reported pair is one person, whatever the names say.
+  connectedSourceIdsRef.current = new Set(patientProfiles.map((profile) => profile.sourceId));
+  const recordEngineIdle = !busy && !modelBusy;
+  const matchRun = useFhir4dsPatientMatching(
+    patientProfiles.length > 1 ? patientProfiles.map((profile) => profile.patient) : null,
+    recordEngineIdle
   );
-  const scopedPatientProfiles = useMemo(
+  const matchedPairs = useMemo(() => matchRun?.matches ?? [], [matchRun]);
+  const identityOverrides = useMemo(() => overridesBySourceId(identityRecord), [identityRecord]);
+  const patientIdentities = useMemo(
     () =>
-      scopedSourceIds
-        ? patientProfiles.filter((profile) => scopedSourceIds.has(profile.sourceId))
-        : patientProfiles,
-    [patientProfiles, scopedSourceIds]
+      resolvePatientIdentities(patientProfiles, {
+        matchedByFhir4ds: (left, right) => {
+          const leftIndex = patientProfiles.indexOf(left);
+          const rightIndex = patientProfiles.indexOf(right);
+          return matchedPairs.some(
+            (pair) =>
+              (pair.first === leftIndex && pair.second === rightIndex) ||
+              (pair.first === rightIndex && pair.second === leftIndex)
+          );
+        },
+        overrides: identityOverrides
+      }),
+    [patientProfiles, matchedPairs, identityOverrides]
   );
-  const scopedResources = useMemo(() => {
-    if (!scopedSourceIds) return null;
-    return scopedSources.flatMap((source) => sourceDatasets[source.id]?.resources ?? []);
-  }, [scopedSourceIds, scopedSources, sourceDatasets]);
+
+  // The shown person is kept by portal, so a background match that regroups
+  // the people cannot silently move the page to someone else.
+  const selectedSourceId = useMemo(() => {
+    const connected = new Set(patientProfiles.map((profile) => profile.sourceId));
+    if (selectedPatientSourceId && connected.has(selectedPatientSourceId)) return selectedPatientSourceId;
+    return patientProfiles[0]?.sourceId ?? null;
+  }, [patientProfiles, selectedPatientSourceId]);
+  useEffect(() => {
+    if (selectedSourceId === selectedPatientSourceId) return;
+    setSelectedPatientSourceId(selectedSourceId);
+  }, [selectedSourceId, selectedPatientSourceId]);
+
+  const selectedIdentity = useMemo(
+    () =>
+      patientIdentities.find((identity) => identity.profiles.some((profile) => profile.sourceId === selectedSourceId)) ??
+      patientIdentities[0] ??
+      null,
+    [patientIdentities, selectedSourceId]
+  );
+  const scopedSourceIds = useMemo(
+    () => new Set((selectedIdentity?.profiles ?? []).map((profile) => profile.sourceId)),
+    [selectedIdentity]
+  );
+  const scopedSources = useMemo(
+    () => sources.filter((source) => scopedSourceIds.has(source.id)),
+    [sources, scopedSourceIds]
+  );
+  const scopedPatientProfiles = useMemo(() => {
+    const profiles = selectedIdentity?.profiles ?? [];
+    const selected = profiles.find((profile) => profile.sourceId === selectedSourceId);
+    return selected ? [selected, ...profiles.filter((profile) => profile !== selected)] : profiles;
+  }, [selectedIdentity, selectedSourceId]);
+  const scopedResources = useMemo(
+    () =>
+      selectedIdentity
+        ? scopedSources.flatMap((source) => sourceDatasets[source.id]?.resources ?? [])
+        : null,
+    [selectedIdentity, scopedSources, sourceDatasets]
+  );
 
   const dataset = useMemo(() => mergeSourceDatasets(scopedSources, sourceDatasets), [scopedSources, sourceDatasets]);
 
@@ -1560,7 +1583,6 @@ export function PatientExplorer() {
   // once the records are grouped and on screen. Until the dedup result
   // arrives, the fast local rule decides what is a copy; afterwards fhir4ds
   // decides for every record it examined.
-  const recordEngineIdle = !busy && !modelBusy;
   const dedupInput = useMemo<DedupInputRecord[] | null>(() => {
     if (records.length === 0) return null;
     const input: DedupInputRecord[] = [];
@@ -1572,15 +1594,18 @@ export function PatientExplorer() {
     return input;
   }, [records, resourceByKey]);
   const dedupRun = useFhir4dsDedup(dedupInput, recordEngineIdle);
-  const matchRun = useFhir4dsPatientMatching(
-    patientProfiles.length > 1 ? patientProfiles.map((profile) => profile.patient) : null,
-    recordEngineIdle
-  );
   const duplicateLinks = dedupRun?.state === "done" ? dedupRun.links : null;
 
   const recordChecks = useMemo<RecordChecks>(
     () => ({
-      dedup: dedupRun ? { state: dedupRun.state, merged: dedupRun.mergedCount, error: dedupRun.error } : null,
+      dedup: dedupRun
+        ? {
+            state: dedupRun.state,
+            merged: dedupRun.mergedCount,
+            duplicates: duplicateLinks ? duplicateSummary(records, duplicateLinks) : null,
+            error: dedupRun.error
+          }
+        : null,
       patientMatch: matchRun
         ? {
             state: matchRun.state,
@@ -1589,7 +1614,7 @@ export function PatientExplorer() {
           }
         : null
     }),
-    [dedupRun, matchRun]
+    [dedupRun, matchRun, duplicateLinks, records]
   );
   useEffect(() => {
     publishRecordChecks(recordChecks);
@@ -2932,6 +2957,40 @@ export function PatientExplorer() {
     }
   }
 
+  async function persistIdentityRecord(next: PatientIdentityRecord): Promise<void> {
+    setIdentityRecord(next);
+    try {
+      const key = await getOrCreateSessionVaultKey();
+      await localVault.putJson(key, { type: "patient-identity", id: PATIENT_IDENTITY_ID }, next);
+    } catch (error) {
+      // The page works without it; the choice just will not survive a reload.
+      console.warn("[fhir4px:identity] could not store the patient choice", error);
+    }
+  }
+
+  function selectPatient(sourceId: string): void {
+    setSelectedPatientSourceId(sourceId);
+    void persistIdentityRecord(withSelectedSourceId(identityRecordRef.current, sourceId));
+  }
+
+  async function setPatientIdentity(sourceId: string, placement: PatientIdentityPlacement): Promise<void> {
+    const base = identityRecordRef.current;
+    if (placement.kind === "auto") {
+      await persistIdentityRecord({
+        ...base,
+        overrides: base.overrides.filter((entry) => entry.sourceId !== sourceId)
+      });
+      return;
+    }
+    await persistIdentityRecord(
+      withIdentityOverride(
+        base,
+        { sourceId, sameAs: placement.kind === "alone" ? null : placement.sourceId },
+        connectedSourceIdsRef.current
+      )
+    );
+  }
+
   async function loadLocalData(autoFetch = false) {
     setError(null);
     try {
@@ -2939,6 +2998,10 @@ export function PatientExplorer() {
       const nextSources = await ensureConnectedSources(key);
       const nextPatches = await localVault.listJson<PatientPatch>(key, "patient-patch");
       const nextPatientRecords = await localVault.listJson<PatientAuthoredRecord>(key, "patient-authored-record");
+      const nextIdentity = await localVault.getJson<PatientIdentityRecord>(key, {
+        type: "patient-identity",
+        id: PATIENT_IDENTITY_ID
+      });
       const nextGroupingCache = await loadGroupingCache(key);
       const nextClassificationCache = await loadClassificationCache(key);
       const nextRelationshipCache = await loadRelationshipCache(key);
@@ -2952,6 +3015,8 @@ export function PatientExplorer() {
       setSourceDatasets(nextDatasets);
       setPatches(nextPatches);
       setPatientAuthoredRecords(nextPatientRecords);
+      setIdentityRecord(nextIdentity ?? emptyPatientIdentityRecord());
+      setSelectedPatientSourceId(nextIdentity?.selectedSourceId ?? null);
       setGroupingCache(nextGroupingCache);
       setClassificationCache(nextClassificationCache);
       setRelationshipCache(nextRelationshipCache);
@@ -3441,11 +3506,11 @@ export function PatientExplorer() {
 
   useEffect(() => {
     if (!browserCanAttemptNaming() || records.length === 0 || busy || modelBusy) return;
-    const key = `${activeSourceId}|${localGroupingMode}|${autoGroupingSignature}`;
+    const key = `${localGroupingMode}|${autoGroupingSignature}`;
     if (lastAutoGroupingKey.current === key) return;
     lastAutoGroupingKey.current = key;
     void refineGroupingWithModel(records);
-  }, [activeSourceId, autoGroupingSignature, busy, localGroupingMode, modelBusy, records]);
+  }, [autoGroupingSignature, busy, localGroupingMode, modelBusy, records]);
 
   useEffect(() => {
     if (!addRecordDialogOpen || !newRecordOptionSystem || codingOptionsBySystem[newRecordOptionSystem]) return;
@@ -3964,7 +4029,7 @@ export function PatientExplorer() {
     const unresolvedReferenceCount =
       (dataset?.referenceResolution?.skipped.length ?? 0) + (dataset?.referenceResolution?.unresolved.length ?? 0);
     const referencePart = unresolvedReferenceCount > 0 ? `${unresolvedReferenceCount} linked records unavailable` : undefined;
-    const reconnectCount = filteredSources.filter(
+    const reconnectCount = sources.filter(
       (source) => source.status === "error" || source.status === "needs-reconnect"
     ).length;
     const reconnectPart =
@@ -3981,29 +4046,14 @@ export function PatientExplorer() {
         : "No portal connected";
     }
 
-    if (activeSourceId === "all") {
-      const resourceCount = filteredSources.reduce(
-        (total, source) => total + (sourceDatasets[source.id]?.resources.length ?? source.recordCount ?? 0),
-        0
-      );
-      return [
-        filteredSources.length > 1 ? "All portals" : sourceLabel(filteredSources[0]),
-        filteredSources.length > 1 ? `${filteredSources.length} connected` : undefined,
-        resourceCount > 0 ? `${resourceCount} records` : undefined,
-        reconnectPart,
-        referencePart
-      ]
-        .filter(Boolean)
-        .join(" · ");
-    }
-
-    const source = filteredSources[0] ?? sources.find((candidate) => candidate.id === activeSourceId);
-    if (!source) return ["No portal selected", referencePart].filter(Boolean).join(" · ");
-
-    const resourceCount = sourceDatasets[source.id]?.resources.length ?? source.recordCount;
+    const resourceCount = sources.reduce(
+      (total, source) => total + (sourceDatasets[source.id]?.resources.length ?? source.recordCount ?? 0),
+      0
+    );
     return [
-      sourceLabel(source),
-      resourceCount !== undefined ? `${resourceCount} records` : undefined,
+      sources.length > 1 ? "All portals" : sourceLabel(sources[0]),
+      sources.length > 1 ? `${sources.length} connected` : undefined,
+      resourceCount > 0 ? `${resourceCount} records` : undefined,
       reconnectPart,
       referencePart
     ]
@@ -4021,9 +4071,13 @@ export function PatientExplorer() {
   useEffect(() => {
     registerRecordsPageActions({
       selectTab: (tabId) => setActiveTab(tabId as ExplorerTab),
-      selectSource: (sourceId) => switchSource(sourceId),
-      selectPatient: (patientId) => setSelectedPatientId(patientId),
-      refreshSources: () => void refreshSources(),
+      selectPatient: (sourceId) => selectPatient(sourceId),
+      setPatientIdentity: (sourceId, placement) => void setPatientIdentity(sourceId, placement),
+      refreshSources: () => void loadLocalData(true),
+      refreshSource: (sourceId) => {
+        const source = sourcesRef.current.find((candidate) => candidate.id === sourceId);
+        if (source) void refreshSources([source]);
+      },
       addRecord: () => openAddRecordDialog(),
       dismissCareGap: (gapId) => void dismissCareGap(gapId),
       restoreCareGap: (gapId) => void restoreCareGap(gapId)
@@ -4031,12 +4085,6 @@ export function PatientExplorer() {
     return () => registerRecordsPageActions(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function switchSource(value: string) {
-    setActiveSourceId(value);
-    const selected = sources.find((source) => source.id === value);
-    showSourceRecords(value === "all" || !selected ? "Showing all portals" : `Showing ${sourceLabel(selected)}`);
-  }
 
 
   function dataStatusPrimaryText() {
@@ -4052,22 +4100,6 @@ export function PatientExplorer() {
     if (appDataIsLoading()) return "Loading app data...";
     if (measureGapsBusy) return "Evaluating quality measures and cohorts...";
     return dataStatusSummary();
-  }
-
-  // Portals that may belong to different people: say so, but keep showing
-  // their records together.
-  function renderPatientMatchNotice() {
-    if (matchRun?.state !== "done" || !matchRun.verdict || matchRun.verdict.status === "same") return null;
-    const nameOf = (index: number) => patientDisplayName(patientProfiles[index]?.patient);
-    const names = matchRun.verdict.pairs.map((pair) => `${nameOf(pair.first)} and ${nameOf(pair.second)}`).join("; ");
-    const different = matchRun.verdict.status === "different";
-    return (
-      <Alert severity={different ? "warning" : "info"}>
-        {different
-          ? `These portals appear to belong to different people: ${names}. fhir4ds patient matching found no match between them. Their records are still shown together.`
-          : `fhir4ds patient matching could not confirm that ${names} ${matchRun.verdict.pairs.length === 1 ? "is" : "are"} the same person. Their records are still shown together.`}
-      </Alert>
-    );
   }
 
   function renderDataToolbar() {
@@ -4233,7 +4265,7 @@ export function PatientExplorer() {
       status: source.status,
       recordCount: sourceRecordCount(source)
     }));
-    const hasError = filteredSources.some((source) => source.status === "error" || source.status === "needs-reconnect");
+    const hasError = sources.some((source) => source.status === "error" || source.status === "needs-reconnect");
     const phase: ConnectionPhase =
       busy || modelBusy || appDataIsLoading()
         ? "loading"
@@ -4267,7 +4299,6 @@ export function PatientExplorer() {
       recordTabs: {
         patientLabel: scopedPatientProfiles[0]?.patient ? patientDisplayName(scopedPatientProfiles[0].patient) : null,
         activeTabId: activeTab,
-        activeSourceId,
         tabs: [
           { id: "PatientSummary", label: RESOURCE_LABELS.PatientSummary, count: records.length },
           ...EXPLORER_TABS.map((type) => ({
@@ -4279,7 +4310,7 @@ export function PatientExplorer() {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, filteredSources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, activeSourceId, records, scopedPatientProfiles, openCareGaps, dismissedGaps, usCoreChecks]);
+  }, [busy, modelBusy, status, groupingProgress, measureGapsBusy, sources, sourceDatasets, error, dataset, webLlmWarmupStatus.phase, llmLoadStatus, groupingDiagnostics, patientAuthoredRecords.length, activeTab, records, scopedPatientProfiles, openCareGaps, dismissedGaps, usCoreChecks]);
 
   // The app header shows the loaded patient on every page. It is cleared as
   // soon as a new dataset starts loading, so the previous patient is never
@@ -4293,23 +4324,33 @@ export function PatientExplorer() {
   // belong to more than one person.
   const patientSelection = useMemo<PatientSelectionState | null>(() => {
     if (patientIdentities.length < 2) return null;
-    const choices: PatientChoice[] = [
-      {
-        id: null,
-        label: `All patients (${patientIdentities.length})`,
-        detail: `${patientProfiles.length} portal profile${patientProfiles.length === 1 ? "" : "s"}`
-      },
-      ...patientIdentities.map((identity) => ({
-        id: identity.key,
+    return {
+      choices: patientIdentities.map((identity) => ({
+        // A person is chosen by one of their portals, so the choice survives a
+        // regrouping in the background.
+        id: identity.profiles[0]?.sourceId ?? identity.key,
         label: identity.name,
         detail: [...new Set(identity.profiles.map((profile) => profile.portalName))].join(", ")
-      }))
-    ];
-    return { choices, selectedId: selectedPatientId };
-  }, [patientIdentities, patientProfiles, selectedPatientId]);
+      })),
+      selectedId: selectedIdentity?.profiles[0]?.sourceId ?? patientIdentities[0].profiles[0].sourceId
+    };
+  }, [patientIdentities, selectedIdentity]);
   useEffect(() => {
     publishPatientSelection(patientSelection);
   }, [patientSelection]);
+
+  // Placements are useful from the second portal on, whatever the groups say.
+  const patientPlacements = useMemo<Record<string, PatientIdentityPlacement> | null>(() => {
+    if (sources.length < 2) return null;
+    const placements: Record<string, PatientIdentityPlacement> = {};
+    for (const [sourceId, override] of identityOverrides) {
+      placements[sourceId] = override.sameAs === null ? { kind: "alone" } : { kind: "sameAs", sourceId: override.sameAs };
+    }
+    return placements;
+  }, [sources.length, identityOverrides]);
+  useEffect(() => {
+    publishPatientPlacements(patientPlacements);
+  }, [patientPlacements]);
 
 
   function renderCareGaps() {
@@ -6651,7 +6692,6 @@ export function PatientExplorer() {
           <Stack spacing={2.5}>
             {renderDataToolbar()}
             {error && <Alert severity="warning">{error}</Alert>}
-            {renderPatientMatchNotice()}
 
             <Stack spacing={2.25} minWidth={0}>
                 {/* Resource tabs live in the app frame's side navigation at

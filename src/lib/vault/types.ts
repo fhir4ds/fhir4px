@@ -8,6 +8,7 @@ export type VaultRecordType =
   | "relationship-cache"
   | "patient-patch"
   | "patient-authored-record"
+  | "patient-identity"
   | "referral-draft"
   | "handoff-state"
   | "care-gap-dismissal";

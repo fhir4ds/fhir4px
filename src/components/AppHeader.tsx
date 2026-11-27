@@ -55,9 +55,6 @@ function ContactDetail({ icon, text }: { icon: ReactElement; text: string }) {
   );
 }
 
-/** Select value for "every patient together". */
-const ALL_PATIENTS = "__all__";
-
 /**
  * The person whose records the app is scoped to. Shown instead of the name
  * when several people are connected; changing it changes what every page
@@ -69,23 +66,18 @@ function PatientSelect({ choices, selectedId }: { choices: PatientChoice[]; sele
       size="small"
       variant="standard"
       disableUnderline
-      value={selectedId ?? ALL_PATIENTS}
-      onChange={(event) =>
-        dispatchRecordsPageCommand({
-          kind: "selectPatient",
-          patientId: event.target.value === ALL_PATIENTS ? null : String(event.target.value)
-        })
-      }
+      value={selectedId}
+      onChange={(event) => dispatchRecordsPageCommand({ kind: "selectPatient", sourceId: String(event.target.value) })}
       inputProps={{ "aria-label": "Patient" }}
       renderValue={(value) => (
         <Typography component="span" variant="subtitle1" sx={{ fontWeight: 700, overflowWrap: "anywhere" }}>
-          {choices.find((choice) => String(choice.id ?? ALL_PATIENTS) === String(value))?.label ?? ""}
+          {choices.find((choice) => choice.id === String(value))?.label ?? ""}
         </Typography>
       )}
       sx={{ maxWidth: 260, minWidth: 120, "& .MuiSelect-select": { py: 0.25 } }}
     >
       {choices.map((choice) => (
-        <MenuItem key={choice.id ?? ALL_PATIENTS} value={choice.id ?? ALL_PATIENTS}>
+        <MenuItem key={choice.id} value={choice.id}>
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="body2" noWrap>
               {choice.label}
@@ -131,14 +123,10 @@ export default function AppHeader() {
   const working = status.phase === "loading" || status.phase === "evaluating";
   const patient = status.patient ?? null;
   const selection = status.patientSelection && status.patientSelection.choices.length > 0 ? status.patientSelection : null;
-  // Several people connected and none chosen: the name is not one person's.
-  const showingAllPatients = selection !== null && selection.selectedId === null;
   // What the pages are showing, as the Records page publishes it. The sum of
   // each portal's fetched records is a different, larger number.
   const shownRecordCount = status.recordTabs?.tabs.find((tab) => tab.id === "PatientSummary")?.count ?? null;
-  // A mixed view of several people must not show the first one's details.
-  const showContactLine =
-    patient !== null && !showingAllPatients && (Boolean(patient.address) || patient.contacts.length > 0);
+  const showContactLine = patient !== null && (Boolean(patient.address) || patient.contacts.length > 0);
 
   return (
     <Box
@@ -197,10 +185,10 @@ export default function AppHeader() {
                   {patient.name}
                 </Typography>
               )}
-              {!showingAllPatients && patient.birthDate && (
+              {patient.birthDate && (
                 <Chip size="small" variant="outlined" label={`DOB ${patient.birthDate}`} />
               )}
-              {!showingAllPatients && patient.gender && (
+              {patient.gender && (
                 <Chip size="small" variant="outlined" label={patient.gender} />
               )}
               {/* With several people the patient selector already says so; this

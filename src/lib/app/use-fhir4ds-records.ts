@@ -80,6 +80,22 @@ export type PatientMatchVerdict =
  * `different`: at least one pair is not the same person. `unconfirmed`: no
  * pair is different, but at least one pair could not be decided.
  */
+/** The pairs fhir4ds reported as one person, once each, lower index first. */
+export function matchedPairs(matches: Fhir4dsPatientMatch[], patientCount: number): PatientMatchPair[] {
+  const pairs: PatientMatchPair[] = [];
+  const seen = new Set<string>();
+  for (let first = 0; first < patientCount; first += 1) {
+    for (const second of matches[first]?.matched ?? []) {
+      if (second <= first || second >= patientCount) continue;
+      const key = `${first}:${second}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pairs.push({ first, second });
+    }
+  }
+  return pairs;
+}
+
 export function patientMatchVerdict(matches: Fhir4dsPatientMatch[], patientCount: number): PatientMatchVerdict | null {
   if (patientCount < 2) return null;
   const unmatched: Array<{ first: number; second: number }> = [];
@@ -99,9 +115,17 @@ export function patientMatchVerdict(matches: Fhir4dsPatientMatch[], patientCount
   return { status: "same" };
 }
 
+/** Indexes of two portals whose patients fhir4ds says are the same person. */
+export interface PatientMatchPair {
+  first: number;
+  second: number;
+}
+
 export interface PatientMatchRun {
   state: BackgroundStepState;
   verdict: PatientMatchVerdict | null;
+  /** The pairs fhir4ds reported as one person, for grouping the portals. */
+  matches: PatientMatchPair[];
   error?: string;
 }
 
@@ -123,16 +147,21 @@ export function useFhir4dsPatientMatching(patients: FhirResource[] | null, start
     cancelCurrent.current = () => {
       current = false;
     };
-    setRun({ signature, state: "running", verdict: null });
+    setRun({ signature, state: "running", verdict: null, matches: [] });
     const input = patients;
     void fhir4dsMatchPatients(input.map((patient, index) => ({ ...patient, id: `p${index}` })))
       .then((matches) => {
         if (!current) return;
-        setRun({ signature, state: "done", verdict: patientMatchVerdict(matches, input.length) });
+        setRun({
+          signature,
+          state: "done",
+          verdict: patientMatchVerdict(matches, input.length),
+          matches: matchedPairs(matches, input.length)
+        });
       })
       .catch((error: unknown) => {
         if (!current) return;
-        setRun({ signature, state: "failed", verdict: null, error: errorMessage(error) });
+        setRun({ signature, state: "failed", verdict: null, matches: [], error: errorMessage(error) });
       });
   }, [patients, signature, start]);
 

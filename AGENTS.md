@@ -56,14 +56,21 @@ peer-to-peer.
   (src/lib/engine/fhir4ds-client.ts) — keep it that way on any host. Records
   are first shown with the fast local rule (src/lib/fhir/dedupe.ts); once the
   worker reports, fhir4ds decides for every record it examined.
-- The patient switcher (app header) appears when the connected portals belong
-  to more than one person. Choosing a person scopes records, care gaps,
-  measures and cohorts to them: the Records page publishes the choice and the
-  person's source ids, and scopes the quality evaluation with
-  `setQualityScopeResources` (src/lib/fhir/quality-run.ts) instead of the
-  active SMART session. "All patients" keeps measures on that session, i.e.
-  the most recently connected portal. Every switch re-runs the measures and
-  cohorts (about 10-15 s in the sandbox).
+- One person is shown at a time. The patient switcher (app header) appears when
+  the connected portals belong to more than one person; the choice is kept by
+  portal and scopes records, care gaps, measures and cohorts to that person
+  (the quality evaluation gets the person's resources through
+  `setQualityScopeResources`, src/lib/fhir/quality-run.ts). Portals are grouped
+  by fhir4ds patient matching plus name and birth date; the connection menu can
+  overrule a placement per portal ("same person as …" / "this portal only"),
+  stored as a `patient-identity` vault record (src/lib/fhir/patient-identity.ts).
+  Every switch re-runs the measures and cohorts (about 10-15 s in the sandbox).
+- The connection menu (src/components/ConnectionMenu.tsx) lists each portal with
+  its own refresh and delete; deleting one portal removes its connection,
+  token/session, records, patches on those records and its patient's care-gap
+  dismissals, and re-points the legacy "current" session that the quality
+  evaluation reads (src/lib/vault/delete-source.ts). There is no portal filter:
+  the header selector is the only scope control.
 - The service worker updates itself (`registerType: "autoUpdate"`, registered
   by hand in src/lib/pwa/register-sw.ts): a returning page reloads once when a
   new build takes over. It never reloads the first visit, /smart/callback, or

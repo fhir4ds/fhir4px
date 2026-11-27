@@ -6,6 +6,8 @@
  */
 
 import type { CareGap } from "../fhir/care-gaps";
+import type { DuplicateSummary } from "../fhir/dedupe";
+import type { PatientIdentityPlacement } from "../fhir/patient-identity";
 import type { PatientHeaderInfo } from "../fhir/patient-header";
 import type { UsCoreCheckResult } from "../fhir/uscore-checks";
 
@@ -68,24 +70,22 @@ export interface RecordTabsState {
   patientLabel: string | null;
   tabs: RecordTabEntry[];
   activeTabId: string;
-  /** Records-page source filter: "all" or a source id. */
-  activeSourceId: string;
 }
 
 /** A patient the app header can switch to: one entry per distinct person. */
 export interface PatientChoice {
-  /** The person's key from the Records page; null shows every patient together. */
-  id: string | null;
+  /** One of the person's portals: a choice is kept by portal, not by name. */
+  id: string;
   label: string;
   /** The portals behind the person, e.g. "SMART Dev Sandbox". */
   detail?: string;
 }
 
 export interface PatientSelectionState {
-  /** Empty or one entry: nothing to switch between, the header shows the name. */
+  /** One entry only: nothing to switch between, the header shows the name. */
   choices: PatientChoice[];
-  /** The chosen person's id; null = every patient together. */
-  selectedId: string | null;
+  /** The portal that identifies the person being shown. */
+  selectedId: string;
 }
 
 export interface ConnectionStatusState {
@@ -110,6 +110,9 @@ export interface ConnectionStatusState {
   /** The patient switcher: several people are connected. Null when a single
    * person is loaded (or nothing is). */
   patientSelection?: PatientSelectionState | null;
+  /** Where the user has said one portal's patient belongs, by portal id.
+   * Portals without an entry follow the automatic decision. */
+  patientPlacements?: Record<string, PatientIdentityPlacement> | null;
   /** The loaded patient, shown in the app header on every page. Null while
    * a different dataset is loading or when nothing is loaded. */
   patient?: PatientHeaderInfo | null;
@@ -149,7 +152,8 @@ function emit(next: ConnectionStatusState): void {
     ...next,
     patient: speak("patient"),
     recordChecks: speak("recordChecks"),
-    patientSelection: speak("patientSelection")
+    patientSelection: speak("patientSelection"),
+    patientPlacements: speak("patientPlacements")
   };
   for (const listener of listeners) listener(state);
 }
@@ -255,7 +259,13 @@ export type RecordCheckState = "running" | "done" | "failed";
 
 export interface RecordChecks {
   /** fhir4ds deduplication. `merged`: records that are copies of another record. */
-  dedup: { state: RecordCheckState; merged: number; error?: string } | null;
+  dedup: {
+    state: RecordCheckState;
+    merged: number;
+    /** The groups behind `merged`, for the report dialog. */
+    duplicates?: DuplicateSummary | null;
+    error?: string;
+  } | null;
   /** fhir4ds patient matching between the connected portals. */
   patientMatch: {
     state: RecordCheckState;
@@ -282,6 +292,13 @@ export function publishPatientSelection(selection: PatientSelectionState | null)
   for (const listener of listeners) listener(state);
 }
 
+/** Make the user's portal placements known; the connection menu edits them. */
+export function publishPatientPlacements(placements: Record<string, PatientIdentityPlacement> | null): void {
+  if (state.patientPlacements === placements) return;
+  state = { ...state, patientPlacements: placements };
+  for (const listener of listeners) listener(state);
+}
+
 // ── Records-page actions ──────────────────────────────────────────────────
 // PatientExplorer is keep-alive mounted, but only after its first visit.
 // The app frame (drawer, connection popover) registers nothing itself: it
@@ -291,19 +308,23 @@ export function publishPatientSelection(selection: PatientSelectionState | null)
 /** Commands the app frame can ask the Records page to perform. */
 export type RecordsPageCommand =
   | { kind: "selectTab"; tabId: string }
-  | { kind: "selectSource"; sourceId: string }
-  | { kind: "selectPatient"; patientId: string | null }
+  | { kind: "selectPatient"; sourceId: string }
+  | { kind: "setPatientIdentity"; sourceId: string; placement: PatientIdentityPlacement }
   | { kind: "refreshSources" }
+  | { kind: "refreshSource"; sourceId: string }
   | { kind: "addRecord" }
   | { kind: "dismissCareGap"; gapId: string }
   | { kind: "restoreCareGap"; gapId: string };
 
 export interface RecordsPageHandlers {
   selectTab: (tabId: string) => void;
-  selectSource: (sourceId: string) => void;
-  /** Scope the page to one person (PatientChoice id), or to all of them (null). */
-  selectPatient: (patientId: string | null) => void;
+  /** Show the person this portal belongs to. */
+  selectPatient: (sourceId: string) => void;
+  /** Say where one portal's patient belongs: automatic, alone, or with another portal. */
+  setPatientIdentity: (sourceId: string, placement: PatientIdentityPlacement) => void;
   refreshSources: () => void;
+  /** Fetch one portal's records again, leaving the other portals alone. */
+  refreshSource: (sourceId: string) => void;
   addRecord: () => void;
   dismissCareGap: (gapId: string) => void;
   restoreCareGap: (gapId: string) => void;
@@ -321,14 +342,17 @@ function run(command: RecordsPageCommand): void {
     case "selectTab":
       recordsPageHandlers.selectTab(command.tabId);
       break;
-    case "selectSource":
-      recordsPageHandlers.selectSource(command.sourceId);
-      break;
     case "selectPatient":
-      recordsPageHandlers.selectPatient(command.patientId);
+      recordsPageHandlers.selectPatient(command.sourceId);
+      break;
+    case "setPatientIdentity":
+      recordsPageHandlers.setPatientIdentity(command.sourceId, command.placement);
       break;
     case "refreshSources":
       recordsPageHandlers.refreshSources();
+      break;
+    case "refreshSource":
+      recordsPageHandlers.refreshSource(command.sourceId);
       break;
     case "addRecord":
       recordsPageHandlers.addRecord();
