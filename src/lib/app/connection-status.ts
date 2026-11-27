@@ -14,7 +14,9 @@ export type ConnectionPhase = "disconnected" | "loading" | "evaluating" | "conne
 
 export interface ConnectionStatusSource {
   id: string;
-  /** Portal and patient, e.g. "SMART Dev Sandbox · Grace Mensah" (the menu lists this). */
+  /** "portal" for a connected portal, "bundle" for records received as a file. */
+  kind?: "portal" | "bundle";
+  /** Source and patient, e.g. "SMART Dev Sandbox · Grace Mensah" (the menu lists this). */
   label: string;
   /** The portal's own name, without the patient: the header shows the
    * patient separately, so its chip uses this. */
@@ -31,11 +33,12 @@ export function sourceChipLabel(source: Pick<ConnectionStatusSource, "label" | "
 }
 
 /**
- * The header's single connection chip. One portal keeps its own name and
- * count; several portals collapse to a portal count, because their names and
- * per-portal counts neither identify the patient nor add up to the records on
- * screen (deduplication and filters come after the fetch). `shownRecordCount`
- * is that on-screen count, when a page has published it.
+ * The header's single connection chip. One source keeps its own name and
+ * count; several collapse to a count, because their names and per-source
+ * counts neither identify the patient nor add up to the records on screen
+ * (deduplication and filters come after the fetch). `shownRecordCount` is that
+ * on-screen count, when a page has published it. Received files are sources
+ * too, so the noun follows what is connected.
  */
 export function connectionChipText(
   sources: ConnectionStatusSource[],
@@ -44,9 +47,10 @@ export function connectionChipText(
   if (sources.length === 1) {
     return sourceChipLabel({ label: sources[0].providerLabel ?? sources[0].label, recordCount: sources[0].recordCount });
   }
-  const portals = `${sources.length} portals`;
-  if (shownRecordCount === null) return portals;
-  return `${portals} · ${shownRecordCount.toLocaleString()} ${shownRecordCount === 1 ? "record" : "records"}`;
+  const noun = sources.some((source) => source.kind === "bundle") ? "sources" : "portals";
+  const count = `${sources.length} ${noun}`;
+  if (shownRecordCount === null) return count;
+  return `${count} · ${shownRecordCount.toLocaleString()} ${shownRecordCount === 1 ? "record" : "records"}`;
 }
 
 /** The patient's care gaps as the Records page computed them. */

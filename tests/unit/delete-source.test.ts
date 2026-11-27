@@ -3,11 +3,12 @@ import { generateVaultKey } from "../../src/lib/vault/crypto";
 import { Fhir4PxVaultDatabase } from "../../src/lib/vault/db";
 import { deleteSourceData } from "../../src/lib/vault/delete-source";
 import { LocalVault } from "../../src/lib/vault/store";
-import { CURRENT_SOURCE_ID, type ConnectedSource } from "../../src/lib/smart/sources";
+import { CURRENT_SOURCE_ID, type BundleSource, type PortalSource } from "../../src/lib/smart/sources";
 import type { FhirDataset, FhirResource } from "../../src/lib/smart/data";
 
-function source(id: string): ConnectedSource {
+function source(id: string): PortalSource {
   return {
+    kind: "portal",
     id,
     displayName: `Portal ${id}`,
     providerName: `Portal ${id}`,
@@ -109,5 +110,46 @@ describe("deleteSourceData", () => {
 
     expect(result).toEqual({ deleted: false, remaining: 2 });
     expect(await vault.getJson(key, { type: "smart-source", id: "a" })).not.toBeNull();
+  });
+});
+
+describe("deleteSourceData with a received bundle", () => {
+  it("deletes the bundle and leaves the portal's session alone", async () => {
+    const db = new Fhir4PxVaultDatabase(`test-vault-${crypto.randomUUID()}`);
+    const vault = new LocalVault(db);
+    const key = await generateVaultKey();
+    const portal = source("a");
+    const received: BundleSource = {
+      kind: "bundle",
+      id: "bundle-abc",
+      displayName: "Received bundle · file.json",
+      patientName: "Robin No-Codes",
+      patientId: "patient-bundle",
+      connectedAt: 1,
+      updatedAt: 1,
+      recordCount: 2,
+      status: "ready",
+      fileName: "file.json",
+      fingerprint: "abc"
+    };
+    await vault.putJson(key, { type: "smart-source", id: portal.id }, portal);
+    await vault.putJson(key, { type: "smart-token", id: portal.tokenRef }, { accessToken: "token-a" });
+    await vault.putJson(key, { type: "smart-session", id: portal.sessionRef }, { fhirBaseUrl: portal.fhirBaseUrl });
+    await vault.putJson(key, { type: "smart-source", id: received.id }, received);
+    await vault.putJson(key, { type: "source-dataset", id: received.id }, {
+      patient: { resourceType: "Patient", id: "patient-bundle" },
+      resources: [],
+      fetchedAt: 1,
+      vendor: "unknown"
+    });
+    await vault.putJson(key, { type: "smart-token", id: CURRENT_SOURCE_ID }, { accessToken: "token-a" });
+    await vault.putJson(key, { type: "smart-session", id: CURRENT_SOURCE_ID }, { fhirBaseUrl: portal.fhirBaseUrl });
+
+    const result = await deleteSourceData(received.id, { vault, key });
+
+    expect(result).toEqual({ deleted: true, remaining: 1 });
+    expect(await vault.getJson(key, { type: "smart-source", id: received.id })).toBeNull();
+    expect(await vault.getJson(key, { type: "source-dataset", id: received.id })).toBeNull();
+    expect(await vault.getJson(key, { type: "smart-token", id: CURRENT_SOURCE_ID })).toEqual({ accessToken: "token-a" });
   });
 });

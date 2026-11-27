@@ -11,7 +11,7 @@
 import type { CareGapDismissal } from "../fhir/care-gaps";
 import type { PatientPatch } from "../fhir/patches";
 import type { FhirDataset } from "../smart/data";
-import { CURRENT_SOURCE_ID, getSourceCredentials, listConnectedSources } from "../smart/sources";
+import { CURRENT_SOURCE_ID, getSourceCredentials, isPortalSource, listConnectedSources } from "../smart/sources";
 import { getOrCreateSessionVaultKey } from "./keys";
 import { localVault, type LocalVault } from "./store";
 
@@ -54,13 +54,17 @@ export async function deleteSourceData(
   }
 
   await vault.delete({ type: "smart-source", id: source.id });
-  await vault.delete({ type: "smart-token", id: source.tokenRef });
-  await vault.delete({ type: "smart-session", id: source.sessionRef });
+  if (source.kind === "portal") {
+    await vault.delete({ type: "smart-token", id: source.tokenRef });
+    await vault.delete({ type: "smart-session", id: source.sessionRef });
+  }
   await vault.delete({ type: "source-dataset", id: source.id });
 
+  // The legacy pointer has to name a portal: a received Bundle has nothing to fetch.
   const remaining = sources.filter((candidate) => candidate.id !== source.id);
-  if (remaining.length > 0) {
-    const credentials = await getSourceCredentials(key, remaining[0], vault);
+  const remainingPortals = remaining.filter(isPortalSource);
+  if (remainingPortals.length > 0) {
+    const credentials = await getSourceCredentials(key, remainingPortals[0], vault);
     await vault.putJson(key, { type: "smart-token", id: CURRENT_SOURCE_ID }, credentials.token);
     await vault.putJson(key, { type: "smart-session", id: CURRENT_SOURCE_ID }, credentials.session);
   } else {

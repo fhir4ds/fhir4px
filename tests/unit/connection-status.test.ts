@@ -160,6 +160,11 @@ describe("connectionChipText", () => {
   it("counts portals alone when no page has published a record count", () => {
     expect(connectionChipText([source("a", 250), source("b", 9)], null)).toBe("2 portals");
   });
+
+  it("calls them sources once a received file is among them", () => {
+    const received = { ...source("c", 40), kind: "bundle" as const, label: "Received bundle · file.json" };
+    expect(connectionChipText([source("a", 250), received], 290)).toBe("2 sources · 290 records");
+  });
 });
 
 describe("record checks", () => {

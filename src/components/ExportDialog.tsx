@@ -30,15 +30,14 @@ import {
   TextField,
   Typography
 } from "@mui/material";
-import { Database, Download, FileLock2, FileText, QrCode, Share2, Upload, UnlockKeyhole } from "lucide-react";
+import { Database, Download, FileLock2, FileText, QrCode, Share2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { createLocalReferralBundle, type LocalReferralBundle } from "../lib/fhir/bundle";
+import { createLocalReferralBundle } from "../lib/fhir/bundle";
 import { filterResourcesByLookback } from "../lib/fhir/filters";
 import { buildReferralSummary } from "../lib/fhir/normalize";
 import type { PatientPatch } from "../lib/fhir/patches";
 import {
   createLocalEncryptedBundleExport,
-  decryptEncryptedBundleArtifact,
   type EncryptedBundleArtifact
 } from "../lib/handoff/encrypted-bundle";
 import {
@@ -68,7 +67,7 @@ const DEFAULT_RESOURCE_TYPES: readonly MvpResourceType[] = [
   "Observation"
 ];
 
-type ExportTab = "bundle" | "ips" | "omop" | "import";
+type ExportTab = "bundle" | "ips" | "omop";
 
 interface ExportState {
   downloadUrl: string;
@@ -83,12 +82,6 @@ interface ExportState {
   qrFallbackReason: string | null;
 }
 
-interface ImportState {
-  fileName: string;
-  resourceCount: number;
-  resourceTypes: string[];
-}
-
 export default function ExportDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [tab, setTab] = useState<ExportTab>("bundle");
   const [selectedResourceTypes, setSelectedResourceTypes] = useState<readonly MvpResourceType[]>(DEFAULT_RESOURCE_TYPES);
@@ -99,9 +92,6 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
   const [error, setError] = useState<string | null>(null);
   const [shareAvailable, setShareAvailable] = useState(false);
   const [exportState, setExportState] = useState<ExportState | null>(null);
-  const [importKey, setImportKey] = useState("");
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importState, setImportState] = useState<ImportState | null>(null);
   const [omopState, setOmopState] = useState<{
     results: OmopTableResult[];
     resolved: number;
@@ -215,33 +205,6 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
       setStatus("Export failed");
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function importEncryptedBundle(file: File | undefined) {
-    if (!file) return;
-
-    setImportError(null);
-    setImportState(null);
-
-    try {
-      if (!importKey.trim()) throw new Error("Enter the decryption key before importing");
-      const artifact = JSON.parse(await file.text()) as EncryptedBundleArtifact;
-      const bundle = await decryptEncryptedBundleArtifact<LocalReferralBundle>(artifact, importKey.trim());
-      const resourceTypes = Array.from(
-        new Set(
-          bundle.entry
-            .map((entry) => ("resourceType" in entry.resource ? entry.resource.resourceType : "PatientPatch"))
-            .filter(Boolean)
-        )
-      ).sort();
-      setImportState({
-        fileName: file.name,
-        resourceCount: bundle.entry.length,
-        resourceTypes
-      });
-    } catch (caught) {
-      setImportError(caught instanceof Error ? caught.message : "Could not decrypt encrypted Bundle");
     }
   }
 
@@ -361,7 +324,6 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
           <Tab value="bundle" label="Bundle" />
           <Tab value="ips" label="IPS" />
           <Tab value="omop" label="OMOP" />
-          <Tab value="import" label="Import" />
         </Tabs>
       </DialogTitle>
 
@@ -574,47 +536,6 @@ export default function ExportDialog({ open, onClose }: { open: boolean; onClose
             </Stack>
           )}
 
-          {tab === "import" && (
-            <Stack spacing={2}>
-              <Stack direction="row" spacing={1} alignItems="center">
-                <UnlockKeyhole size={18} />
-                <Typography fontWeight={700}>Import/decrypt dev utility</Typography>
-              </Stack>
-              <Alert severity="info">
-                Decrypts an encrypted fhir4px Bundle locally in this browser for receiver workflow testing.
-              </Alert>
-              {importError && <Alert severity="error">{importError}</Alert>}
-              <TextField
-                label="Decryption key"
-                value={importKey}
-                onChange={(event) => setImportKey(event.target.value)}
-                fullWidth
-              />
-              <Button
-                component="label"
-                variant="outlined"
-                startIcon={<Upload size={18} />}
-                sx={{ alignSelf: "flex-start" }}
-              >
-                Import encrypted Bundle
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  hidden
-                  onChange={(event) => void importEncryptedBundle(event.target.files?.[0])}
-                />
-              </Button>
-              {importState && (
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  <Chip label={importState.fileName} />
-                  <Chip label={`${importState.resourceCount} decrypted resources`} color="success" />
-                  {importState.resourceTypes.map((resourceType) => (
-                    <Chip key={resourceType} label={resourceType} />
-                  ))}
-                </Stack>
-              )}
-            </Stack>
-          )}
         </Stack>
       </DialogContent>
 

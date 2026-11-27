@@ -11,25 +11,45 @@ import { localVault, type LocalVault } from "../vault/store";
 
 export type ConnectedSourceStatus = "connected" | "fetching" | "ready" | "error" | "needs-reconnect";
 
-export interface ConnectedSource {
+interface ConnectedSourceBase {
   id: string;
   displayName: string;
-  providerId?: string;
-  providerName?: string;
   patientName?: string;
-  fhirBaseUrl: string;
-  vendor: Vendor;
-  clientId: string;
   patientId: string | null;
-  requestedScopes?: string;
-  tokenRef: string;
-  sessionRef: string;
   connectedAt: number;
   updatedAt: number;
   lastFetchedAt?: number;
   recordCount?: number;
   status: ConnectedSourceStatus;
   lastError?: string;
+}
+
+/** A portal the app connects to over SMART on FHIR. */
+export interface PortalSource extends ConnectedSourceBase {
+  kind: "portal";
+  providerId?: string;
+  providerName?: string;
+  fhirBaseUrl: string;
+  vendor: Vendor;
+  clientId: string;
+  requestedScopes?: string;
+  tokenRef: string;
+  sessionRef: string;
+}
+
+/** Records received as a Bundle file: no server to fetch from. */
+export interface BundleSource extends ConnectedSourceBase {
+  kind: "bundle";
+  /** The file the records came from. */
+  fileName: string;
+  /** SHA-256 of the file, so importing the same one replaces it. */
+  fingerprint: string;
+}
+
+export type ConnectedSource = PortalSource | BundleSource;
+
+export function isPortalSource(source: ConnectedSource): source is PortalSource {
+  return source.kind === "portal";
 }
 
 export interface SourceFetchResult {
@@ -83,26 +103,31 @@ export function sourceIdForConnection(session: SmartSessionInfo, token: SmartTok
 }
 
 export function sourceLabel(source: ConnectedSource): string {
+  if (source.kind === "bundle") {
+    return source.patientName ? `${source.displayName} · ${source.patientName}` : source.displayName;
+  }
   if (source.providerName && source.patientName) return `${source.providerName} · ${source.patientName}`;
   return source.providerName || source.patientName || source.displayName || hostLabel(source.fhirBaseUrl);
 }
 
-/** The portal's own name, without the patient (for where the patient is shown separately). */
+/** The source's own name, without the patient (for where the patient is shown separately). */
 export function providerLabel(source: ConnectedSource): string {
+  if (source.kind === "bundle") return source.displayName;
   return source.providerName || source.displayName || hostLabel(source.fhirBaseUrl);
 }
 
 function createSource(
   session: SmartSessionInfo,
   token: SmartToken,
-  existing?: ConnectedSource | null,
+  existing?: PortalSource | null,
   now = Date.now(),
   statusOverride?: ConnectedSourceStatus
-): ConnectedSource {
+): PortalSource {
   const id = sourceIdForConnection(session, token);
   const providerName = session.providerName || existing?.providerName;
   const displayName = providerName || existing?.displayName || hostLabel(session.fhirBaseUrl);
   return {
+    kind: "portal",
     id,
     displayName,
     providerId: session.providerId || existing?.providerId,
@@ -129,11 +154,11 @@ export async function upsertConnectedSource(
   session: SmartSessionInfo,
   token: SmartToken,
   options: { vault?: LocalVault; now?: number; statusOverride?: ConnectedSourceStatus } = {}
-): Promise<ConnectedSource> {
+): Promise<PortalSource> {
   const vault = options.vault ?? localVault;
   const now = options.now ?? Date.now();
   const id = sourceIdForConnection(session, token);
-  const existing = await vault.getJson<ConnectedSource>(key, { type: "smart-source", id });
+  const existing = await vault.getJson<PortalSource>(key, { type: "smart-source", id });
   const source = createSource(session, token, existing, now, options.statusOverride);
   await vault.putJson(key, { type: "smart-token", id: source.tokenRef }, token);
   await vault.putJson(key, { type: "smart-session", id: source.sessionRef }, session);
@@ -150,7 +175,7 @@ export async function upsertLocalTestSource(
   key: CryptoKey,
   provider: SmartProvider,
   options: { vault?: LocalVault; now?: number } = {}
-): Promise<ConnectedSource> {
+): Promise<PortalSource> {
   if (!provider.localTestPatientId) throw new Error("Local sandbox provider is missing a test patient id");
   const token: SmartToken = {
     accessToken: "local-smart-dev-sandbox-token",
@@ -171,7 +196,11 @@ export async function upsertLocalTestSource(
 }
 
 export async function listConnectedSources(key: CryptoKey, vault = localVault): Promise<ConnectedSource[]> {
-  const sources = await vault.listJson<ConnectedSource>(key, "smart-source");
+  const stored = await vault.listJson<ConnectedSource>(key, "smart-source");
+  // Sources saved before bundles existed carry no kind: they are portals.
+  const sources: ConnectedSource[] = stored.map((source) =>
+    source.kind === "bundle" ? source : { ...source, kind: "portal" }
+  );
   return sources.sort((left, right) => right.updatedAt - left.updatedAt || sourceLabel(left).localeCompare(sourceLabel(right)));
 }
 
@@ -198,7 +227,7 @@ export async function ensureConnectedSources(
 
 export async function getSourceCredentials(
   key: CryptoKey,
-  source: ConnectedSource,
+  source: PortalSource,
   vault = localVault
 ): Promise<{ token: SmartToken; session: SmartSessionInfo }> {
   const token = await vault.getJson<SmartToken>(key, { type: "smart-token", id: source.tokenRef });
@@ -226,11 +255,11 @@ export async function putSourceDataset(
 
 async function updateSource(
   key: CryptoKey,
-  source: ConnectedSource,
-  updates: Partial<ConnectedSource>,
+  source: PortalSource,
+  updates: Partial<PortalSource>,
   vault = localVault
-): Promise<ConnectedSource> {
-  const next: ConnectedSource = {
+): Promise<PortalSource> {
+  const next: PortalSource = {
     ...source,
     ...updates,
     updatedAt: Date.now()
@@ -241,7 +270,7 @@ async function updateSource(
 
 export async function fetchAndStoreSourceDataset(
   key: CryptoKey,
-  source: ConnectedSource,
+  source: PortalSource,
   options: {
     vault?: LocalVault;
     fetcher?: typeof fetch;

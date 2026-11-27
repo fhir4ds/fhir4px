@@ -3065,6 +3065,8 @@ export function PatientExplorer() {
     try {
       const key = await getOrCreateSessionVaultKey();
       for (const source of targets) {
+        // A received Bundle has no server to fetch from.
+        if (source.kind !== "portal") continue;
         const result = await fetchAndStoreSourceDataset(key, source, {
           onStatus(updated) {
             workingSources = workingSources.map((candidate) => (candidate.id === updated.id ? updated : candidate));
@@ -3654,7 +3656,8 @@ export function PatientExplorer() {
         // Relative attachment URLs (Binary/…) resolve against the record's
         // FHIR source, never the app origin (the SPA fallback would happily
         // serve index.html as a 200 text/html "document").
-        const sourceBaseUrl = sources.find((source) => source.id === record.portalSourceId)?.fhirBaseUrl;
+        const source = sources.find((candidate) => candidate.id === record.portalSourceId);
+        const sourceBaseUrl = source && source.kind === "portal" ? source.fhirBaseUrl : undefined;
         setViewerDocument({ resource: raw, label: record.sourceLabel, sourceBaseUrl });
         return;
       }
@@ -4271,6 +4274,7 @@ export function PatientExplorer() {
   useEffect(() => {
     const sourcesForPill: ConnectionStatusSource[] = sources.map((source) => ({
       id: source.id,
+      kind: source.kind,
       label: sourceLabel(source),
       providerLabel: providerLabel(source),
       status: source.status,

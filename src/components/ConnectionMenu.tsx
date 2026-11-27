@@ -21,6 +21,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  Menu,
   MenuItem,
   Popover,
   Select,
@@ -29,7 +30,7 @@ import {
   Typography
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
-import { Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
   dispatchRecordsPageCommand,
   getConnectionStatus,
@@ -43,15 +44,16 @@ import { summarizeUsCore, usCoreSummaryText } from "../lib/fhir/uscore-summary";
 import DuplicateRecordsTable from "./DuplicateRecordsTable";
 import UsCoreDataTable from "./UsCoreDataTable";
 import ExportDialog from "./ExportDialog";
+import ImportRecordsDialog from "./ImportRecordsDialog";
 import VaultKeyDialog from "./VaultKeyDialog";
 
-/** Green while a portal is fine; amber when it needs attention. */
+/** Green while a source is fine; amber when it needs attention. */
 function portalDotColor(status: string): string {
   return status === "error" || status === "needs-reconnect" ? "warning.main" : "success.main";
 }
 
 /** "1,614 records", plus the state only when something is wrong. */
-function portalDetail(source: ConnectionStatusSource): string {
+function sourceDetail(source: ConnectionStatusSource): string {
   const parts: string[] = [];
   if (source.recordCount !== undefined) {
     parts.push(`${source.recordCount.toLocaleString()} ${source.recordCount === 1 ? "record" : "records"}`);
@@ -75,6 +77,8 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
   const [duplicatesOpen, setDuplicatesOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [addAnchor, setAddAnchor] = useState<HTMLElement | null>(null);
   const [sourceToDelete, setSourceToDelete] = useState<ConnectionStatusSource | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -135,7 +139,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
 
           <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} flexWrap="wrap" useFlexGap>
             <Typography variant="caption" color="text.secondary">
-              Portals
+              {status.sources.some((source) => source.kind === "bundle") ? "Sources" : "Portals"}
             </Typography>
             {(usCore || duplicateChip) && (
               <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
@@ -202,7 +206,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                         </Typography>
                       </Stack>
                       <Typography variant="caption" color="text.secondary" sx={{ flex: "0 0 auto" }}>
-                        {portalDetail(source)}
+                        {sourceDetail(source)}
                       </Typography>
                     </Stack>
                     <Stack direction="row" spacing={0.5} alignItems="center" flexWrap="wrap" useFlexGap>
@@ -231,19 +235,21 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                         </Select>
                       )}
                       <Stack direction="row" spacing={0.25} sx={{ ml: "auto", flexShrink: 0 }}>
-                        <Tooltip title="Refresh this portal">
-                          <IconButton
-                            size="small"
-                            aria-label={`Refresh ${source.label}`}
-                            onClick={() => {
-                              onClose();
-                              dispatchRecordsPageCommand({ kind: "refreshSource", sourceId: source.id });
-                            }}
-                          >
-                            <RefreshCw size={16} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete this portal's data">
+                        {source.kind !== "bundle" && (
+                          <Tooltip title="Refresh this portal">
+                            <IconButton
+                              size="small"
+                              aria-label={`Refresh ${source.label}`}
+                              onClick={() => {
+                                onClose();
+                                dispatchRecordsPageCommand({ kind: "refreshSource", sourceId: source.id });
+                              }}
+                            >
+                              <RefreshCw size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        <Tooltip title="Delete this source's data">
                           <IconButton
                             size="small"
                             color="error"
@@ -274,8 +280,14 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
           )}
 
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-            <Button size="small" variant="outlined" component={RouterLink} to="/providers" onClick={onClose} startIcon={<Plus size={15} />}>
-              Add portal
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<Plus size={15} />}
+              endIcon={<ChevronDown size={15} />}
+              onClick={(event) => setAddAnchor(event.currentTarget)}
+            >
+              Add Records
             </Button>
             {patientPeople && patientPeople.overrideCount > 0 && (
               <Tooltip title="Follow the matching again">
@@ -316,7 +328,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
               <Button
                 size="small"
                 color="error"
-                aria-label="Delete all portals' data"
+                aria-label="Delete all sources' data"
                 onClick={() => {
                   onClose();
                   setConfirmOpen(true);
@@ -330,6 +342,34 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
         </Stack>
       </Popover>
 
+      <Menu
+        anchorEl={addAnchor}
+        open={Boolean(addAnchor)}
+        onClose={() => setAddAnchor(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        <MenuItem
+          component={RouterLink}
+          to="/providers"
+          onClick={() => {
+            setAddAnchor(null);
+            onClose();
+          }}
+        >
+          Connect a portal
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAddAnchor(null);
+            onClose();
+            setImportOpen(true);
+          }}
+        >
+          Import a file
+        </MenuItem>
+      </Menu>
+
+      <ImportRecordsDialog open={importOpen} onClose={() => setImportOpen(false)} />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
       <VaultKeyDialog open={vaultOpen} onClose={() => setVaultOpen(false)} />
 
@@ -357,18 +397,24 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Delete this portal's data?</DialogTitle>
+        <DialogTitle>Delete this source's data?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" component="div">
             {sourceToDelete?.label} and everything stored for it:
           </Typography>
           <Box component="ul" pl={2} mb={1}>
-            <li>The connection and its stored sign-in material</li>
-            <li>The records fetched from this portal, with their groupings and edits</li>
-            <li>Care-gap dismissals for this portal's patient</li>
+            {sourceToDelete?.kind === "bundle" ? (
+              <li>The records imported from this file, with their groupings and edits</li>
+            ) : (
+              <>
+                <li>The connection and its stored sign-in material</li>
+                <li>The records fetched from this portal, with their groupings and edits</li>
+              </>
+            )}
+            <li>Care-gap dismissals for this patient</li>
           </Box>
           <Typography variant="body2" color="text.secondary">
-            Other portals keep their data, and records you added yourself are kept — they are not tied to a portal.
+            Other sources keep their data, and records you added yourself are kept — they are not tied to a source.
           </Typography>
           <Typography variant="body2" fontWeight={700} mt={1}>
             This cannot be undone.
@@ -400,26 +446,26 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
             }}
             startIcon={<Trash2 size={16} />}
           >
-            {deleting ? "Deleting…" : "Delete this portal"}
+            {deleting ? "Deleting…" : "Delete this source"}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Delete all portals' data?</DialogTitle>
+        <DialogTitle>Delete all sources' data?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" component="div">
             This permanently deletes all locally stored patient data
             {status.sources.length > 0 && (
               <>
-                {" "}— {status.sources.length} connection{status.sources.length === 1 ? "" : "s"}
+                {" "}— {status.sources.length} source{status.sources.length === 1 ? "" : "s"}
               </>
             )}
             :
           </Typography>
           <Box component="ul" pl={2} mb={1}>
-            <li>Portal connections and token material</li>
-            <li>Fetched medical records</li>
+            <li>Portal connections, token material and imported files</li>
+            <li>Fetched and imported medical records</li>
             <li>Record groupings, patches, and authored entries</li>
             <li>Care-gap dismissals</li>
           </Box>

@@ -79,6 +79,7 @@ export function AppFrame({ children }: PropsWithChildren) {
       publishConnections(
         connected.map((source) => ({
           id: source.id,
+          kind: source.kind,
           label: sourceLabel(source),
           providerLabel: providerLabel(source),
           status: source.status,
