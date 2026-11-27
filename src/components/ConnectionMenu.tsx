@@ -129,9 +129,44 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
         <Stack spacing={1.5}>
           {working && <CircularProgress size={18} sx={{ alignSelf: "flex-start" }} />}
 
-          <Typography variant="caption" color="text.secondary">
-            Portals
-          </Typography>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1} flexWrap="wrap" useFlexGap>
+            <Typography variant="caption" color="text.secondary">
+              Portals
+            </Typography>
+            {(usCore || duplicateChip) && (
+              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+                {usCore && (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    color={usCoreChip.color}
+                    label={usCoreChip.label}
+                    aria-label={`US Core data presence: ${usCoreLine}`}
+                    onClick={() => {
+                      onClose();
+                      setUsCoreOpen(true);
+                    }}
+                  />
+                )}
+                {duplicateChip && (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={duplicateChip}
+                    aria-label={`Duplicate records: ${duplicateLine}`}
+                    onClick={
+                      duplicates && duplicates.copies > 0
+                        ? () => {
+                            onClose();
+                            setDuplicatesOpen(true);
+                          }
+                        : undefined
+                    }
+                  />
+                )}
+              </Stack>
+            )}
+          </Stack>
 
           {status.sources.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -264,43 +299,6 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
               </Button>
             )}
           </Stack>
-
-          {(usCore || duplicateChip) && (
-            <>
-              <Divider />
-              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                {usCore && (
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    color={usCoreChip.color}
-                    label={usCoreChip.label}
-                    aria-label={`US Core data presence: ${usCoreLine}`}
-                    onClick={() => {
-                      onClose();
-                      setUsCoreOpen(true);
-                    }}
-                  />
-                )}
-                {duplicateChip && (
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    label={duplicateChip}
-                    aria-label={`Duplicate records: ${duplicateLine}`}
-                    onClick={
-                      duplicates && duplicates.copies > 0
-                        ? () => {
-                            onClose();
-                            setDuplicatesOpen(true);
-                          }
-                        : undefined
-                    }
-                  />
-                )}
-              </Stack>
-            </>
-          )}
         </Stack>
       </Popover>
 
