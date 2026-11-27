@@ -21,8 +21,15 @@ export default function ConnectionChip({ label }: { label?: string }) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   const working = status.phase === "loading" || status.phase === "evaluating";
-  const dotColor =
-    status.phase === "connected" ? "success.main" : status.phase === "warning" ? "warning.main" : "text.disabled";
+  // Amber also when the shown person's portals disagree with patient matching:
+  // this chip opens the menu where that is fixed.
+  const dotColor = status.patientMismatch
+    ? "warning.main"
+    : status.phase === "connected"
+      ? "success.main"
+      : status.phase === "warning"
+        ? "warning.main"
+        : "text.disabled";
   const text = working || label === undefined ? status.label : label;
 
   return (
@@ -31,7 +38,7 @@ export default function ConnectionChip({ label }: { label?: string }) {
         size="small"
         label={text}
         onClick={(event) => setAnchorEl(event.currentTarget)}
-        aria-label={`Connection status: ${text}`}
+        aria-label={status.patientMismatch ? `Connection status: ${text} (check patient matching)` : `Connection status: ${text}`}
         icon={
           working ? (
             <CircularProgress size={12} />

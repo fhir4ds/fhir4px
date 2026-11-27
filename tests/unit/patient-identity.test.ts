@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { resolvePatientIdentities, withIdentityOverride, emptyPatientIdentityRecord } from "../../src/lib/fhir/patient-identity";
+import {
+  emptyPatientIdentityRecord,
+  groupMatchMismatch,
+  resolvePatientIdentities,
+  withIdentityOverride
+} from "../../src/lib/fhir/patient-identity";
 import type { PatientProfileLike } from "../../src/lib/fhir/patient-header";
 import type { FhirResource } from "../../src/lib/smart/data";
 
@@ -85,5 +90,74 @@ describe("withIdentityOverride", () => {
     const next = withIdentityOverride(record, { sourceId: "a", sameAs: null }, connected);
 
     expect(next.overrides).toEqual([{ sourceId: "a", sameAs: null }]);
+  });
+});
+
+describe("groupMatchMismatch", () => {
+  const indexBySourceId = new Map([
+    ["a", 0],
+    ["b", 1],
+    ["c", 2]
+  ]);
+  const pair = { first: 0, second: 1 };
+
+  it("flags a person whose portals the matching calls different people", () => {
+    expect(
+      groupMatchMismatch({
+        sourceIds: ["a", "b"],
+        indexBySourceId,
+        overridden: new Set(),
+        verdict: "different",
+        pairs: [pair]
+      })
+    ).toEqual({ portalCount: 2, verdict: "different" });
+  });
+
+  it("flags an undecided pair as unconfirmed", () => {
+    expect(
+      groupMatchMismatch({
+        sourceIds: ["a", "b"],
+        indexBySourceId,
+        overridden: new Set(),
+        verdict: "unconfirmed",
+        pairs: [pair]
+      })
+    ).toEqual({ portalCount: 2, verdict: "unconfirmed" });
+  });
+
+  it("says nothing about a single portal, or a pair outside the group", () => {
+    expect(
+      groupMatchMismatch({ sourceIds: ["a"], indexBySourceId, overridden: new Set(), verdict: "different", pairs: [pair] })
+    ).toBeNull();
+    expect(
+      groupMatchMismatch({
+        sourceIds: ["a", "c"],
+        indexBySourceId,
+        overridden: new Set(),
+        verdict: "different",
+        pairs: [pair]
+      })
+    ).toBeNull();
+  });
+
+  it("stays quiet once the user has placed a portal by hand", () => {
+    expect(
+      groupMatchMismatch({
+        sourceIds: ["a", "b"],
+        indexBySourceId,
+        overridden: new Set(["b"]),
+        verdict: "different",
+        pairs: [pair]
+      })
+    ).toBeNull();
+  });
+
+  it("says nothing while the matching is still running or reports one person", () => {
+    expect(
+      groupMatchMismatch({ sourceIds: ["a", "b"], indexBySourceId, overridden: new Set(), verdict: null, pairs: [] })
+    ).toBeNull();
+    expect(
+      groupMatchMismatch({ sourceIds: ["a", "b"], indexBySourceId, overridden: new Set(), verdict: "same", pairs: [] })
+    ).toBeNull();
   });
 });

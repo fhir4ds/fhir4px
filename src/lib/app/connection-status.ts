@@ -72,6 +72,12 @@ export interface RecordTabsState {
   activeTabId: string;
 }
 
+/** The shown person's portals, as fhir4ds matching sees them. */
+export interface PatientMismatch {
+  portalCount: number;
+  verdict: "different" | "unconfirmed";
+}
+
 /** A patient the app header can switch to: one entry per distinct person. */
 export interface PatientChoice {
   /** One of the person's portals: a choice is kept by portal, not by name. */
@@ -113,6 +119,9 @@ export interface ConnectionStatusState {
   /** Where the user has said one portal's patient belongs, by portal id.
    * Portals without an entry follow the automatic decision. */
   patientPlacements?: Record<string, PatientIdentityPlacement> | null;
+  /** Set when the portals of the person being shown disagree with fhir4ds
+   * patient matching, and none of them has been placed by hand. */
+  patientMismatch?: PatientMismatch | null;
   /** The loaded patient, shown in the app header on every page. Null while
    * a different dataset is loading or when nothing is loaded. */
   patient?: PatientHeaderInfo | null;
@@ -153,7 +162,8 @@ function emit(next: ConnectionStatusState): void {
     patient: speak("patient"),
     recordChecks: speak("recordChecks"),
     patientSelection: speak("patientSelection"),
-    patientPlacements: speak("patientPlacements")
+    patientPlacements: speak("patientPlacements"),
+    patientMismatch: speak("patientMismatch")
   };
   for (const listener of listeners) listener(state);
 }
@@ -289,6 +299,13 @@ export function publishRecordChecks(recordChecks: RecordChecks | null): void {
 export function publishPatientSelection(selection: PatientSelectionState | null): void {
   if (state.patientSelection === selection) return;
   state = { ...state, patientSelection: selection };
+  for (const listener of listeners) listener(state);
+}
+
+/** Make the shown person's matching state known; the menu and the chip show it. */
+export function publishPatientMismatch(mismatch: PatientMismatch | null): void {
+  if (state.patientMismatch === mismatch) return;
+  state = { ...state, patientMismatch: mismatch };
   for (const listener of listeners) listener(state);
 }
 

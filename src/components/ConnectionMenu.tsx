@@ -20,7 +20,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  Link as MuiLink,
   MenuItem,
   Popover,
   Select,
@@ -42,6 +41,23 @@ import { summarizeUsCore, usCoreSummaryText } from "../lib/fhir/uscore-summary";
 import DuplicateRecordsTable from "./DuplicateRecordsTable";
 import UsCoreDataTable from "./UsCoreDataTable";
 
+/** Green while a portal is fine; amber when it needs attention. */
+function portalDotColor(status: string): string {
+  return status === "error" || status === "needs-reconnect" ? "warning.main" : "success.main";
+}
+
+/** "1,614 records", plus the state only when something is wrong. */
+function portalDetail(source: ConnectionStatusSource): string {
+  const parts: string[] = [];
+  if (source.recordCount !== undefined) {
+    parts.push(`${source.recordCount.toLocaleString()} ${source.recordCount === 1 ? "record" : "records"}`);
+  }
+  if (source.status !== "ready" && source.status !== "connected") {
+    parts.push(source.status === "needs-reconnect" ? "needs reconnect" : source.status);
+  }
+  return parts.join(" · ");
+}
+
 interface ConnectionMenuProps {
   open: boolean;
   anchorEl: HTMLElement | null;
@@ -61,21 +77,8 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
   const working = status.phase === "loading" || status.phase === "evaluating";
   const usCore = status.usCore && status.usCore.length > 0 ? status.usCore : null;
   const usCoreLine = useMemo(() => (usCore ? usCoreSummaryText(summarizeUsCore(usCore)) : null), [usCore]);
-  const patientMatch = status.recordChecks?.patientMatch ?? null;
-  const matchLine = !patientMatch
-    ? null
-    : patientMatch.state === "running"
-      ? "checking…"
-      : patientMatch.state === "failed"
-        ? "check unavailable"
-        : patientMatch.verdict === "same"
-          ? "these portals look like one person"
-          : patientMatch.verdict === "different"
-            ? "these portals look like different people"
-            : patientMatch.verdict === "unconfirmed"
-              ? "could not confirm these portals are one person"
-              : null;
   const placements = status.patientPlacements ?? null;
+  const mismatch = status.patientMismatch ?? null;
   const dedupCheck = status.recordChecks?.dedup ?? null;
   const duplicates = dedupCheck?.state === "done" ? dedupCheck.duplicates ?? null : null;
   const duplicateCopies = duplicates?.copies ?? dedupCheck?.merged ?? 0;
@@ -104,33 +107,90 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
         slotProps={{ paper: { sx: { width: 380, p: 2 } } }}
       >
         <Stack spacing={1.5}>
-          <Stack spacing={0.25}>
-            <Typography fontWeight={700}>{status.label}</Typography>
-            {status.detail && (
-              <Typography variant="caption" color="text.secondary">
-                {status.detail}
-              </Typography>
-            )}
-          </Stack>
-
           {working && <CircularProgress size={18} sx={{ alignSelf: "flex-start" }} />}
 
-          {status.sources.length > 0 && (
-            <>
-              <Divider />
-              <Stack spacing={1.25}>
-                {status.sources.map((source) => (
-                  <Stack key={source.id} spacing={0.25}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
-                      <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
-                        {source.label}
-                      </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Portals
+          </Typography>
+
+          {status.sources.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No portal connected.
+            </Typography>
+          ) : (
+            <Stack spacing={1.75}>
+              {status.sources.map((source) => {
+                const placement = placements?.[source.id];
+                const value =
+                  placement === undefined || placement.kind === "auto"
+                    ? "auto"
+                    : placement.kind === "alone"
+                      ? "alone"
+                      : placement.sourceId;
+                return (
+                  <Stack key={source.id} spacing={0.5}>
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                      <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>
+                        <Box
+                          component="span"
+                          aria-hidden
+                          sx={{
+                            display: "block",
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            bgcolor: portalDotColor(source.status),
+                            flexShrink: 0
+                          }}
+                        />
+                        <Typography variant="body2" sx={{ overflowWrap: "anywhere" }}>
+                          {source.label}
+                        </Typography>
+                      </Stack>
                       <Typography variant="caption" color="text.secondary" sx={{ flex: "0 0 auto" }}>
-                        {source.recordCount !== undefined ? `${source.recordCount.toLocaleString()} records · ` : ""}
-                        {source.status}
+                        {portalDetail(source)}
                       </Typography>
                     </Stack>
-                    <Stack direction="row" spacing={0.5}>
+                    <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                      {placements && (
+                        <>
+                          <Typography variant="caption" color="text.secondary">
+                            Person
+                          </Typography>
+                          <Select
+                            size="small"
+                            variant="standard"
+                            disableUnderline
+                            displayEmpty
+                            value={value}
+                            onChange={(event) => {
+                              const next = String(event.target.value);
+                              dispatchRecordsPageCommand({
+                                kind: "setPatientIdentity",
+                                sourceId: source.id,
+                                placement:
+                                  next === "auto"
+                                    ? { kind: "auto" }
+                                    : next === "alone"
+                                      ? { kind: "alone" }
+                                      : { kind: "sameAs", sourceId: next }
+                              });
+                            }}
+                            inputProps={{ "aria-label": `Person for ${source.label}` }}
+                            sx={{ maxWidth: 190, fontSize: "0.8rem" }}
+                          >
+                            <MenuItem value="auto">Automatic (as matched)</MenuItem>
+                            <MenuItem value="alone">This portal only</MenuItem>
+                            {status.sources
+                              .filter((other) => other.id !== source.id)
+                              .map((other) => (
+                                <MenuItem key={other.id} value={other.id}>
+                                  Same person as {other.label}
+                                </MenuItem>
+                              ))}
+                          </Select>
+                        </>
+                      )}
                       <Button
                         size="small"
                         startIcon={<RefreshCw size={14} />}
@@ -138,7 +198,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                           onClose();
                           dispatchRecordsPageCommand({ kind: "refreshSource", sourceId: source.id });
                         }}
-                        sx={{ textTransform: "none" }}
+                        sx={{ textTransform: "none", ml: "auto" }}
                       >
                         Refresh
                       </Button>
@@ -157,83 +217,37 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                       </Button>
                     </Stack>
                   </Stack>
-                ))}
-              </Stack>
-            </>
+                );
+              })}
+            </Stack>
           )}
 
-          {matchLine && (
-            <>
-              <Divider />
-              <Stack spacing={0.25}>
-                <Typography variant="body2" color={patientMatch?.verdict === "same" ? "text.primary" : "warning.main"}>
-                  Patient matching: {matchLine}
-                </Typography>
-                {patientMatch?.verdict !== undefined && patientMatch.verdict !== null && patientMatch.verdict !== "same" && (
-                  <Typography variant="caption" color="text.secondary">
-                    Set a portal's person below if that is wrong.
-                  </Typography>
-                )}
-              </Stack>
-            </>
+          {mismatch && (
+            <Typography variant="caption" color="warning.main">
+              {mismatch.verdict === "different"
+                ? `These ${mismatch.portalCount} portals look like different people. Set the person on each portal.`
+                : `Could not confirm these ${mismatch.portalCount} portals are one person. Set the person on each portal.`}
+            </Typography>
           )}
 
-          {placements && status.sources.length > 1 && (
-            <>
-              <Divider />
-              <Stack spacing={1}>
-                <Typography variant="caption" color="text.secondary">
-                  Which person each portal belongs to
-                </Typography>
-                {status.sources.map((source) => {
-                  const placement = placements[source.id];
-                  const value =
-                    placement === undefined || placement.kind === "auto"
-                      ? "auto"
-                      : placement.kind === "alone"
-                        ? "alone"
-                        : placement.sourceId;
-                  return (
-                    <Stack key={source.id} spacing={0.25}>
-                      <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
-                        {source.label}
-                      </Typography>
-                      <Select
-                        size="small"
-                        displayEmpty
-                        value={value}
-                        onChange={(event) => {
-                          const next = String(event.target.value);
-                          dispatchRecordsPageCommand({
-                            kind: "setPatientIdentity",
-                            sourceId: source.id,
-                            placement:
-                              next === "auto"
-                                ? { kind: "auto" }
-                                : next === "alone"
-                                  ? { kind: "alone" }
-                                  : { kind: "sameAs", sourceId: next }
-                          });
-                        }}
-                        inputProps={{ "aria-label": `Person for ${source.label}` }}
-                        sx={{ maxWidth: 300 }}
-                      >
-                        <MenuItem value="auto">Automatic (as matched)</MenuItem>
-                        <MenuItem value="alone">This portal only</MenuItem>
-                        {status.sources
-                          .filter((other) => other.id !== source.id)
-                          .map((other) => (
-                            <MenuItem key={other.id} value={other.id}>
-                              Same person as {other.label}
-                            </MenuItem>
-                          ))}
-                      </Select>
-                    </Stack>
-                  );
-                })}
-              </Stack>
-            </>
-          )}
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+            <Button size="small" variant="outlined" component={RouterLink} to="/providers" onClick={onClose} startIcon={<Plus size={15} />}>
+              Add portal
+            </Button>
+            {status.sources.length > 0 && (
+              <Button
+                size="small"
+                color="error"
+                onClick={() => {
+                  onClose();
+                  setConfirmOpen(true);
+                }}
+                sx={{ textTransform: "none" }}
+              >
+                Delete all portals' data
+              </Button>
+            )}
+          </Stack>
 
           {usCore && (
             <>
@@ -284,28 +298,6 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
               )}
             </>
           )}
-
-          <Divider />
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Button size="small" variant="outlined" component={RouterLink} to="/providers" onClick={onClose} startIcon={<Plus size={15} />}>
-              Add portal
-            </Button>
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              onClick={() => {
-                onClose();
-                setConfirmOpen(true);
-              }}
-              startIcon={<Trash2 size={15} />}
-            >
-              Clear local data
-            </Button>
-          </Stack>
-          <Typography variant="caption" color="text.secondary">
-            Manage records on the <MuiLink component={RouterLink} to="/records" onClick={onClose}>Records page</MuiLink>.
-          </Typography>
         </Stack>
       </Popover>
 
@@ -382,7 +374,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
       </Dialog>
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Clear all local data?</DialogTitle>
+        <DialogTitle>Delete all portals' data?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" component="div">
             This permanently deletes all locally stored patient data

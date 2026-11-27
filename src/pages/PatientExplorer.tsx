@@ -147,6 +147,7 @@ import { recordTypeIcon, type ExplorerTab } from "../components/RecordTypeIcon";
 import {
   publishConnectionStatus,
   publishPatient,
+  publishPatientMismatch,
   publishPatientPlacements,
   publishPatientSelection,
   publishRecordChecks,
@@ -154,6 +155,7 @@ import {
   type ConnectionPhase,
   type ConnectionStatusSource,
   type PatientChoice,
+  type PatientMismatch,
   type PatientSelectionState,
   type RecordChecks
 } from "../lib/app/connection-status";
@@ -161,6 +163,7 @@ import { useFhir4dsDedup, useFhir4dsPatientMatching, type DedupInputRecord } fro
 import { headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
 import {
   emptyPatientIdentityRecord,
+  groupMatchMismatch,
   overridesBySourceId,
   resolvePatientIdentities,
   withIdentityOverride,
@@ -4351,6 +4354,26 @@ export function PatientExplorer() {
   useEffect(() => {
     publishPatientPlacements(patientPlacements);
   }, [patientPlacements]);
+
+  // A hint, not a state: it appears only while the shown person's portals are
+  // all left to the automatic decision and the matching disagrees with it.
+  const patientMismatch = useMemo<PatientMismatch | null>(() => {
+    if (!selectedIdentity) return null;
+    const verdict = matchRun?.state === "done" ? matchRun.verdict : null;
+    const indexBySourceId = new Map(
+      patientProfiles.map((profile, index) => [profile.sourceId, index] as const)
+    );
+    return groupMatchMismatch({
+      sourceIds: selectedIdentity.profiles.map((profile) => profile.sourceId),
+      indexBySourceId,
+      overridden: new Set(identityOverrides.keys()),
+      verdict: verdict && verdict.status !== "same" ? verdict.status : null,
+      pairs: verdict && verdict.status !== "same" ? verdict.pairs : []
+    });
+  }, [selectedIdentity, identityOverrides, matchRun, patientProfiles]);
+  useEffect(() => {
+    publishPatientMismatch(patientMismatch);
+  }, [patientMismatch]);
 
 
   function renderCareGaps() {

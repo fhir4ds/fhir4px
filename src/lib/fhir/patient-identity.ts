@@ -19,6 +19,34 @@ import {
 
 export const PATIENT_IDENTITY_ID = "patient-identity";
 
+/**
+ * Whether the shown person's portals contradict fhir4ds matching. Only when
+ * they are all left to the automatic decision: a placement is the user's
+ * answer, and the hint must not argue with it.
+ */
+export function groupMatchMismatch(options: {
+  /** The portals grouped under the person. */
+  sourceIds: string[];
+  /** Profile index of each portal, as fhir4ds matching numbered them. */
+  indexBySourceId: ReadonlyMap<string, number>;
+  /** Portals the user placed by hand. */
+  overridden: ReadonlySet<string>;
+  verdict: "same" | "different" | "unconfirmed" | null;
+  /** The pairs matching reported as not the same person. */
+  pairs: ReadonlyArray<{ first: number; second: number }>;
+}): { portalCount: number; verdict: "different" | "unconfirmed" } | null {
+  if (options.sourceIds.length < 2) return null;
+  if (options.sourceIds.some((sourceId) => options.overridden.has(sourceId))) return null;
+  if (options.verdict !== "different" && options.verdict !== "unconfirmed") return null;
+  const inside = new Set(
+    options.sourceIds
+      .map((sourceId) => options.indexBySourceId.get(sourceId))
+      .filter((index): index is number => index !== undefined)
+  );
+  const disagrees = options.pairs.some((pair) => inside.has(pair.first) && inside.has(pair.second));
+  return disagrees ? { portalCount: options.sourceIds.length, verdict: options.verdict } : null;
+}
+
 /** What the user says about one portal's patient. */
 export type PatientIdentityPlacement =
   | { kind: "auto" }
