@@ -65,6 +65,11 @@ export async function readBundleFile(file: File, options: { key?: string } = {})
 }
 
 /** Store a read Bundle as a source. The same file replaces its earlier import. */
+/** Short enough for a menu row: "12 Nov". */
+function shortDate(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString(undefined, { day: "numeric", month: "short" });
+}
+
 export async function storeBundleSource(options: {
   imported: ImportedBundle;
   key?: CryptoKey;
@@ -81,7 +86,7 @@ export async function storeBundleSource(options: {
   const source: BundleSource = {
     kind: "bundle",
     id,
-    displayName: `Received bundle · ${imported.fileName}`,
+    displayName: `Received bundle · ${shortDate(now)}`,
     patientName: patientDisplayName(imported.patient),
     patientId: typeof imported.patient.id === "string" ? imported.patient.id : null,
     connectedAt: existing?.connectedAt ?? now,

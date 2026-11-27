@@ -88,7 +88,9 @@ describe("storeBundleSource", () => {
     const source = await storeBundleSource({ imported, key, vault, now: 1000 });
 
     expect(source.kind).toBe("bundle");
-    expect(source.displayName).toBe("Received bundle · camila.json");
+    expect(source.displayName.startsWith("Received bundle · ")).toBe(true);
+    expect(source.displayName).not.toContain("camila.json");
+    expect(source.fileName).toBe("camila.json");
     expect(source.patientName).toBe("Camila Lopez");
     expect(source.recordCount).toBe(2);
     expect(source.id.startsWith("bundle-")).toBe(true);

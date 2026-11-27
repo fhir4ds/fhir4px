@@ -18,6 +18,8 @@ export interface ConnectionStatusSource {
   kind?: "portal" | "bundle";
   /** Source and patient, e.g. "SMART Dev Sandbox · Grace Mensah" (the menu lists this). */
   label: string;
+  /** Bundle sources: the file the records came from, for the delete dialog. */
+  fileName?: string;
   /** The portal's own name, without the patient: the header shows the
    * patient separately, so its chip uses this. */
   providerLabel?: string;

@@ -4275,6 +4275,7 @@ export function PatientExplorer() {
     const sourcesForPill: ConnectionStatusSource[] = sources.map((source) => ({
       id: source.id,
       kind: source.kind,
+      fileName: source.kind === "bundle" ? source.fileName : undefined,
       label: sourceLabel(source),
       providerLabel: providerLabel(source),
       status: source.status,

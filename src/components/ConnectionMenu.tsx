@@ -404,7 +404,10 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
           </Typography>
           <Box component="ul" pl={2} mb={1}>
             {sourceToDelete?.kind === "bundle" ? (
-              <li>The records imported from this file, with their groupings and edits</li>
+              <li>
+                The records imported from {sourceToDelete.fileName ? <strong>{sourceToDelete.fileName}</strong> : "this file"},
+                with their groupings and edits
+              </li>
             ) : (
               <>
                 <li>The connection and its stored sign-in material</li>
