@@ -73,7 +73,9 @@ peer-to-peer.
   token/session, records, patches on those records and its patient's care-gap
   dismissals, and re-points the legacy "current" session that the quality
   evaluation reads (src/lib/vault/delete-source.ts). There is no portal filter:
-  the header selector is the only scope control.
+  the header selector is the only scope control. The vault key (passkey or
+  session-only) moved there too as the "Vault" action (VaultKeyDialog); there
+  is no Settings page.
 - The service worker updates itself (`registerType: "autoUpdate"`, registered
   by hand in src/lib/pwa/register-sw.ts): a returning page reloads once when a
   new build takes over. It never reloads the first visit, /smart/callback, or

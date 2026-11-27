@@ -132,7 +132,7 @@ export function Privacy() {
             because the operator has nothing of yours. To delete your local data:
           </Typography>
           <ul>
-            <li>Use <strong>Settings → Clear local data</strong> inside the app, or</li>
+            <li>Use <strong>Delete all</strong> in the app's connection menu, or</li>
             <li>Clear site data in your browser's settings for <code>app.fhir4ds.com</code>.</li>
           </ul>
         </Stack>

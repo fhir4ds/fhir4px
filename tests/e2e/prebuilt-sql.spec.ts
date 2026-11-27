@@ -40,7 +40,7 @@ test("prebuilt SQL is identical to live translation in the real engine", async (
 
   // A quiet page: it loads the app shell and the isolated document the
   // engine needs, without a patient's records.
-  await page.goto("/settings");
+  await page.goto("/docs");
 
   const comparisons = await page.evaluate(async () => {
     // Indirect dynamic import, so the function's bundler leaves it alone.

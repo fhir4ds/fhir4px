@@ -42,6 +42,7 @@ import { deleteSourceData } from "../lib/vault/delete-source";
 import { summarizeUsCore, usCoreSummaryText } from "../lib/fhir/uscore-summary";
 import DuplicateRecordsTable from "./DuplicateRecordsTable";
 import UsCoreDataTable from "./UsCoreDataTable";
+import VaultKeyDialog from "./VaultKeyDialog";
 
 /** Green while a portal is fine; amber when it needs attention. */
 function portalDotColor(status: string): string {
@@ -71,6 +72,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [usCoreOpen, setUsCoreOpen] = useState(false);
   const [duplicatesOpen, setDuplicatesOpen] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState<ConnectionStatusSource | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -288,6 +290,16 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                 </Button>
               </Tooltip>
             )}
+            <Button
+              size="small"
+              onClick={() => {
+                onClose();
+                setVaultOpen(true);
+              }}
+              sx={{ textTransform: "none" }}
+            >
+              Vault
+            </Button>
             {status.sources.length > 0 && (
               <Button
                 size="small"
@@ -305,6 +317,8 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
           </Stack>
         </Stack>
       </Popover>
+
+      <VaultKeyDialog open={vaultOpen} onClose={() => setVaultOpen(false)} />
 
       <Dialog open={duplicatesOpen} onClose={() => setDuplicatesOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Duplicate records</DialogTitle>

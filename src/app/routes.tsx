@@ -13,7 +13,6 @@ import CohortsPage from "../pages/Cohorts";
 import { Privacy } from "../pages/Privacy";
 import { ProviderSearch } from "../pages/ProviderSearch";
 import { ReferralBuilder } from "../pages/ReferralBuilder";
-import { Settings } from "../pages/Settings";
 import { SmartCallback } from "../pages/SmartCallback";
 import { Terms } from "../pages/Terms";
 
@@ -51,7 +50,6 @@ export function AppRoutes() {
         <Route path="/cohorts" element={<CohortsPage />} />
         <Route path="/referral" element={<ReferralBuilder />} />
         <Route path="/export" element={<LocalExport />} />
-        <Route path="/settings" element={<Settings />} />
         <Route path="/grouping-report" element={<GroupingReport />} />
         <Route path="/llm-playground" element={<LlmPlayground />} />
         <Route path="/docs" element={<Docs />} />

@@ -96,7 +96,7 @@ export function Terms() {
             Because the app stores all data in your browser, you can delete everything at any time by:
           </Typography>
           <ul>
-            <li>Using <strong>Settings → Clear local data</strong> inside the app, or</li>
+            <li>Using <strong>Delete all</strong> in the app's connection menu, or</li>
             <li>Clearing site data in your browser's settings for <code>app.fhir4ds.com</code>.</li>
           </ul>
           <Typography>

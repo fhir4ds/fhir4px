@@ -100,8 +100,9 @@ export function Docs() {
             </li>
           </ul>
           <Typography>
-            For long-term use, register a passkey in <Link href="/settings">Settings</Link>. The passkey
-            syncs across your devices via iCloud Keychain or Google Password Manager where supported.
+            For long-term use, register a passkey in <strong>Vault</strong> in the connection menu at the
+            top of the Records page. The passkey syncs across your devices via iCloud Keychain or Google
+            Password Manager where supported.
           </Typography>
         </Section>
 

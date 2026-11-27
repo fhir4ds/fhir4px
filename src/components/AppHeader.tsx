@@ -15,7 +15,7 @@
 
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { Box, Button, Chip, Container, MenuItem, Select, Stack, Typography } from "@mui/material";
-import { Database, Globe, Mail, MapPin, Phone, Settings } from "lucide-react";
+import { Database, Globe, Mail, MapPin, Phone } from "lucide-react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import ConnectionChip from "./ConnectionChip";
 import {
@@ -27,10 +27,7 @@ import {
   type PatientChoice
 } from "../lib/app/connection-status";
 
-const navItems = [
-  { to: "/export", label: "Export", icon: <Database size={18} /> },
-  { to: "/settings", label: "Settings", icon: <Settings size={18} /> }
-];
+const navItems = [{ to: "/export", label: "Export", icon: <Database size={18} /> }];
 
 /** CSS variable the side navigation reads to pin below the header. */
 const HEIGHT_VARIABLE = "--app-header-h";
