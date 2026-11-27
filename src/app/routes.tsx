@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { matchPath, Route, Routes, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
-import { ConnectedProvider } from "../pages/ConnectedProvider";
 import { Docs } from "../pages/Docs";
 import { GroupingReport } from "../pages/GroupingReport";
 import { Landing } from "../pages/Landing";
@@ -45,7 +44,6 @@ export function AppRoutes() {
         <Route path="/" element={<Landing />} />
         <Route path="/providers" element={<ProviderSearch />} />
         <Route path="/smart/callback" element={<SmartCallback />} />
-        <Route path="/connected" element={<ConnectedProvider />} />
         <Route path="/cohorts" element={<CohortsPage />} />
         <Route path="/referral" element={<ReferralBuilder />} />
         <Route path="/grouping-report" element={<GroupingReport />} />
