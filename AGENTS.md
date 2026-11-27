@@ -82,6 +82,11 @@ peer-to-peer.
   refresh) under an id derived from the file's SHA-256, so the same file replaces
   itself. Export is a three-tab dialog (Bundle, IPS, OMOP) that refuses to close
   while a job runs.
+- GitHub Pages cannot send COOP/COEP, which the engine's SharedArrayBuffer needs,
+  so public/coi-headers.js is imported by the generated service worker
+  (`workbox.importScripts`) and answers navigation requests with those headers.
+  The page is therefore isolated in production, like in dev; check
+  `crossOriginIsolated` on the deployed site after touching it.
 - The service worker updates itself (`registerType: "autoUpdate"`, registered
   by hand in src/lib/pwa/register-sw.ts): a returning page reloads once when a
   new build takes over. It never reloads the first visit, /smart/callback, or

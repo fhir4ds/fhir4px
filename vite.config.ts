@@ -177,6 +177,10 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
+          // Loaded before the generated worker's own routes: answers navigation
+          // requests with the COOP/COEP headers a static host cannot send, so the
+          // page and its engine iframe are cross-origin isolated in production.
+          importScripts: ["/coi-headers.js"],
           cleanupOutdatedCaches: true,
           globPatterns: ["**/*.{js,css,html,ico,png,svg,webmanifest}"],
           // cicada.js (CDC immunization forecast, ~4.8 MB) exceeds Workbox's
