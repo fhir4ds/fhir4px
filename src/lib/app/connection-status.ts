@@ -7,7 +7,6 @@
 
 import type { CareGap } from "../fhir/care-gaps";
 import type { DuplicateSummary } from "../fhir/dedupe";
-import type { PatientIdentityPlacement } from "../fhir/patient-identity";
 import type { PatientHeaderInfo } from "../fhir/patient-header";
 import type { UsCoreCheckResult } from "../fhir/uscore-checks";
 
@@ -72,12 +71,20 @@ export interface RecordTabsState {
   activeTabId: string;
 }
 
-/** What the connection menu needs to show and edit a portal's person. */
+/** One portal row of the connection menu's person control. */
+export interface PortalPersonRow {
+  sourceId: string;
+  /** The portal's patient name; the portal is added when two share it. */
+  label: string;
+  /** The portal that names the person this one belongs to. */
+  namingSourceId: string;
+}
+
+/** What the connection menu needs to show and edit the portal associations. */
 export interface PatientPeopleState {
-  /** Draft placements by portal id; a portal without an entry is automatic. */
-  placements: Record<string, PatientIdentityPlacement>;
-  /** One entry per person; `sourceIds` are the portals whose patients are theirs. */
-  people: Array<{ label: string; sourceIds: string[] }>;
+  rows: PortalPersonRow[];
+  /** Portals chosen by hand; the reset action appears while this is not zero. */
+  overrideCount: number;
 }
 
 /** The shown person's portals, as fhir4ds matching sees them. */
@@ -334,7 +341,8 @@ export function publishPatientPeople(patientPeople: PatientPeopleState | null): 
 export type RecordsPageCommand =
   | { kind: "selectTab"; tabId: string }
   | { kind: "selectPatient"; sourceId: string }
-  | { kind: "setPatientIdentity"; sourceId: string; placement: PatientIdentityPlacement }
+  | { kind: "setPatientIdentity"; sourceId: string; sameAs: string }
+  | { kind: "resetPatientIdentity" }
   | { kind: "refreshSources" }
   | { kind: "refreshSource"; sourceId: string }
   | { kind: "addRecord" }
@@ -345,8 +353,10 @@ export interface RecordsPageHandlers {
   selectTab: (tabId: string) => void;
   /** Show the person this portal belongs to. */
   selectPatient: (sourceId: string) => void;
-  /** Say where one portal's patient belongs: automatic, alone, or with another portal. */
-  setPatientIdentity: (sourceId: string, placement: PatientIdentityPlacement) => void;
+  /** Say which portal names this portal's person (its own id to name it here). */
+  setPatientIdentity: (sourceId: string, sameAs: string) => void;
+  /** Forget every hand-made association: matching decides again. */
+  resetPatientIdentity: () => void;
   refreshSources: () => void;
   /** Fetch one portal's records again, leaving the other portals alone. */
   refreshSource: (sourceId: string) => void;
@@ -371,7 +381,10 @@ function run(command: RecordsPageCommand): void {
       recordsPageHandlers.selectPatient(command.sourceId);
       break;
     case "setPatientIdentity":
-      recordsPageHandlers.setPatientIdentity(command.sourceId, command.placement);
+      recordsPageHandlers.setPatientIdentity(command.sourceId, command.sameAs);
+      break;
+    case "resetPatientIdentity":
+      recordsPageHandlers.resetPatientIdentity();
       break;
     case "refreshSources":
       recordsPageHandlers.refreshSources();

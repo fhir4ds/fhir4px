@@ -163,14 +163,15 @@ import {
 import { useFhir4dsDedup, useFhir4dsPatientMatching, type DedupInputRecord } from "../lib/app/use-fhir4ds-records";
 import { headerPatientFor, patientAge, patientDisplayName } from "../lib/fhir/patient-header";
 import {
+  applyAssociation,
+  automaticAnchors,
+  clearAssociations,
   emptyPatientIdentityRecord,
   groupMatchMismatch,
   overridesBySourceId,
   resolvePatientIdentities,
-  withIdentityOverride,
   withSelectedSourceId,
   PATIENT_IDENTITY_ID,
-  type PatientIdentityPlacement,
   type PatientIdentityRecord
 } from "../lib/fhir/patient-identity";
 import type { UsCoreCheckResult } from "../lib/fhir/uscore-checks";
@@ -1362,22 +1363,28 @@ export function PatientExplorer() {
     recordEngineIdle
   );
   const matchedPairs = useMemo(() => matchRun?.matches ?? [], [matchRun]);
+  const matchedByFhir4ds = useMemo(
+    () => (left: PatientProfile, right: PatientProfile) => {
+      const leftIndex = patientProfiles.indexOf(left);
+      const rightIndex = patientProfiles.indexOf(right);
+      return matchedPairs.some(
+        (pair) =>
+          (pair.first === leftIndex && pair.second === rightIndex) ||
+          (pair.first === rightIndex && pair.second === leftIndex)
+      );
+    },
+    [patientProfiles, matchedPairs]
+  );
+  const automaticAnchorBySourceId = useMemo(
+    () => automaticAnchors(patientProfiles, matchedByFhir4ds),
+    [patientProfiles, matchedByFhir4ds]
+  );
+  const automaticAnchorRef = useRef(automaticAnchorBySourceId);
+  automaticAnchorRef.current = automaticAnchorBySourceId;
   const identityOverrides = useMemo(() => overridesBySourceId(identityRecord), [identityRecord]);
   const patientIdentities = useMemo(
-    () =>
-      resolvePatientIdentities(patientProfiles, {
-        matchedByFhir4ds: (left, right) => {
-          const leftIndex = patientProfiles.indexOf(left);
-          const rightIndex = patientProfiles.indexOf(right);
-          return matchedPairs.some(
-            (pair) =>
-              (pair.first === leftIndex && pair.second === rightIndex) ||
-              (pair.first === rightIndex && pair.second === leftIndex)
-          );
-        },
-        overrides: identityOverrides
-      }),
-    [patientProfiles, matchedPairs, identityOverrides]
+    () => resolvePatientIdentities(patientProfiles, { matchedByFhir4ds, overrides: identityOverrides }),
+    [patientProfiles, matchedByFhir4ds, identityOverrides]
   );
 
   // The shown person is kept by portal, so a background match that regroups
@@ -1407,11 +1414,13 @@ export function PatientExplorer() {
     () => sources.filter((source) => scopedSourceIds.has(source.id)),
     [sources, scopedSourceIds]
   );
+  // The person carries the name of the portal that names it, so that portal
+  // comes first: the header reads the person's name, not the row last clicked.
   const scopedPatientProfiles = useMemo(() => {
     const profiles = selectedIdentity?.profiles ?? [];
-    const selected = profiles.find((profile) => profile.sourceId === selectedSourceId);
-    return selected ? [selected, ...profiles.filter((profile) => profile !== selected)] : profiles;
-  }, [selectedIdentity, selectedSourceId]);
+    const naming = profiles.find((profile) => profile.sourceId === selectedIdentity?.key);
+    return naming ? [naming, ...profiles.filter((profile) => profile !== naming)] : profiles;
+  }, [selectedIdentity]);
   const scopedResources = useMemo(
     () =>
       selectedIdentity
@@ -2977,22 +2986,19 @@ export function PatientExplorer() {
     void persistIdentityRecord(withSelectedSourceId(identityRecordRef.current, sourceId));
   }
 
-  async function setPatientIdentity(sourceId: string, placement: PatientIdentityPlacement): Promise<void> {
-    const base = identityRecordRef.current;
-    if (placement.kind === "auto") {
-      await persistIdentityRecord({
-        ...base,
-        overrides: base.overrides.filter((entry) => entry.sourceId !== sourceId)
-      });
-      return;
-    }
+  async function setPatientIdentity(sourceId: string, sameAs: string): Promise<void> {
     await persistIdentityRecord(
-      withIdentityOverride(
-        base,
-        { sourceId, sameAs: placement.kind === "alone" ? null : placement.sourceId },
-        connectedSourceIdsRef.current
-      )
+      applyAssociation(identityRecordRef.current, {
+        sourceId,
+        sameAs,
+        connected: connectedSourceIdsRef.current,
+        automaticAnchorBySourceId: automaticAnchorRef.current
+      })
     );
+  }
+
+  async function resetPatientIdentity(): Promise<void> {
+    await persistIdentityRecord(clearAssociations(identityRecordRef.current));
   }
 
   async function loadLocalData(autoFetch = false) {
@@ -4076,7 +4082,8 @@ export function PatientExplorer() {
     registerRecordsPageActions({
       selectTab: (tabId) => setActiveTab(tabId as ExplorerTab),
       selectPatient: (sourceId) => selectPatient(sourceId),
-      setPatientIdentity: (sourceId, placement) => void setPatientIdentity(sourceId, placement),
+      setPatientIdentity: (sourceId, sameAs) => void setPatientIdentity(sourceId, sameAs),
+      resetPatientIdentity: () => void resetPatientIdentity(),
       refreshSources: () => void loadLocalData(true),
       refreshSource: (sourceId) => {
         const source = sourcesRef.current.find((candidate) => candidate.id === sourceId);
@@ -4330,9 +4337,9 @@ export function PatientExplorer() {
     if (patientIdentities.length < 2) return null;
     return {
       choices: patientIdentities.map((identity) => ({
-        // A person is chosen by one of their portals, so the choice survives a
-        // regrouping in the background.
-        id: identity.profiles[0]?.sourceId ?? identity.key,
+        // A person is chosen by the portal that names it, which is a portal id,
+        // so the choice survives a regrouping in the background.
+        id: identity.key,
         label: identity.name,
         detail: [...new Set(identity.profiles.map((profile) => profile.portalName))].join(", ")
       })),
@@ -4347,22 +4354,29 @@ export function PatientExplorer() {
   // groups say: two portals of the same person still need to be separable.
   const patientPeople = useMemo<PatientPeopleState | null>(() => {
     if (sources.length < 2) return null;
-    const placements: Record<string, PatientIdentityPlacement> = {};
-    for (const [sourceId, override] of identityOverrides) {
-      placements[sourceId] = override.sameAs === null ? { kind: "alone" } : { kind: "sameAs", sourceId: override.sameAs };
-    }
-    // Two people with the same name are told apart by their portals.
+    // Each row offers the portals' own names, so two patients with one name
+    // are told apart by their portal.
     const nameCounts = new Map<string, number>();
-    for (const identity of patientIdentities) nameCounts.set(identity.name, (nameCounts.get(identity.name) ?? 0) + 1);
-    const people = patientIdentities.map((identity) => ({
-      label:
-        (nameCounts.get(identity.name) ?? 0) > 1
-          ? `${identity.name} (${[...new Set(identity.profiles.map((profile) => profile.portalName))].join(", ")})`
-          : identity.name,
-      sourceIds: identity.profiles.map((profile) => profile.sourceId)
-    }));
-    return { placements, people };
-  }, [sources.length, identityOverrides, patientIdentities]);
+    for (const profile of patientProfiles) {
+      const name = patientDisplayName(profile.patient);
+      nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
+    }
+    const namingBySourceId = new Map<string, string>();
+    for (const identity of patientIdentities) {
+      for (const profile of identity.profiles) namingBySourceId.set(profile.sourceId, identity.key);
+    }
+    return {
+      rows: patientProfiles.map((profile) => {
+        const name = patientDisplayName(profile.patient);
+        return {
+          sourceId: profile.sourceId,
+          label: (nameCounts.get(name) ?? 0) > 1 ? `${name} (${profile.portalName})` : name,
+          namingSourceId: namingBySourceId.get(profile.sourceId) ?? profile.sourceId
+        };
+      }),
+      overrideCount: identityRecord.overrides.length
+    };
+  }, [sources.length, patientProfiles, patientIdentities, identityRecord.overrides.length]);
   useEffect(() => {
     publishPatientPeople(patientPeople);
   }, [patientPeople]);

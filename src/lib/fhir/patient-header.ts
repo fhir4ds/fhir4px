@@ -156,30 +156,6 @@ export function groupProfilesByPatient<T extends PatientProfileLike>(
   return identities;
 }
 
-/** One identity per distinct value of `keyBySourceId`, in profile order. */
-export function groupProfilesByKeys<T extends PatientProfileLike>(
-  profiles: T[],
-  keyBySourceId: ReadonlyMap<string, string>
-): PatientIdentity<T>[] {
-  const identities: PatientIdentity<T>[] = [];
-  const byKey = new Map<string, PatientIdentity<T>>();
-  for (const profile of profiles) {
-    const key = keyBySourceId.get(profile.sourceId) ?? patientIdentityKey(profile.patient);
-    const existing = byKey.get(key);
-    if (existing) {
-      existing.profiles.push(profile);
-      continue;
-    }
-    const identity: PatientIdentity<T> = {
-      key,
-      name: patientDisplayName(profile.patient),
-      profiles: [profile]
-    };
-    byKey.set(key, identity);
-    identities.push(identity);
-  }
-  return identities;
-}
 
 /**
  * The patient the header shows for the loaded records: the first portal's

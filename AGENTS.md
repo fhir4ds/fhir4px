@@ -61,9 +61,12 @@ peer-to-peer.
   portal and scopes records, care gaps, measures and cohorts to that person
   (the quality evaluation gets the person's resources through
   `setQualityScopeResources`, src/lib/fhir/quality-run.ts). Portals are grouped
-  by fhir4ds patient matching plus name and birth date; the connection menu can
-  overrule a placement per portal ("same person as …" / "this portal only"),
-  stored as a `patient-identity` vault record (src/lib/fhir/patient-identity.ts).
+  by fhir4ds patient matching plus name and birth date. A person is named by
+  exactly one of its portals; the connection menu gives every portal the list of
+  portal names (its own, and "same as …" each other), so choosing another name
+  hands the naming over and the portals that pointed at a portal move with it.
+  The choices are a `patient-identity` vault record
+  (src/lib/fhir/patient-identity.ts), and "Reset to matching" clears them.
   Every switch re-runs the measures and cohorts (about 10-15 s in the sandbox).
 - The connection menu (src/components/ConnectionMenu.tsx) lists each portal with
   its own refresh and delete; deleting one portal removes its connection,

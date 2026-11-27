@@ -1,95 +1,233 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyAssociation,
+  automaticAnchors,
+  clearAssociations,
   emptyPatientIdentityRecord,
   groupMatchMismatch,
   resolvePatientIdentities,
-  withIdentityOverride
+  withSelectedSourceId,
+  type PatientIdentityOverride,
+  type PatientIdentityRecord
 } from "../../src/lib/fhir/patient-identity";
 import type { PatientProfileLike } from "../../src/lib/fhir/patient-header";
 import type { FhirResource } from "../../src/lib/smart/data";
 
-function profile(sourceId: string, name: string, birthDate: string): PatientProfileLike {
+function profile(sourceId: string, given: string[], family: string, birthDate = "1987-09-12"): PatientProfileLike {
   return {
     sourceId,
     portalName: `Portal ${sourceId}`,
     patient: {
       resourceType: "Patient",
       id: `patient-${sourceId}`,
-      name: [{ family: name }],
+      name: [{ family, given }],
       birthDate
     } as unknown as FhirResource
   };
 }
 
-const camila = profile("a", "Lopez", "1987-09-12");
-const camilaVariant = profile("b", "Lopes", "1987-09-12");
-const omar = profile("c", "Haddad", "1980-05-30");
+const short = profile("a", ["Camila", "M"], "Lopez");
+const full = profile("b", ["Camila", "Maria"], "Lopez");
+const omar = profile("c", ["Omar"], "Haddad", "1980-05-30");
+
+function record(overrides: PatientIdentityOverride[]): PatientIdentityRecord {
+  return { ...emptyPatientIdentityRecord(), overrides };
+}
+
+function byOverrides(overrides: PatientIdentityOverride[]) {
+  return new Map(overrides.map((entry) => [entry.sourceId, entry] as const));
+}
+
+const connected = new Set(["a", "b", "c"]);
+
+describe("automaticAnchors", () => {
+  it("names a matched pair after the more complete name", () => {
+    const anchors = automaticAnchors([short, full], () => true);
+
+    expect(anchors.get("a")).toBe("b");
+    expect(anchors.get("b")).toBe("b");
+  });
+
+  it("lets every portal name itself when matching keeps them apart", () => {
+    const anchors = automaticAnchors([short, full], () => false);
+
+    expect(anchors.get("a")).toBe("a");
+    expect(anchors.get("b")).toBe("b");
+  });
+});
 
 describe("resolvePatientIdentities", () => {
   it("groups by name and birth date on its own", () => {
-    const identities = resolvePatientIdentities([camila, camilaVariant, omar]);
+    const identities = resolvePatientIdentities([short, omar]);
 
-    expect(identities.map((identity) => identity.profiles.map((entry) => entry.sourceId))).toEqual([["a"], ["b"], ["c"]]);
+    expect(identities.map((identity) => identity.profiles.map((entry) => entry.sourceId))).toEqual([["a"], ["c"]]);
   });
 
-  it("groups portals that fhir4ds matched, whatever the names say", () => {
-    const identities = resolvePatientIdentities([camila, camilaVariant], {
-      matchedByFhir4ds: (left, right) => left.sourceId === "a" && right.sourceId === "b"
+  it("groups portals that fhir4ds matched", () => {
+    const identities = resolvePatientIdentities([short, full], {
+      matchedByFhir4ds: (left, right) => left.sourceId !== right.sourceId
     });
 
     expect(identities).toHaveLength(1);
     expect(identities[0].profiles.map((entry) => entry.sourceId)).toEqual(["a", "b"]);
+    expect(identities[0].name).toBe("Camila Maria Lopez");
+    expect(identities[0].key).toBe("b");
   });
 
-  it("joins a portal to another person when the user says so", () => {
-    const identities = resolvePatientIdentities([camila, omar], {
-      overrides: new Map([["c", { sourceId: "c", sameAs: "a" }]])
+  it("puts a portal with the portal it points at", () => {
+    const identities = resolvePatientIdentities([short, omar], {
+      matchedByFhir4ds: () => false,
+      overrides: byOverrides([{ sourceId: "c", sameAs: "a" }])
     });
 
-    expect(identities.map((identity) => identity.profiles.map((entry) => entry.sourceId))).toEqual([["a", "c"]]);
-    expect(identities[0].name).toBe("Lopez");
+    expect(identities).toHaveLength(1);
+    expect(identities[0].profiles.map((entry) => entry.sourceId)).toEqual(["a", "c"]);
+    expect(identities[0].name).toBe("Camila M Lopez");
   });
 
-  it("splits a portal off when the user says it is someone else", () => {
-    const identical = profile("d", "Lopez", "1987-09-12");
-    const identities = resolvePatientIdentities([camila, identical], {
-      overrides: new Map([["d", { sourceId: "d", sameAs: null }]])
+  it("takes a portal out of a matched pair when it names itself", () => {
+    const identities = resolvePatientIdentities([short, full], {
+      matchedByFhir4ds: () => true,
+      overrides: byOverrides([{ sourceId: "a", sameAs: null }])
     });
 
-    expect(identities.map((identity) => identity.profiles.map((entry) => entry.sourceId))).toEqual([["a"], ["d"]]);
+    expect(identities.map((identity) => identity.profiles.map((entry) => entry.sourceId))).toEqual([["a"], ["b"]]);
   });
 
-  it("leaves everything alone while the background match has not reported", () => {
-    const identities = resolvePatientIdentities([camila, camilaVariant], { matchedByFhir4ds: () => false });
+  it("follows a pointer even when the portal it names does not name itself", () => {
+    const identities = resolvePatientIdentities([short, full, omar], {
+      matchedByFhir4ds: () => false,
+      overrides: byOverrides([
+        { sourceId: "a", sameAs: "b" },
+        { sourceId: "b", sameAs: "c" }
+      ])
+    });
 
-    expect(identities).toHaveLength(2);
+    expect(identities.map((identity) => identity.profiles.map((entry) => entry.sourceId))).toEqual([["a", "b", "c"]]);
+    expect(identities[0].name).toBe("Omar Haddad");
+  });
+
+  it("survives a cycle without losing a portal", () => {
+    const identities = resolvePatientIdentities([short, full], {
+      matchedByFhir4ds: () => false,
+      overrides: byOverrides([
+        { sourceId: "a", sameAs: "b" },
+        { sourceId: "b", sameAs: "a" }
+      ])
+    });
+
+    expect(identities.flatMap((identity) => identity.profiles.map((entry) => entry.sourceId)).sort()).toEqual(["a", "b"]);
   });
 });
 
-describe("withIdentityOverride", () => {
-  it("replaces a portal's placement and drops ones that point at a gone portal", () => {
-    const connected = new Set(["a", "b"]);
-    const start = emptyPatientIdentityRecord();
-    const withStale = withIdentityOverride(start, { sourceId: "b", sameAs: "gone" }, connected);
-    expect(withStale.overrides).toEqual([]);
+describe("applyAssociation", () => {
+  it("does not store a choice that agrees with matching", () => {
+    const anchors = automaticAnchors([short, full], () => true);
 
-    const first = withIdentityOverride(start, { sourceId: "b", sameAs: "a" }, connected);
-    const second = withIdentityOverride(first, { sourceId: "b", sameAs: null }, connected);
+    // a already belongs with b by matching, so pointing it at b changes nothing.
+    const next = applyAssociation(record([]), {
+      sourceId: "a",
+      sameAs: "b",
+      connected,
+      automaticAnchorBySourceId: anchors
+    });
 
-    expect(second.overrides).toEqual([{ sourceId: "b", sameAs: null }]);
+    expect(next.overrides).toEqual([]);
   });
 
-  it("forgets placements for portals that are no longer connected", () => {
-    const connected = new Set(["a"]);
-    const record = emptyPatientIdentityRecord();
-    record.overrides = [
-      { sourceId: "a", sameAs: null },
-      { sourceId: "gone", sameAs: null }
-    ];
+  it("hands the name to the portal that is chosen", () => {
+    const anchors = automaticAnchors([short, full], () => true);
+    // b names the person by matching; a chooses "same as b" — no change.
+    // Now b chooses a instead: the name moves to a.
+    const next = applyAssociation(record([]), {
+      sourceId: "b",
+      sameAs: "a",
+      connected,
+      automaticAnchorBySourceId: anchors
+    });
 
-    const next = withIdentityOverride(record, { sourceId: "a", sameAs: null }, connected);
+    expect(next.overrides).toEqual([
+      { sourceId: "a", sameAs: null },
+      { sourceId: "b", sameAs: "a" }
+    ]);
+
+    const identities = resolvePatientIdentities([short, full], {
+      matchedByFhir4ds: () => true,
+      overrides: byOverrides(next.overrides)
+    });
+    expect(identities).toHaveLength(1);
+    expect(identities[0].name).toBe("Camila M Lopez");
+  });
+
+  it("moves the portals that pointed at a portal along with it", () => {
+    const anchors = automaticAnchors([short, full, omar], () => false);
+    const before = record([
+      { sourceId: "a", sameAs: null },
+      { sourceId: "c", sameAs: "a" }
+    ]);
+
+    const next = applyAssociation(before, {
+      sourceId: "a",
+      sameAs: "b",
+      connected,
+      automaticAnchorBySourceId: anchors
+    });
+
+    // b names itself by the automatic decision, so it needs no entry.
+    expect(new Map(next.overrides.map((entry) => [entry.sourceId, entry.sameAs]))).toEqual(
+      new Map([
+        ["a", "b"],
+        ["c", "b"]
+      ])
+    );
+
+    const identities = resolvePatientIdentities([short, full, omar], {
+      matchedByFhir4ds: () => false,
+      overrides: byOverrides(next.overrides)
+    });
+    expect(identities).toHaveLength(1);
+    expect(identities[0].name).toBe("Camila Maria Lopez");
+  });
+
+  it("lets a portal name itself again", () => {
+    const anchors = automaticAnchors([short, full], () => true);
+    const before = record([{ sourceId: "a", sameAs: "b" }]);
+
+    const next = applyAssociation(before, {
+      sourceId: "a",
+      sameAs: "a",
+      connected,
+      automaticAnchorBySourceId: anchors
+    });
 
     expect(next.overrides).toEqual([{ sourceId: "a", sameAs: null }]);
+  });
+
+  it("forgets portals that are no longer connected", () => {
+    // Matching puts a with b, so a naming itself has to be stored.
+    const anchors = automaticAnchors([short, full], () => true);
+    const before = record([
+      { sourceId: "gone", sameAs: null },
+      { sourceId: "a", sameAs: "gone" }
+    ]);
+
+    const next = applyAssociation(before, {
+      sourceId: "a",
+      sameAs: "a",
+      connected: new Set(["a", "b"]),
+      automaticAnchorBySourceId: anchors
+    });
+
+    expect(next.overrides).toEqual([{ sourceId: "a", sameAs: null }]);
+  });
+});
+
+describe("clearAssociations", () => {
+  it("leaves only the shown portal", () => {
+    const next = clearAssociations(withSelectedSourceId(record([{ sourceId: "a", sameAs: null }]), "a"));
+
+    expect(next.overrides).toEqual([]);
+    expect(next.selectedSourceId).toBe("a");
   });
 });
 
@@ -140,7 +278,7 @@ describe("groupMatchMismatch", () => {
     ).toBeNull();
   });
 
-  it("stays quiet once the user has placed a portal by hand", () => {
+  it("stays quiet once the user has chosen by hand", () => {
     expect(
       groupMatchMismatch({
         sourceIds: ["a", "b"],
@@ -149,15 +287,6 @@ describe("groupMatchMismatch", () => {
         verdict: "different",
         pairs: [pair]
       })
-    ).toBeNull();
-  });
-
-  it("says nothing while the matching is still running or reports one person", () => {
-    expect(
-      groupMatchMismatch({ sourceIds: ["a", "b"], indexBySourceId, overridden: new Set(), verdict: null, pairs: [] })
-    ).toBeNull();
-    expect(
-      groupMatchMismatch({ sourceIds: ["a", "b"], indexBySourceId, overridden: new Set(), verdict: "same", pairs: [] })
     ).toBeNull();
   });
 });

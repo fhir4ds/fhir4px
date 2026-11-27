@@ -122,18 +122,8 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
           ) : (
             <Stack spacing={1.75}>
               {status.sources.map((source) => {
-                const placement = patientPeople?.placements[source.id];
-                const placedWith =
-                  placement?.kind === "sameAs"
-                    ? patientPeople?.people.find((person) => person.sourceIds.includes(placement.sourceId))
-                        ?.sourceIds[0] ?? placement.sourceId
-                    : null;
-                const value =
-                  placement === undefined || placement.kind === "auto"
-                    ? "auto"
-                    : placement.kind === "alone"
-                      ? "alone"
-                      : placedWith;
+                const namingSourceId =
+                  patientPeople?.rows.find((row) => row.sourceId === source.id)?.namingSourceId ?? source.id;
                 return (
                   <Stack key={source.id} spacing={0.5}>
                     <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
@@ -165,32 +155,22 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                           variant="standard"
                           disableUnderline
                           displayEmpty
-                          value={value}
-                          onChange={(event) => {
-                            const next = String(event.target.value);
+                          value={namingSourceId}
+                          onChange={(event) =>
                             dispatchRecordsPageCommand({
                               kind: "setPatientIdentity",
                               sourceId: source.id,
-                              placement:
-                                next === "auto"
-                                  ? { kind: "auto" }
-                                  : next === "alone"
-                                    ? { kind: "alone" }
-                                    : { kind: "sameAs", sourceId: next }
-                            });
-                          }}
+                              sameAs: String(event.target.value)
+                            })
+                          }
                           inputProps={{ "aria-label": `Person for ${source.label}` }}
-                          sx={{ flex: 1, minWidth: 150, maxWidth: 240, fontSize: "0.8rem" }}
+                          sx={{ flex: 1, minWidth: 150, maxWidth: 250, fontSize: "0.8rem" }}
                         >
-                          <MenuItem value="auto">Automatic</MenuItem>
-                          {patientPeople.people
-                            .filter((person) => !person.sourceIds.includes(source.id))
-                            .map((person) => (
-                              <MenuItem key={person.sourceIds[0]} value={person.sourceIds[0]}>
-                                Same as {person.label}
-                              </MenuItem>
-                            ))}
-                          <MenuItem value="alone">Different person</MenuItem>
+                          {patientPeople.rows.map((row) => (
+                            <MenuItem key={row.sourceId} value={row.sourceId}>
+                              {row.sourceId === source.id ? row.label : `Same as ${row.label}`}
+                            </MenuItem>
+                          ))}
                         </Select>
                       )}
                       <Stack direction="row" spacing={0.25} sx={{ ml: "auto", flexShrink: 0 }}>
@@ -240,6 +220,18 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
             <Button size="small" variant="outlined" component={RouterLink} to="/providers" onClick={onClose} startIcon={<Plus size={15} />}>
               Add portal
             </Button>
+            {patientPeople && patientPeople.overrideCount > 0 && (
+              <Button
+                size="small"
+                onClick={() => {
+                  onClose();
+                  dispatchRecordsPageCommand({ kind: "resetPatientIdentity" });
+                }}
+                sx={{ textTransform: "none" }}
+              >
+                Reset to matching
+              </Button>
+            )}
             {status.sources.length > 0 && (
               <Button
                 size="small"

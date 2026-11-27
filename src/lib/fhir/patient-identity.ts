@@ -1,17 +1,18 @@
 /**
  * Which portal belongs to which person, when the automatic decision is wrong.
  *
- * fhir4ds matching groups the portals that look like one person; the patient
- * selector lists those groups. A user who knows better says, for one portal,
- * "this is the same person as that portal" or "this one stands alone". The
- * choice is stored per session, next to the rest of the local data, and the
- * portal that was last shown is stored with it.
+ * Every person is named by exactly one of its portals — the one that selects
+ * its own patient name. The others select "same as" that portal, so the graph
+ * is one level deep: pointers always point at a naming portal, never at
+ * another pointer. fhir4ds matching (plus name and birth date) decides the
+ * defaults; the user can hand the name to another portal, take it back, or
+ * point a portal at a name. The choices are stored per session, with the
+ * portal that was shown last.
  */
 
-
 import {
-  groupProfilesByKeys,
   groupProfilesByPatient,
+  patientDisplayName,
   patientIdentityKey,
   type PatientIdentity,
   type PatientProfileLike
@@ -21,8 +22,8 @@ export const PATIENT_IDENTITY_ID = "patient-identity";
 
 /**
  * Whether the shown person's portals contradict fhir4ds matching. Only when
- * they are all left to the automatic decision: a placement is the user's
- * answer, and the hint must not argue with it.
+ * they are all left to the automatic decision: a choice of person is the
+ * user's answer, and the hint must not argue with it.
  */
 export function groupMatchMismatch(options: {
   /** The portals grouped under the person. */
@@ -47,16 +48,11 @@ export function groupMatchMismatch(options: {
   return disagrees ? { portalCount: options.sourceIds.length, verdict: options.verdict } : null;
 }
 
-/** What the user says about one portal's patient. */
-export type PatientIdentityPlacement =
-  | { kind: "auto" }
-  | { kind: "alone" }
-  | { kind: "sameAs"; sourceId: string };
-
 export interface PatientIdentityOverride {
-  /** The portal whose patient is being placed. */
+  /** The portal this entry decides. */
   sourceId: string;
-  /** The portal it belongs with; null means it stands alone. */
+  /** The portal that names the person this one belongs to; null means this
+   * portal names the person itself. */
   sameAs: string | null;
 }
 
@@ -67,10 +63,57 @@ export interface PatientIdentityRecord {
   selectedSourceId?: string | null;
 }
 
+export function emptyPatientIdentityRecord(): PatientIdentityRecord {
+  return { id: PATIENT_IDENTITY_ID, overrides: [], selectedSourceId: null };
+}
+
+/** The stored record's overrides, by the portal they decide. */
+export function overridesBySourceId(record: PatientIdentityRecord | null): Map<string, PatientIdentityOverride> {
+  const map = new Map<string, PatientIdentityOverride>();
+  for (const override of record?.overrides ?? []) map.set(override.sourceId, override);
+  return map;
+}
+
 /**
- * The people behind the connected portals. The automatic decision is "same
- * name and birth date", plus any pair fhir4ds reported as one person; the
- * user's placements are applied last, one portal at a time.
+ * The portals the automatic decision groups together, and the naming portal
+ * of each group: the portal with the most complete name, because a person's
+ * name has to be one of its portals' own names.
+ */
+function automaticAnchorMap<T extends PatientProfileLike>(
+  profiles: T[],
+  matchedByFhir4ds?: (left: T, right: T) => boolean
+): Map<string, string> {
+  const identities = groupProfilesByPatient(
+    profiles,
+    (left, right) =>
+      patientIdentityKey(left.patient) === patientIdentityKey(right.patient) ||
+      matchedByFhir4ds?.(left, right) === true
+  );
+  const anchorBySourceId = new Map<string, string>();
+  for (const identity of identities) {
+    const anchor = [...identity.profiles].sort(
+      (left, right) =>
+        patientDisplayName(right.patient).length - patientDisplayName(left.patient).length ||
+        left.sourceId.localeCompare(right.sourceId)
+    )[0];
+    for (const profile of identity.profiles) anchorBySourceId.set(profile.sourceId, anchor.sourceId);
+  }
+  return anchorBySourceId;
+}
+
+/** The naming portal of each portal, by the automatic decision alone. */
+export function automaticAnchors<T extends PatientProfileLike>(
+  profiles: T[],
+  matchedByFhir4ds?: (left: T, right: T) => boolean
+): Map<string, string> {
+  return automaticAnchorMap(profiles, matchedByFhir4ds);
+}
+
+/**
+ * The people behind the connected portals. Automatic groups first, then the
+ * stored choices: a portal names its person, or points at the portal that
+ * does. A pointer that would form a cycle falls back to the automatic answer
+ * for the portal that closes it.
  */
 export function resolvePatientIdentities<T extends PatientProfileLike>(
   profiles: T[],
@@ -79,67 +122,95 @@ export function resolvePatientIdentities<T extends PatientProfileLike>(
     overrides?: ReadonlyMap<string, PatientIdentityOverride>;
   } = {}
 ): PatientIdentity<T>[] {
-  const automatic = groupProfilesByPatient(
-    profiles,
-    (left, right) =>
-      patientIdentityKey(left.patient) === patientIdentityKey(right.patient) ||
-      options.matchedByFhir4ds?.(left, right) === true
-  );
+  const anchorBySourceId = automaticAnchorMap(profiles, options.matchedByFhir4ds);
   const overrides = options.overrides ?? new Map<string, PatientIdentityOverride>();
-  if (overrides.size === 0) return automatic;
+  const bySourceId = new Map(profiles.map((profile) => [profile.sourceId, profile] as const));
 
-  const automaticKeyBySourceId = new Map<string, string>();
-  for (const identity of automatic) {
-    for (const profile of identity.profiles) automaticKeyBySourceId.set(profile.sourceId, identity.key);
-  }
-
-  const finalKeyBySourceId = new Map<string, string>();
-  for (const [sourceId, automaticKey] of automaticKeyBySourceId) {
+  // Where a portal points: itself, another portal, or the automatic answer.
+  const pointerOf = (sourceId: string): string => {
+    const automatic = anchorBySourceId.get(sourceId) ?? sourceId;
     const override = overrides.get(sourceId);
-    if (!override) {
-      finalKeyBySourceId.set(sourceId, automaticKey);
-      continue;
+    if (!override) return automatic;
+    if (override.sameAs === null) return sourceId;
+    return bySourceId.has(override.sameAs) ? override.sameAs : automatic;
+  };
+  const anchorOf = (sourceId: string): string => {
+    let current = sourceId;
+    const seen = new Set<string>();
+    while (!seen.has(current)) {
+      seen.add(current);
+      const next = pointerOf(current);
+      if (next === current) return current;
+      current = next;
     }
-    if (override.sameAs === null) {
-      finalKeyBySourceId.set(sourceId, `alone:${sourceId}`);
-      continue;
-    }
-    const targetOverride = overrides.get(override.sameAs);
-    const targetKey =
-      targetOverride?.sameAs === null
-        ? `alone:${override.sameAs}`
-        : automaticKeyBySourceId.get(targetOverride?.sameAs ?? override.sameAs) ?? automaticKey;
-    finalKeyBySourceId.set(sourceId, targetKey);
+    // A cycle: the automatic answer of the portal that closed it wins.
+    return anchorBySourceId.get(sourceId) ?? sourceId;
+  };
+
+  const groups = new Map<string, T[]>();
+  for (const profile of profiles) {
+    const anchor = anchorOf(profile.sourceId);
+    const members = groups.get(anchor) ?? [];
+    members.push(profile);
+    groups.set(anchor, members);
   }
-  return groupProfilesByKeys(profiles, finalKeyBySourceId);
-}
 
-export function emptyPatientIdentityRecord(): PatientIdentityRecord {
-  return { id: PATIENT_IDENTITY_ID, overrides: [], selectedSourceId: null };
-}
-
-/** The stored record's overrides, by the portal they place. */
-export function overridesBySourceId(record: PatientIdentityRecord | null): Map<string, PatientIdentityOverride> {
-  const map = new Map<string, PatientIdentityOverride>();
-  for (const override of record?.overrides ?? []) map.set(override.sourceId, override);
-  return map;
+  return [...groups.entries()].map(([anchor, members]) => ({
+    key: anchor,
+    name: patientDisplayName(bySourceId.get(anchor)?.patient ?? members[0].patient),
+    profiles: members
+  }));
 }
 
 /**
- * Set one portal's placement and drop overrides that point at portals which
- * are gone, so a stale record cannot keep two people apart.
+ * Record a choice made on one row: `sameAs` names the portal that should name
+ * the person. Choosing the row's own portal means "this one names it".
+ *
+ * The portals that pointed at this one move with it, and the portal that is
+ * about to name the person stops pointing at anyone, so no chain is left
+ * behind. Choices that agree with the automatic answer are not stored.
  */
-export function withIdentityOverride(
+export function applyAssociation(
   record: PatientIdentityRecord,
-  override: PatientIdentityOverride,
-  connectedSourceIds: ReadonlySet<string>
+  options: {
+    sourceId: string;
+    sameAs: string;
+    /** The connected portals. */
+    connected: ReadonlySet<string>;
+    /** The naming portal of each portal, by the automatic decision. */
+    automaticAnchorBySourceId: ReadonlyMap<string, string>;
+  }
 ): PatientIdentityRecord {
-  const overrides = record.overrides.filter(
-    (entry) => entry.sourceId !== override.sourceId && connectedSourceIds.has(entry.sourceId)
+  const { sourceId, sameAs, connected, automaticAnchorBySourceId } = options;
+  const overrides = new Map(
+    record.overrides.filter((entry) => connected.has(entry.sourceId)).map((entry) => [entry.sourceId, entry] as const)
   );
-  if (override.sameAs !== null && !connectedSourceIds.has(override.sameAs)) return { ...record, overrides };
-  overrides.push(override);
-  return { ...record, overrides };
+  const dependsOn = (anchor: string) =>
+    [...overrides.values()].filter((entry) => entry.sameAs === anchor).map((entry) => entry.sourceId);
+
+  const nameItself = (portal: string) => {
+    if (automaticAnchorBySourceId.get(portal) === portal) overrides.delete(portal);
+    else overrides.set(portal, { sourceId: portal, sameAs: null });
+  };
+
+  if (sameAs === sourceId) {
+    // This portal names its person; everyone who pointed at it stays.
+    nameItself(sourceId);
+  } else {
+    // Hand the name to the other portal, and move this portal's group with it.
+    const dependents = dependsOn(sourceId).filter((dependent) => dependent !== sameAs);
+    nameItself(sameAs);
+    for (const dependent of dependents) overrides.set(dependent, { sourceId: dependent, sameAs });
+    if (automaticAnchorBySourceId.get(sourceId) === sameAs) overrides.delete(sourceId);
+    else overrides.set(sourceId, { sourceId, sameAs });
+  }
+
+  return { ...record, overrides: [...overrides.values()] };
+}
+
+/** Forget every hand-made choice: the matching decides again. */
+export function clearAssociations(record: PatientIdentityRecord): PatientIdentityRecord {
+  return { ...record, overrides: [] };
 }
 
 export function withSelectedSourceId(
