@@ -46,6 +46,7 @@ import UsCoreDataTable from "./UsCoreDataTable";
 import ExportDialog from "./ExportDialog";
 import ImportRecordsDialog from "./ImportRecordsDialog";
 import VaultKeyDialog from "./VaultKeyDialog";
+import { loadWebAuthnPrfProfile, type WebAuthnPrfProfile } from "../lib/vault/keys";
 
 /** Green while a source is fine; amber when it needs attention. */
 function portalDotColor(status: string): string {
@@ -76,6 +77,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
   const [usCoreOpen, setUsCoreOpen] = useState(false);
   const [duplicatesOpen, setDuplicatesOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);
+  const [vaultProfile, setVaultProfile] = useState<WebAuthnPrfProfile | null>(() => loadWebAuthnPrfProfile());
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [addAnchor, setAddAnchor] = useState<HTMLElement | null>(null);
@@ -141,8 +143,22 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
             <Typography variant="caption" color="text.secondary">
               {status.sources.some((source) => source.kind === "bundle") ? "Sources" : "Portals"}
             </Typography>
-            {(usCore || duplicateChip) && (
-              <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+            <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
+              <Chip
+                size="small"
+                variant="outlined"
+                color={vaultProfile ? "success" : "default"}
+                label={vaultProfile ? "Passkey vault" : "Session vault"}
+                aria-label={
+                  vaultProfile
+                    ? "Vault key: a passkey holds it"
+                    : "Vault key: kept for this browser session only"
+                }
+                onClick={() => {
+                  onClose();
+                  setVaultOpen(true);
+                }}
+              />
                 {usCore && (
                   <Chip
                     size="small"
@@ -172,8 +188,7 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
                     }
                   />
                 )}
-              </Stack>
-            )}
+            </Stack>
           </Stack>
 
           {status.sources.length === 0 ? (
@@ -314,16 +329,6 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
             >
               Export
             </Button>
-            <Button
-              size="small"
-              onClick={() => {
-                onClose();
-                setVaultOpen(true);
-              }}
-              sx={{ textTransform: "none" }}
-            >
-              Vault
-            </Button>
             {status.sources.length > 0 && (
               <Button
                 size="small"
@@ -371,7 +376,11 @@ export default function ConnectionMenu({ open, anchorEl, onClose }: ConnectionMe
 
       <ImportRecordsDialog open={importOpen} onClose={() => setImportOpen(false)} />
       <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} />
-      <VaultKeyDialog open={vaultOpen} onClose={() => setVaultOpen(false)} />
+      <VaultKeyDialog
+        open={vaultOpen}
+        onClose={() => setVaultOpen(false)}
+        onProfileChange={setVaultProfile}
+      />
 
       <Dialog open={duplicatesOpen} onClose={() => setDuplicatesOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Duplicate records</DialogTitle>

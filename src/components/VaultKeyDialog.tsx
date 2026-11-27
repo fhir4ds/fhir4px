@@ -15,7 +15,16 @@ import {
   type WebAuthnPrfProfile
 } from "../lib/vault/keys";
 
-export default function VaultKeyDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function VaultKeyDialog({
+  open,
+  onClose,
+  onProfileChange
+}: {
+  open: boolean;
+  onClose: () => void;
+  /** Told when a passkey is registered or forgotten, so the menu's chip follows. */
+  onProfileChange?: (profile: WebAuthnPrfProfile | null) => void;
+}) {
   const [profile, setProfile] = useState<WebAuthnPrfProfile | null>(null);
   const [webAuthnAvailable, setWebAuthnAvailable] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -24,16 +33,21 @@ export default function VaultKeyDialog({ open, onClose }: { open: boolean; onClo
   useEffect(() => {
     if (!open) return;
     setWebAuthnAvailable(isWebAuthnPrfPotentiallyAvailable());
-    setProfile(loadWebAuthnPrfProfile());
+    const stored = loadWebAuthnPrfProfile();
+    setProfile(stored);
+    onProfileChange?.(stored);
     setStatus(null);
     setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   async function register() {
     setError(null);
     setStatus(null);
     try {
-      setProfile(await createWebAuthnPrfProfile());
+      const next = await createWebAuthnPrfProfile();
+      setProfile(next);
+      onProfileChange?.(next);
       setStatus("Passkey vault profile registered");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not register passkey vault profile");
@@ -43,6 +57,7 @@ export default function VaultKeyDialog({ open, onClose }: { open: boolean; onClo
   function forget() {
     clearWebAuthnPrfProfile();
     setProfile(null);
+    onProfileChange?.(null);
     setStatus("Passkey vault profile forgotten");
   }
 

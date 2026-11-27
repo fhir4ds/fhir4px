@@ -73,9 +73,10 @@ peer-to-peer.
   token/session, records, patches on those records and its patient's care-gap
   dismissals, and re-points the legacy "current" session that the quality
   evaluation reads (src/lib/vault/delete-source.ts). There is no portal filter:
-  the header selector is the only scope control. The vault key (passkey or
-  session-only) and Export live there too (VaultKeyDialog, ExportDialog); there
-  is no Settings or Export page and no /settings or /export route. "Add Records"
+  the header selector is the only scope control. The vault key is a status chip
+  there ("Session vault" / "Passkey vault", VaultKeyDialog) and Export is an
+  action (ExportDialog); there is no Settings or Export page and no /settings
+  or /export route. "Add Records"
   offers a portal connection or a Bundle file: an import (readBundleFile,
   storeBundleSource) is stored as a source of kind "bundle" (no server, no
   refresh) under an id derived from the file's SHA-256, so the same file replaces
