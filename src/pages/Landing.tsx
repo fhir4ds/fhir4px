@@ -160,7 +160,7 @@ export function Landing() {
       >
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2} justifyContent="space-between" alignItems={{ sm: "center" }}>
           <Typography color="text.secondary" variant="body2">
-            fhir4px &middot; FHIR for Patient Exchange
+            FHIR4PX &middot; FHIR for Patient Exchange
           </Typography>
           <Stack direction="row" spacing={3}>
             <RouterLink to="/docs" style={{ color: MINT_LIGHT, textDecoration: "none", fontSize: "0.875rem" }}>

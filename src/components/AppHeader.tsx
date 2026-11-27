@@ -155,12 +155,22 @@ export default function AppHeader() {
             sx={{
               gridColumn: { md: 1 },
               gridRow: { md: "1 / span 2" },
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 1.25,
               color: "text.primary",
               textDecoration: "none",
               alignSelf: { md: "center" }
             }}
           >
-            fhir4px
+            <Box
+              component="img"
+              src="/icon.svg"
+              alt=""
+              aria-hidden
+              sx={{ width: 44, height: 44, display: "block", flexShrink: 0 }}
+            />
+            FHIR4PX
           </Typography>
 
           {patient !== null && (

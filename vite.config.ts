@@ -170,8 +170,8 @@ export default defineConfig(({ mode }) => {
         injectRegister: null,
         strategies: "generateSW",
         manifest: {
-          name: "fhir4px",
-          short_name: "fhir4px",
+          name: "FHIR4PX",
+          short_name: "FHIR4PX",
           description: "Browser-only SMART on FHIR referral handoff",
           theme_color: "#0d1b2a",
           background_color: "#0d1b2a",
@@ -183,6 +183,18 @@ export default defineConfig(({ mode }) => {
               sizes: "any",
               type: "image/svg+xml",
               purpose: "any"
+            },
+            {
+              src: "/pwa-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+              purpose: "any maskable"
+            },
+            {
+              src: "/pwa-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "any maskable"
             }
           ]
         },
